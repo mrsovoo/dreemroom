@@ -160,13 +160,9 @@ export default function ProductCard({
           className="velvorn-card-plus-btn"
           onClick={(e) => {
             e.stopPropagation();
-            if (onQuickAdd) {
-              onQuickAdd(product);
-            } else {
-              onOpen(product);
-            }
+            onOpen(product);
           }}
-          aria-label={`${product.name} savatga qo'shish`}
+          aria-label={`${product.name} mahsulotini ko'rish`}
         >
           <Plus size={15} strokeWidth={1.8} />
         </button>

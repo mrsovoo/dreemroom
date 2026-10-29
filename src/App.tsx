@@ -933,7 +933,6 @@ export default function App() {
                         key={product.id}
                         product={product}
                         onOpen={openProduct}
-                        onQuickAdd={handleQuickAdd}
                       />
                     ))}
                   </div>
@@ -1076,7 +1075,6 @@ export default function App() {
                     key={product.id}
                     product={product}
                     onOpen={openProduct}
-                    onQuickAdd={handleQuickAdd}
                   />
                 ))}
               </div>
