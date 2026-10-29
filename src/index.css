@@ -3619,8 +3619,15 @@ body.in-telegram .mobile-app-layout {
   font-size: 14.5px;
   font-weight: 600;
   color: #1e1e24;
-  margin: 0 0 12px;
+  margin: 0 0 4px;
   letter-spacing: 0.05em;
+}
+.hot-sale-card-price {
+  font-family: "Inter", sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #555462;
+  margin: 0 0 12px;
 }
 .btn-shop-now {
   font-family: "HASBOOK ALL CAPS", "HASBOOK", sans-serif;

@@ -292,6 +292,26 @@ export default function App() {
     }),
   );
 
+  // Eng ko'p xarid qilingan ommabop mahsulotlar (Best Sellers dinamik algoritmi)
+  const popularTopProducts = useMemo(() => {
+    const sorted = [...productsList].sort((a, b) => {
+      const aSales = (a.salesCount || 0) * 10 + (a.ordersCount || 0) * 5 + (a.isPopular ? 100 : 0);
+      const bSales = (b.salesCount || 0) * 10 + (b.ordersCount || 0) * 5 + (b.isPopular ? 100 : 0);
+      if (bSales !== aSales) return bScoreDiff(bSales, aSales);
+      return 0;
+    });
+
+    function bScoreDiff(bScore: number, aScore: number) {
+      return bScore - aScore;
+    }
+
+    const top3 = sorted.slice(0, 3);
+    while (top3.length < 3 && productsList[top3.length]) {
+      top3.push(productsList[top3.length]);
+    }
+    return top3;
+  }, [productsList]);
+
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 3500);
@@ -787,87 +807,47 @@ export default function App() {
             </section>
 
             {/* =================================================================
-                3. OMMABOP TO'PLAMLAR (3 talik kartochka: 10, 11, 12 rasmlari)
+                3. OMMABOP TO'PLAMLAR (Eng ko'p xarid qilinganlar algoritmi)
                 ================================================================= */}
             <section className="velvorn-cards-section hot-sale-section" id="ommabop-toplamlar">
               <div className="velvorn-section-header hot-sale-center-head">
                 <h2 className="velvorn-heading-drops hot-sale-title">Ommabop to'plamlar</h2>
               </div>
               <div className="hot-sale-grid">
-                <div className="hot-sale-card" onClick={() => openCatalog("Kurtka")}>
-                  <div className="hot-sale-media">
-                    <img
-                      src="/images/10.jpg"
-                      alt="Bahorgi to'plam"
-                      className="hot-sale-img"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="hot-sale-info">
-                    <h3 className="hot-sale-card-title">Bahorgi to'plam</h3>
-                    <button
-                      type="button"
-                      className="btn-shop-now"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openCatalog("Kurtka");
-                      }}
+                {popularTopProducts.map((prod, idx) => {
+                  const cardImg = ["/images/10.jpg", "/images/11.png", "/images/12.png"][idx] || prod.images?.[0]?.src;
+                  return (
+                    <div
+                      key={prod.id || `popular-${idx}`}
+                      className="hot-sale-card"
+                      onClick={() => openProduct(prod)}
                     >
-                      <span>XARID QILISH</span>
-                      <span className="shop-arrow">→</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="hot-sale-card" onClick={() => openCatalog("Sviter")}>
-                  <div className="hot-sale-media">
-                    <img
-                      src="/images/11.png"
-                      alt="Prime to'plam"
-                      className="hot-sale-img"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="hot-sale-info">
-                    <h3 className="hot-sale-card-title">Prime to'plam</h3>
-                    <button
-                      type="button"
-                      className="btn-shop-now"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openCatalog("Sviter");
-                      }}
-                    >
-                      <span>XARID QILISH</span>
-                      <span className="shop-arrow">→</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="hot-sale-card" onClick={() => openCatalog("Choponlar")}>
-                  <div className="hot-sale-media">
-                    <img
-                      src="/images/12.png"
-                      alt="Wonder to'plam"
-                      className="hot-sale-img"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="hot-sale-info">
-                    <h3 className="hot-sale-card-title">Wonder to'plam</h3>
-                    <button
-                      type="button"
-                      className="btn-shop-now"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openCatalog("Choponlar");
-                      }}
-                    >
-                      <span>XARID QILISH</span>
-                      <span className="shop-arrow">→</span>
-                    </button>
-                  </div>
-                </div>
+                      <div className="hot-sale-media">
+                        <img
+                          src={cardImg}
+                          alt={prod.name}
+                          className="hot-sale-img"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="hot-sale-info">
+                        <h3 className="hot-sale-card-title">{prod.name}</h3>
+                        <p className="hot-sale-card-price">{money(prod.price, prod.displayPrice)}</p>
+                        <button
+                          type="button"
+                          className="btn-shop-now"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openProduct(prod);
+                          }}
+                        >
+                          <span>XARID QILISH</span>
+                          <span className="shop-arrow">→</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           </>
