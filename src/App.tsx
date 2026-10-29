@@ -9,6 +9,7 @@ import {
   Home,
   Mail,
   MapPin,
+  Menu,
   MessageCircle,
   Minus,
   Phone,
@@ -305,6 +306,18 @@ export default function App() {
     }
     return productsList;
   }, [productsList, category]);
+
+  // VELVORN: Hot Style Steals (Up to 70% Off)
+  const hotDeals = useMemo(() => {
+    const deals = productsList.filter((p) => p.collectionSection === "hot-deals");
+    return deals.length ? deals : productsList.slice(0, 3);
+  }, [productsList]);
+
+  // VELVORN: Latest Drops (New Arrivals)
+  const latestDrops = useMemo(() => {
+    const drops = productsList.filter((p) => p.collectionSection === "latest-drops");
+    return drops.length ? drops : productsList.slice(3, 7);
+  }, [productsList]);
 
   // Eng ko'p sotilgan va yaxshi buyurtma bo'layotgan ommabop modellar
   const popularProducts = useMemo(() => {
@@ -617,58 +630,46 @@ export default function App() {
         Tarkibga o'tish
       </a>
 
-      <header className="header">
+      <header className="header velvorn-header">
         <div className="header-zone header-brand" aria-label="Bosh sahifa">
           <button
-            className="brand"
+            className="brand brand-velvorn"
             onClick={goHome}
-            aria-label="DREEM ROOM — bosh sahifa"
+            aria-label="VELVORN"
           >
-            <Logo className="logo" />
+            <Logo />
+          </button>
+          <button
+            type="button"
+            className="header-menu-btn"
+            onClick={() => openCatalog()}
+            aria-label="Menyu"
+          >
+            <Menu size={20} strokeWidth={1.8} />
           </button>
         </div>
-        <nav className="nav" aria-label="Asosiy menyu">
+
+        <nav className="nav velvorn-nav" aria-label="Asosiy menyu">
           <button
-            className={
-              view === "home" && !panel
-                ? "nav-link is-active"
-                : "nav-link"
-            }
-            onClick={goHome}
+            className={view === "catalog" && category === "Women" ? "nav-link is-active" : "nav-link"}
+            onClick={() => openCatalog("Women")}
           >
-            Asosiy
+            Women
           </button>
           <button
-            className={
-              view === "catalog" && !panel
-                ? "nav-link is-active"
-                : "nav-link"
-            }
+            className={view === "catalog" && category === "Men" ? "nav-link is-active" : "nav-link"}
+            onClick={() => openCatalog("Men")}
+          >
+            Men
+          </button>
+          <button
+            className={view === "catalog" && category === allCategory ? "nav-link is-active" : "nav-link"}
             onClick={() => openCatalog()}
           >
-            Katalog
+            Categories
           </button>
-          <button
-            className={panel === "contact" ? "nav-link is-active" : "nav-link"}
-            onClick={openContact}
-          >
-            Kontakt
-          </button>
-          <a
-            href="/admin"
-            className="nav-link"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Admin panel
-          </a>
-          <a
-            href="mailto:hello@dreemroom.uz"
-            className="nav-link nav-email"
-          >
-            hello@dreemroom.uz
-          </a>
         </nav>
+
         <div className="header-zone header-actions">
           <button
             className="action-btn"
@@ -681,17 +682,6 @@ export default function App() {
             <Search size={20} strokeWidth={1.6} />
           </button>
           <button
-            className={`action-btn ${panel === "wishlist" ? "is-active" : ""}`}
-            onClick={() => {
-              haptic(tgRef.current, "light");
-              setPanel("wishlist");
-            }}
-            aria-label={`Sevimlilar, ${wishlist.length} ta mahsulot`}
-          >
-            <Heart size={20} strokeWidth={1.6} />
-            {wishlist.length > 0 && <span className="action-badge">{wishlist.length}</span>}
-          </button>
-          <button
             className={`action-btn ${panel === "profile" ? "is-active" : ""}`}
             onClick={openProfile}
             aria-label="Profil"
@@ -702,6 +692,17 @@ export default function App() {
                 {profile.name.charAt(0).toUpperCase()}
               </span>
             )}
+          </button>
+          <button
+            className={`action-btn ${panel === "wishlist" ? "is-active" : ""}`}
+            onClick={() => {
+              haptic(tgRef.current, "light");
+              setPanel("wishlist");
+            }}
+            aria-label={`Sevimlilar, ${wishlist.length} ta mahsulot`}
+          >
+            <Heart size={20} strokeWidth={1.6} />
+            {wishlist.length > 0 && <span className="action-badge">{wishlist.length}</span>}
           </button>
           <button
             className={`action-btn ${panel === "cart" ? "is-active" : ""}`}
@@ -718,10 +719,9 @@ export default function App() {
         {view === "home" ? (
           <>
             {/* =================================================================
-                1. KOMPYUTER VA TABLET (DESKTOP & TABLET) UCHUN ASOSIY BANNER
-                (VELVORN — Power Meets Purpose uslubidagi yangi banner)
+                1. HERO SECTION: Power Meets Purpose • VELVORN
                 ================================================================= */}
-            <section className="hero-desktop-view velvorn-hero" aria-label="Asosiy banner">
+            <section className="velvorn-hero-section" aria-label="Asosiy banner">
               <div className="velvorn-hero-container">
                 <img
                   src="/image-landing/hero-velvorn-1920.jpg"
@@ -731,7 +731,6 @@ export default function App() {
                   decoding="async"
                 />
 
-                {/* Bosiladigan interaktiv qatlam va Katalogga o'tish tugmasi */}
                 <div className="velvorn-hero-overlay">
                   <button
                     type="button"
@@ -740,7 +739,7 @@ export default function App() {
                       haptic(tgRef.current, "light");
                       openCatalog();
                     }}
-                    aria-label="Explore the Collection — Katalogga o'tish"
+                    aria-label="Explore the Collection"
                   >
                     <span>Explore the Collection</span>
                     <ArrowRight size={14} className="velvorn-cta-arrow" />
@@ -750,107 +749,138 @@ export default function App() {
             </section>
 
             {/* =================================================================
-                2. MOBIL / TELEGRAM MINI APP UCHUN QORONG'I FEATURED BANNER
+                2. SECTION: Hot Style Steals Up to 70% Off Now
                 ================================================================= */}
-            <section className="hero-mobile-view" aria-label="Mobil banner">
-              <div
-                className="mobile-hero-wrapper"
-                onClick={() => {
-                  haptic(tgRef.current, "light");
-                  openCatalog();
-                }}
-              >
-                <img
-                  src="/image-landing/mobile-banner-dark.png"
-                  alt="DREEM ROOM • Yangi mavsum ayollar to'plami"
-                  className="mobile-hero-banner-img"
-                  loading="eager"
-                />
-              </div>
-            </section>
-
-            {/* =================================================================
-                3. OMMABOP MODELLAR (Ko'p sotilgan va yaxshi buyurtma bo'lganlar)
-                ================================================================= */}
-            {popularProducts.length > 0 && (
-              <section className="section popular-section" id="ommabop">
-                <div className="section-head popular-head">
-                  <div>
-                    <span className="section-eyebrow">Ko'p sotilganlar</span>
-                    <h2>Ommabop modellar</h2>
-                  </div>
-                  <button
-                    className="link-btn popular-see-all"
-                    onClick={() => {
-                      haptic(tgRef.current, "light");
-                      openCatalog();
-                    }}
-                  >
-                    Barchasi &gt;
-                  </button>
-                </div>
-                <div className="grid popular-grid">
-                  {popularProducts.slice(0, 4).map((product) => (
-                    <ProductCard
-                      key={"pop-" + product.id}
-                      product={product}
-                      onOpen={openProduct}
-                      isLiked={wishlist.includes(product.id)}
-                      onToggleWishlist={toggleWishlist}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* =================================================================
-                4. MAHSULOTLAR KATALOGI
-                ================================================================= */}
-            <section className="section catalog-section" id="katalog">
-              <div className="section-head">
-                <div>
-                  <span className="section-eyebrow">Kolleksiya</span>
-                  <h2>
-                    {category === allCategory ? "Mahsulotlar katalogi" : `${category} katalogi`}
+            <section className="velvorn-section" id="hot-deals">
+              <div className="velvorn-section-header">
+                <div className="velvorn-header-left">
+                  <h2 className="velvorn-heading-steals">
+                    <span>Hot Style Steals Up to</span>
+                    <strong className="accent-highlight">70% Off Now</strong>
                   </h2>
                 </div>
-                <button
-                  className="link-btn"
-                  onClick={() => {
-                    haptic(tgRef.current, "light");
-                    openCatalog(category);
-                  }}
-                >
-                  Barchasini ko'rish ({homeCatalogProducts.length})
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-
-              <div className="chips">
-                {dynamicCategories.map((item) => (
+                <div className="velvorn-header-right">
+                  <p className="velvorn-subtext">
+                    Score up to 70% off premium activewear—designed for peak moves, built for style.
+                  </p>
                   <button
-                    key={item}
-                    className={category === item ? "chip is-active" : "chip"}
+                    type="button"
+                    className="btn-dark-pill"
                     onClick={() => {
-                      haptic(tgRef.current, "select");
-                      setCategory(item);
+                      haptic(tgRef.current, "light");
+                      openCatalog("Hot Style Steals");
                     }}
                   >
-                    {item}
+                    Shop Now
                   </button>
-                ))}
+                </div>
               </div>
 
-              <div className="grid">
-                {homeCatalogProducts.map((product) => (
+              <div className="velvorn-steals-grid">
+                {hotDeals.slice(0, 3).map((product) => (
                   <ProductCard
-                    key={product.id}
+                    key={"deal-" + product.id}
                     product={product}
                     onOpen={openProduct}
                     isLiked={wishlist.includes(product.id)}
                     onToggleWishlist={toggleWishlist}
                   />
                 ))}
+              </div>
+            </section>
+
+            {/* =================================================================
+                3. SECTION: SPORTSWEAR COLLECTION Banner
+                ================================================================= */}
+            <section className="velvorn-sportswear-section" aria-label="Sportswear Collection">
+              <div className="velvorn-sportswear-container">
+                <div className="velvorn-sportswear-left">
+                  <img
+                    src="/image-landing/velvorn-sportswear-banner.jpg"
+                    alt="Sportswear Collection"
+                    className="velvorn-sportswear-photo"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="velvorn-sportswear-right">
+                  <h2 className="sportswear-title">SPORTSWEAR COLLECTION</h2>
+                  <p className="sportswear-desc">
+                    Push boundaries in activewear crafted for modern movement. From workouts to wind-downs, our gear is built to move with you.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-dark-pill"
+                    onClick={() => {
+                      haptic(tgRef.current, "light");
+                      openCatalog("Sportswear");
+                    }}
+                  >
+                    Explore the Collection
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* =================================================================
+                4. SECTION: Latest Drops
+                ================================================================= */}
+            <section className="velvorn-section" id="latest-drops">
+              <div className="velvorn-section-header">
+                <div className="velvorn-header-left">
+                  <h2 className="velvorn-heading-drops">Latest Drops</h2>
+                </div>
+                <div className="velvorn-header-right">
+                  <p className="velvorn-subtext">
+                    Elevate your look with our newest arrivals. Whether you're hitting the gym, heading out for a coffee run.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-dark-pill"
+                    onClick={() => {
+                      haptic(tgRef.current, "light");
+                      openCatalog("Latest Drops");
+                    }}
+                  >
+                    Browse the Latest
+                  </button>
+                </div>
+              </div>
+
+              <div className="velvorn-drops-grid">
+                {latestDrops.slice(0, 4).map((product) => (
+                  <ProductCard
+                    key={"drop-" + product.id}
+                    product={product}
+                    onOpen={openProduct}
+                    isLiked={wishlist.includes(product.id)}
+                    onToggleWishlist={toggleWishlist}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* =================================================================
+                5. SECTION: Empower Every Move with Style (CTA Banner)
+                ================================================================= */}
+            <section className="velvorn-empower-section" aria-label="Empower Every Move with Style">
+              <div className="velvorn-empower-inner">
+                <h2 className="empower-heading">
+                  <span>Empower Every Move</span>
+                  <span>with Style</span>
+                </h2>
+                <p className="empower-subtext">
+                  Elevate confidence that transitions seamlessly from gym to street. Every piece is meticulously crafted to elevate your routine.
+                </p>
+                <button
+                  type="button"
+                  className="btn-dark-pill btn-empower-cta"
+                  onClick={() => {
+                    haptic(tgRef.current, "light");
+                    openCatalog();
+                  }}
+                >
+                  Shop the Collection
+                </button>
               </div>
             </section>
           </>
@@ -946,24 +976,86 @@ export default function App() {
         )}
       </main>
 
-      <footer className="footer" id="contact">
-        <div className="footer-inner">
-          <button
-            className="brand"
-            onClick={goHome}
-            aria-label="DREEM ROOM — bosh sahifa"
-          >
-            <Logo className="logo" />
-          </button>
-          <nav className="footer-nav" aria-label="Pastki menyu">
-            <button onClick={goHome}>Asosiy</button>
-            <button onClick={() => openCatalog()}>Katalog</button>
-            <button onClick={openContact}>Kontakt</button>
-            <a href="/admin" target="_blank" rel="noopener noreferrer">Admin panel</a>
-            <a href="mailto:hello@dreemroom.uz">hello@dreemroom.uz</a>
-          </nav>
+      <footer className="velvorn-footer" id="contact">
+        <div className="velvorn-footer-inner">
+          <div className="footer-col col-brand">
+            <button
+              className="brand brand-velvorn"
+              onClick={goHome}
+              aria-label="VELVORN"
+            >
+              <Logo />
+            </button>
+            <div className="footer-social-row">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+              </a>
+              <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+              </a>
+              <a href="mailto:hello@velvorn.com" aria-label="Email">
+                <Mail size={17} />
+              </a>
+            </div>
+          </div>
+
+          <div className="footer-col">
+            <h3 className="footer-col-title">Shop</h3>
+            <ul className="footer-links">
+              <li><button onClick={() => openCatalog("Women")}>Women</button></li>
+              <li><button onClick={() => openCatalog("Men")}>Men</button></li>
+              <li><button onClick={() => openCatalog("Accessories")}>Accessories</button></li>
+              <li><button onClick={() => openCatalog("Performance Gear")}>Performance Gear</button></li>
+              <li><button onClick={() => openCatalog()}>Collection</button></li>
+            </ul>
+          </div>
+
+          <div className="footer-col">
+            <h3 className="footer-col-title">Help</h3>
+            <ul className="footer-links">
+              <li><button onClick={openContact}>Customer support</button></li>
+              <li><button onClick={openProfile}>My Velvorn account</button></li>
+              <li><a href="#store-locator">Store locator</a></li>
+              <li><a href="#terms">Terms & privacy</a></li>
+              <li><button onClick={openContact}>Contact us</button></li>
+              <li><a href="#secure">Secure shopping</a></li>
+              <li><a href="#cookies">Cookie policy</a></li>
+              <li><a href="#cookie-pref">Cookie preferences</a></li>
+            </ul>
+          </div>
+
+          <div className="footer-col col-newsletter">
+            <h3 className="footer-col-title">Be First to know</h3>
+            <p className="footer-newsletter-text">
+              Sign up now and be the first to hear about new drops, exclusive offers, colors, and performance gear updates.
+            </p>
+            <form
+              className="footer-newsletter-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setToast("Rahmat! Yangiliklarimizga obuna bo'ldingiz.");
+              }}
+            >
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="footer-email-input"
+                required
+              />
+              <button type="submit" className="footer-submit-btn" aria-label="Subscribe">
+                <ArrowRight size={15} />
+              </button>
+            </form>
+          </div>
         </div>
-        <p className="footer-bottom">© {new Date().getFullYear()} DREEM ROOM MAYBE</p>
+
+        <div className="velvorn-footer-bottom">
+          <p>© {new Date().getFullYear()} - All Rights Reserved</p>
+        </div>
       </footer>
 
       {/* Mobil telefonlar uchun pastki suzuvchi dok navigatsiya paneli (Tabbar Dock) */}

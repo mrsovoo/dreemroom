@@ -139,9 +139,18 @@ export default function ProductCard({
         </div>
       </div>
       <div className="card-info" onClick={() => onOpen(product)}>
-        <div>
+        <div className="card-meta">
           <h3>{product.name}</h3>
-          <p id={`${product.id}-price`}>{money(product.price)}</p>
+          <div className="card-price-row">
+            <span className="card-price" id={`${product.id}-price`}>
+              {money(product.price, product.displayPrice)}
+            </span>
+            {(product.oldPrice || product.displayOldPrice) && (
+              <span className="card-old-price">
+                {product.displayOldPrice || (product.oldPrice ? money(product.oldPrice) : "")}
+              </span>
+            )}
+          </div>
         </div>
         <button
           type="button"
@@ -152,7 +161,7 @@ export default function ProductCard({
           }}
           aria-label={`${product.name} ni tanlash`}
         >
-          <Plus size={17} strokeWidth={1.7} />
+          <Plus size={15} strokeWidth={2} />
         </button>
       </div>
     </article>

@@ -7,8 +7,12 @@ export type Product = {
   id: string;
   name: string;
   price: number;
+  oldPrice?: number;
+  displayPrice?: string;
+  displayOldPrice?: string;
   images: ProductImage[];
   category: string;
+  collectionSection?: "hot-deals" | "latest-drops" | "standard";
   season?: string;
   isNew: boolean;
   isPopular?: boolean;
@@ -21,109 +25,200 @@ export type Product = {
 
 export const allCategory = "Barchasi";
 
-export const categories = [allCategory];
+export const categories = [allCategory, "Women", "Men", "Hot Style Steals", "Latest Drops", "Sportswear"];
 
 export const products: Product[] = [
   {
-    id: "dreem-kardigan-01",
-    name: "Kardigan to'plami",
-    price: 280000,
+    id: "velvorn-sports-bra-01",
+    name: "Sports Bra Top",
+    price: 30,
+    oldPrice: 45,
+    displayPrice: "$30.00",
+    displayOldPrice: "$45.00",
     images: [
-      { src: "/images/kardigan-navy.jpg", alt: "Kardigan to'plami" },
-      { src: "/images/kardigan-navy.jpg", alt: "Kardigan yon ko'rinishi" },
+      { src: "/images/velvorn-sports-bra.jpg", alt: "Sports Bra Top" }
     ],
-    category: "Kardigan",
-    season: "Kuz/Qish",
+    category: "Women",
+    collectionSection: "hot-deals",
+    season: "All Season",
     isNew: true,
     isPopular: true,
-    salesCount: 14,
-    ordersCount: 8,
-    color: "To'q ko'k (Navy)",
-    description: "Nafis va qulay bichimli ayollar kardigan to'plami. Yuqori sifatli matodan tayyorlangan.",
+    salesCount: 140,
+    ordersCount: 85,
+    color: "Black",
+    description: "Premium athletic sports bra designed for peak moves and built for style. High-support, breathable compression fabric.",
     sizes: ["XS", "S", "M", "L", "XL"],
   },
   {
-    id: "dreem-dvoyka-02",
-    name: "Klassik Dvoyka",
-    price: 320000,
+    id: "velvorn-compression-top-02",
+    name: "Compression Top",
+    price: 30,
+    oldPrice: 45,
+    displayPrice: "$30.00",
+    displayOldPrice: "$45.00",
     images: [
-      { src: "/images/dvoyka-black.jpg", alt: "Klassik Dvoyka" },
-      { src: "/images/dvoyka-black.jpg", alt: "Klassik Dvoyka yon tomoni" },
+      { src: "/images/velvorn-compression-top.jpg", alt: "Compression Top" }
     ],
-    category: "Dvoyka",
-    season: "Barchasi",
+    category: "Women",
+    collectionSection: "hot-deals",
+    season: "All Season",
     isNew: true,
     isPopular: true,
-    salesCount: 21,
-    ordersCount: 12,
-    color: "Qora",
-    description: "Har qanday vaziyat uchun mos keladigan zamonaviy dvoyka kostyum. Nafis va erkin bichim.",
+    salesCount: 120,
+    ordersCount: 72,
+    color: "Heather Gray",
+    description: "Ergonomic compression top for workouts, running and all-day active comfort.",
     sizes: ["XS", "S", "M", "L", "XL"],
   },
   {
-    id: "dreem-dvoyka-03",
-    name: "Zamonaviy Dvoyka",
-    price: 290000,
+    id: "velvorn-wind-breaker-03",
+    name: "Wind Breaker",
+    price: 52,
+    oldPrice: 70,
+    displayPrice: "$52.00",
+    displayOldPrice: "$70.00",
     images: [
-      { src: "/images/dvoyka-beige.jpg", alt: "Zamonaviy Dvoyka" },
+      { src: "/images/velvorn-wind-breaker.jpg", alt: "Wind Breaker" }
     ],
-    category: "Dvoyka",
-    season: "Bahor",
+    category: "Women",
+    collectionSection: "hot-deals",
+    season: "Autumn/Spring",
     isNew: true,
-    isPopular: false,
-    salesCount: 6,
-    ordersCount: 4,
-    color: "Och kulrang / Bej",
-    description: "Kuz va bahor mavsumi uchun qulay va zamonaviy dvoyka libosi.",
+    isPopular: true,
+    salesCount: 95,
+    ordersCount: 48,
+    color: "Dark Onyx",
+    description: "Lightweight weather-resistant windbreaker jacket tailored for modern movement.",
     sizes: ["S", "M", "L", "XL"],
   },
   {
-    id: "dreem-sport-04",
-    name: "Sport kostyum to'plami",
-    price: 260000,
+    id: "velvorn-zen-tank-04",
+    name: "Zen Tank",
+    price: 40,
+    displayPrice: "$40.00",
     images: [
-      { src: "/images/sport-set.jpg", alt: "Sport kostyumi" },
+      { src: "/images/velvorn-zen-tank.jpg", alt: "Zen Tank" }
     ],
-    category: "Sport kiyim",
-    season: "Barchasi",
-    isNew: false,
+    category: "Women",
+    collectionSection: "latest-drops",
+    season: "Summer",
+    isNew: true,
     isPopular: true,
-    salesCount: 18,
-    ordersCount: 9,
-    color: "Zangori / Moviy",
-    description: "Erkin harakatlanish uchun mo'ljallangan yengil va qulay sport kiyimi.",
+    salesCount: 88,
+    ordersCount: 40,
+    color: "Taupe / Sand",
+    description: "Buttery-soft yoga and studio tank top offering effortless freedom of movement.",
     sizes: ["XS", "S", "M", "L"],
   },
   {
-    id: "dreem-classic-05",
-    name: "Eksklyuziv Kostyum",
-    price: 380000,
+    id: "velvorn-oura-top-05",
+    name: "Oura Top",
+    price: 35,
+    displayPrice: "$35.00",
     images: [
-      { src: "/images/classic-set.jpg", alt: "Eksklyuziv Kostyum" },
+      { src: "/images/velvorn-oura-top.jpg", alt: "Oura Top" }
     ],
-    category: "Kostyum",
-    season: "Kuz/Qish",
+    category: "Women",
+    collectionSection: "latest-drops",
+    season: "Autumn/Winter",
     isNew: true,
     isPopular: false,
-    salesCount: 5,
-    ordersCount: 3,
-    color: "Qora / To'q kulrang",
-    description: "DREEM ROOM maxsus to'plami. Yuqori sifatli mato va mukammal tikilish.",
+    salesCount: 65,
+    ordersCount: 30,
+    color: "Slate Blue",
+    description: "Seamless long-sleeve performance layer with moisture-wicking technology.",
+    sizes: ["XS", "S", "M", "L"],
+  },
+  {
+    id: "velvorn-zen-top-06",
+    name: "Zen Top",
+    price: 50,
+    displayPrice: "$50.00",
+    images: [
+      { src: "/images/velvorn-zen-top.jpg", alt: "Zen Top" }
+    ],
+    category: "Women",
+    collectionSection: "latest-drops",
+    season: "All Season",
+    isNew: true,
+    isPopular: true,
+    salesCount: 78,
+    ordersCount: 39,
+    color: "Teal Forest",
+    description: "Strappy studio top providing medium support with an elegant cross-back design.",
+    sizes: ["S", "M", "L"],
+  },
+  {
+    id: "velvorn-hoodie-07",
+    name: "Hoodie",
+    price: 45,
+    displayPrice: "$45.00",
+    images: [
+      { src: "/images/velvorn-hoodie.jpg", alt: "Hoodie" }
+    ],
+    category: "Women",
+    collectionSection: "latest-drops",
+    season: "Autumn/Winter",
+    isNew: true,
+    isPopular: true,
+    salesCount: 110,
+    ordersCount: 60,
+    color: "Heather Gray",
+    description: "Cropped performance fleece hoodie with raw-edge finish and soft inner lining.",
+    sizes: ["XS", "S", "M", "L", "XL"],
+  },
+  {
+    id: "velvorn-sportswear-men-08",
+    name: "Pro Performance Long-Sleeve",
+    price: 48,
+    displayPrice: "$48.00",
+    images: [
+      { src: "/images/sport-set.jpg", alt: "Pro Performance Long-Sleeve" }
+    ],
+    category: "Men",
+    collectionSection: "standard",
+    season: "All Season",
+    isNew: true,
+    isPopular: true,
+    salesCount: 90,
+    ordersCount: 45,
+    color: "White / Black",
+    description: "Men's athletic training compression shirt with fast-drying yarn.",
     sizes: ["S", "M", "L", "XL", "XXL"],
   },
+  {
+    id: "velvorn-sportswear-pants-09",
+    name: "Active Tapered Jogger",
+    price: 55,
+    displayPrice: "$55.00",
+    images: [
+      { src: "/images/classic-set.jpg", alt: "Active Tapered Jogger" }
+    ],
+    category: "Men",
+    collectionSection: "standard",
+    season: "All Season",
+    isNew: false,
+    isPopular: true,
+    salesCount: 82,
+    ordersCount: 38,
+    color: "Onyx Black",
+    description: "Tailored athletic joggers with zippered pockets and 4-way stretch.",
+    sizes: ["S", "M", "L", "XL"],
+  }
 ];
 
 export const sizes = ["XS", "S", "M", "L", "XL"];
-export const money = (amount: number) => {
-  if (!amount) return "0 so'm";
-  let val = amount;
-  if (val > 0 && val < 1000) {
-    val = val * 1000;
+
+export const money = (amount: number, display?: string) => {
+  if (display) return display;
+  if (!amount && amount !== 0) return "$0.00";
+  if (amount < 1000) {
+    return `$${amount.toFixed(2)}`;
   }
-  return `${val.toLocaleString("ru-RU")} so'm`;
+  return `${amount.toLocaleString("ru-RU")} so'm`;
 };
 
-/** Karta ichida uchta rasmli ko'rinish uchun oldindan yuklanadigan rasmlar ro'yxati. */
+/** Karta ichida rasmli ko'rinish uchun oldindan yuklanadigan rasmlar ro'yxati. */
 export const imageSources = [
   ...new Set(
     products.flatMap((product) => product.images.map((image) => image.src)),
