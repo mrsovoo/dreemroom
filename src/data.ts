@@ -12,7 +12,6 @@ export type Product = {
   displayOldPrice?: string;
   images: ProductImage[];
   category: string;
-  collectionSection?: "hot-deals" | "latest-drops" | "standard";
   season?: string;
   isNew: boolean;
   isPopular?: boolean;
@@ -25,185 +24,134 @@ export type Product = {
 
 export const allCategory = "Barchasi";
 
-export const categories = [allCategory, "Women", "Men", "Hot Style Steals", "Latest Drops", "Sportswear"];
+export const categories = [allCategory, "Kurtka", "Sviter", "Kostyumlar", "Choponlar", "Sport kiyimlari"];
 
 export const products: Product[] = [
   {
-    id: "velvorn-sports-bra-01",
-    name: "Sports Bra Top",
-    price: 30,
-    oldPrice: 45,
-    displayPrice: "$30.00",
-    displayOldPrice: "$45.00",
-    images: [
-      { src: "/images/velvorn-sports-bra.jpg", alt: "Sports Bra Top" }
-    ],
-    category: "Women",
-    collectionSection: "hot-deals",
-    season: "All Season",
-    isNew: true,
-    isPopular: true,
-    salesCount: 140,
-    ordersCount: 85,
-    color: "Black",
-    description: "Premium athletic sports bra designed for peak moves and built for style. High-support, breathable compression fabric.",
-    sizes: ["XS", "S", "M", "L", "XL"],
-  },
-  {
-    id: "velvorn-compression-top-02",
-    name: "Compression Top",
-    price: 30,
-    oldPrice: 45,
-    displayPrice: "$30.00",
-    displayOldPrice: "$45.00",
-    images: [
-      { src: "/images/velvorn-compression-top.jpg", alt: "Compression Top" }
-    ],
-    category: "Women",
-    collectionSection: "hot-deals",
-    season: "All Season",
-    isNew: true,
-    isPopular: true,
-    salesCount: 120,
-    ordersCount: 72,
-    color: "Heather Gray",
-    description: "Ergonomic compression top for workouts, running and all-day active comfort.",
-    sizes: ["XS", "S", "M", "L", "XL"],
-  },
-  {
-    id: "velvorn-wind-breaker-03",
-    name: "Wind Breaker",
-    price: 52,
-    oldPrice: 70,
-    displayPrice: "$52.00",
-    displayOldPrice: "$70.00",
-    images: [
-      { src: "/images/velvorn-wind-breaker.jpg", alt: "Wind Breaker" }
-    ],
-    category: "Women",
-    collectionSection: "hot-deals",
-    season: "Autumn/Spring",
-    isNew: true,
-    isPopular: true,
-    salesCount: 95,
-    ordersCount: 48,
-    color: "Dark Onyx",
-    description: "Lightweight weather-resistant windbreaker jacket tailored for modern movement.",
-    sizes: ["S", "M", "L", "XL"],
-  },
-  {
-    id: "velvorn-zen-tank-04",
-    name: "Zen Tank",
-    price: 40,
-    displayPrice: "$40.00",
-    images: [
-      { src: "/images/velvorn-zen-tank.jpg", alt: "Zen Tank" }
-    ],
-    category: "Women",
-    collectionSection: "latest-drops",
-    season: "Summer",
-    isNew: true,
-    isPopular: true,
-    salesCount: 88,
-    ordersCount: 40,
-    color: "Taupe / Sand",
-    description: "Buttery-soft yoga and studio tank top offering effortless freedom of movement.",
-    sizes: ["XS", "S", "M", "L"],
-  },
-  {
-    id: "velvorn-oura-top-05",
-    name: "Oura Top",
+    id: "prod-01-hoodie-red",
+    name: "Bordo rangli xudi va shim to'plami",
     price: 35,
     displayPrice: "$35.00",
     images: [
-      { src: "/images/velvorn-oura-top.jpg", alt: "Oura Top" }
+      { src: "/images/1.png", alt: "Bordo rangli xudi va shim to'plami" }
     ],
-    category: "Women",
-    collectionSection: "latest-drops",
-    season: "Autumn/Winter",
-    isNew: true,
-    isPopular: false,
-    salesCount: 65,
-    ordersCount: 30,
-    color: "Slate Blue",
-    description: "Seamless long-sleeve performance layer with moisture-wicking technology.",
-    sizes: ["XS", "S", "M", "L"],
-  },
-  {
-    id: "velvorn-zen-top-06",
-    name: "Zen Top",
-    price: 50,
-    displayPrice: "$50.00",
-    images: [
-      { src: "/images/velvorn-zen-top.jpg", alt: "Zen Top" }
-    ],
-    category: "Women",
-    collectionSection: "latest-drops",
-    season: "All Season",
+    category: "Sport kiyimlari",
+    season: "Kuz/Qish",
     isNew: true,
     isPopular: true,
-    salesCount: 78,
-    ordersCount: 39,
-    color: "Teal Forest",
-    description: "Strappy studio top providing medium support with an elegant cross-back design.",
-    sizes: ["S", "M", "L"],
+    salesCount: 168,
+    ordersCount: 92,
+    color: "To'q qizil / Bordo",
+    description: "Yumshoq paxtali flis matodan tikilgan, qulay va keng bichimdagi zamonaviy xudi va shim to'plami.",
+    sizes: ["XS", "S", "M", "L", "XL"]
   },
   {
-    id: "velvorn-hoodie-07",
-    name: "Hoodie",
+    id: "prod-02-jacket-red",
+    name: "Milliy naqshli qavilgan kurtka (Qizil)",
+    price: 40,
+    displayPrice: "$40.00",
+    images: [
+      { src: "/images/2.png", alt: "Milliy naqshli qavilgan kurtka (Qizil)" }
+    ],
+    category: "Kurtka",
+    season: "Kuz/Bahor",
+    isNew: true,
+    isPopular: true,
+    salesCount: 145,
+    ordersCount: 84,
+    color: "Qizil / Naqshinkor",
+    description: "Nafis milliy naqshli, belbog'li va qavilgan issiq va zamonaviy ayollar kurtkasi.",
+    sizes: ["XS", "S", "M", "L", "XL"]
+  },
+  {
+    id: "prod-03-jacket-blue",
+    name: "Milliy naqshli qavilgan kurtka (Moviy)",
+    price: 40,
+    displayPrice: "$40.00",
+    images: [
+      { src: "/images/3.png", alt: "Milliy naqshli qavilgan kurtka (Moviy)" }
+    ],
+    category: "Kurtka",
+    season: "Kuz/Bahor",
+    isNew: true,
+    isPopular: true,
+    salesCount: 132,
+    ordersCount: 78,
+    color: "Moviy / Naqshinkor",
+    description: "Yorqin moviy fondagi milliy bodom naqshli, qavilgan zamonaviy va nafis kurtka.",
+    sizes: ["XS", "S", "M", "L", "XL"]
+  },
+  {
+    id: "prod-04-chapan-striped",
+    name: "Chiziqli uzun beqasam chopon",
     price: 45,
     displayPrice: "$45.00",
     images: [
-      { src: "/images/velvorn-hoodie.jpg", alt: "Hoodie" }
+      { src: "/images/4.png", alt: "Chiziqli uzun beqasam chopon" }
     ],
-    category: "Women",
-    collectionSection: "latest-drops",
-    season: "Autumn/Winter",
+    category: "Choponlar",
+    season: "Barcha fasllar",
     isNew: true,
     isPopular: true,
     salesCount: 110,
-    ordersCount: 60,
-    color: "Heather Gray",
-    description: "Cropped performance fleece hoodie with raw-edge finish and soft inner lining.",
-    sizes: ["XS", "S", "M", "L", "XL"],
+    ordersCount: 65,
+    color: "Chiziqli beqasam",
+    description: "Zamonaviy bichimdagi uzun milliy chiziqli chopon, qulay belbog' va cho'ntaklar bilan.",
+    sizes: ["S", "M", "L", "XL"]
   },
   {
-    id: "velvorn-sportswear-men-08",
-    name: "Pro Performance Long-Sleeve",
+    id: "prod-05-sweater-blue",
+    name: "Ko'k romb naqshli trikotaj sviter",
+    price: 32,
+    displayPrice: "$32.00",
+    images: [
+      { src: "/images/5.png", alt: "Ko'k romb naqshli trikotaj sviter" }
+    ],
+    category: "Sviter",
+    season: "Kuz/Qish",
+    isNew: true,
+    isPopular: true,
+    salesCount: 124,
+    ordersCount: 71,
+    color: "Ko'k / Havorang romb",
+    description: "Klassik romb naqshli, mayin va issiq trikotaj matodan to'qilgan qulay ayollar sviteri.",
+    sizes: ["XS", "S", "M", "L", "XL"]
+  },
+  {
+    id: "prod-06-suit-navy",
+    name: "To'q ko'k rangli kamarlik to'plam",
     price: 48,
     displayPrice: "$48.00",
     images: [
-      { src: "/images/sport-set.jpg", alt: "Pro Performance Long-Sleeve" }
+      { src: "/images/6.png", alt: "To'q ko'k rangli kamarlik to'plam" }
     ],
-    category: "Men",
-    collectionSection: "standard",
-    season: "All Season",
+    category: "Kostyumlar",
+    season: "Barcha fasllar",
     isNew: true,
     isPopular: true,
-    salesCount: 90,
-    ordersCount: 45,
-    color: "White / Black",
-    description: "Men's athletic training compression shirt with fast-drying yarn.",
-    sizes: ["S", "M", "L", "XL", "XXL"],
+    salesCount: 156,
+    ordersCount: 89,
+    color: "To'q ko'k",
+    description: "Zamonaviy tik yoqali, qulay zamokli va belbog'li ikki qismli nafis kostyum-shim to'plami.",
+    sizes: ["XS", "S", "M", "L", "XL"]
   },
   {
-    id: "velvorn-sportswear-pants-09",
-    name: "Active Tapered Jogger",
-    price: 55,
-    displayPrice: "$55.00",
+    id: "prod-07-suit-brown",
+    name: "Shokolad rangli kamarlik to'plam",
+    price: 48,
+    displayPrice: "$48.00",
     images: [
-      { src: "/images/classic-set.jpg", alt: "Active Tapered Jogger" }
+      { src: "/images/7.png", alt: "Shokolad rangli kamarlik to'plam" }
     ],
-    category: "Men",
-    collectionSection: "standard",
-    season: "All Season",
-    isNew: false,
+    category: "Kostyumlar",
+    season: "Barcha fasllar",
+    isNew: true,
     isPopular: true,
-    salesCount: 82,
-    ordersCount: 38,
-    color: "Onyx Black",
-    description: "Tailored athletic joggers with zippered pockets and 4-way stretch.",
-    sizes: ["S", "M", "L", "XL"],
+    salesCount: 142,
+    ordersCount: 82,
+    color: "Shokolad / Jigarrang",
+    description: "Tik yoqali, zamokli va belbog'li ikki qismli qulay va nafis shokolad rangli ayollar to'plami.",
+    sizes: ["XS", "S", "M", "L", "XL"]
   }
 ];
 
@@ -218,7 +166,6 @@ export const money = (amount: number, display?: string) => {
   return `${amount.toLocaleString("ru-RU")} so'm`;
 };
 
-/** Karta ichida rasmli ko'rinish uchun oldindan yuklanadigan rasmlar ro'yxati. */
 export const imageSources = [
   ...new Set(
     products.flatMap((product) => product.images.map((image) => image.src)),

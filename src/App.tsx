@@ -2,14 +2,12 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import {
   ArrowRight,
-  ArrowUpRight,
   Check,
   Grid2X2,
   Heart,
   Home,
   Mail,
   MapPin,
-  Menu,
   MessageCircle,
   Minus,
   Phone,
@@ -39,12 +37,12 @@ type View = "home" | "catalog";
 type CartItem = { id: string; size: string; quantity: number };
 type Profile = { name: string; phone: string };
 
-/** Hero fonidagi avtomatik almashadigan suratlar (public/image-landing/ ichida). */
+/** Hero fonidagi avtomatik almashadigan suratlar (public/image-landing/ ichidagi 4 ta banner). */
 const heroSlides = [
-  { src: "/image-landing/banner-1.jpg", mirrored: false },
-  { src: "/image-landing/banner-2.jpg", mirrored: false },
-  { src: "/image-landing/banner-3.jpg", mirrored: false },
-  { src: "/image-landing/banner-4.jpg", mirrored: false },
+  { src: "/image-landing/banner-1.jpg", alt: "DREEM ROOM • Yangi mavsum" },
+  { src: "/image-landing/banner-2.jpg", alt: "DREEM ROOM • Eksklyuziv to'plam" },
+  { src: "/image-landing/banner-3.jpg", alt: "DREEM ROOM • Premium uslub" },
+  { src: "/image-landing/banner-4.jpg", alt: "DREEM ROOM • Nafis kolleksiya" },
 ];
 
 /** O'lcham yo'riqnomasi parametrlari. */
@@ -294,41 +292,6 @@ export default function App() {
     }),
   );
 
-  // Desktop va mobil asosiy sahifadagi mahsulotlar ro'yxati (Kategoriya bo'yicha)
-  const homeCatalogProducts = useMemo(() => {
-    if (category && category !== allCategory) {
-      const q = category.toLowerCase().trim();
-      return productsList.filter(
-        (p) =>
-          (p.category && p.category.toLowerCase().trim() === q) ||
-          (p.name && p.name.toLowerCase().includes(q)),
-      );
-    }
-    return productsList;
-  }, [productsList, category]);
-
-  // VELVORN: Hot Style Steals (Up to 70% Off)
-  const hotDeals = useMemo(() => {
-    const deals = productsList.filter((p) => p.collectionSection === "hot-deals");
-    return deals.length ? deals : productsList.slice(0, 3);
-  }, [productsList]);
-
-  // VELVORN: Latest Drops (New Arrivals)
-  const latestDrops = useMemo(() => {
-    const drops = productsList.filter((p) => p.collectionSection === "latest-drops");
-    return drops.length ? drops : productsList.slice(3, 7);
-  }, [productsList]);
-
-  // Eng ko'p sotilgan va yaxshi buyurtma bo'layotgan ommabop modellar
-  const popularProducts = useMemo(() => {
-    return [...productsList].sort((a, b) => {
-      const aSales = (a.salesCount || 0) * 10 + (a.ordersCount || 0) * 5 + (a.isPopular ? 1000 : 0);
-      const bSales = (b.salesCount || 0) * 10 + (b.ordersCount || 0) * 5 + (b.isPopular ? 1000 : 0);
-      if (bSales !== aSales) return bSales - aSales;
-      return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
-    });
-  }, [productsList]);
-
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 3500);
@@ -443,6 +406,25 @@ export default function App() {
 
   function addToCart() {
     addToCartWithQuantity(productQuantity);
+  }
+
+  function handleQuickAdd(product: Product) {
+    const prodSizes = product.sizes && product.sizes.length > 0 ? product.sizes : sizes;
+    const defaultSize = prodSizes[0] || "XS";
+    setCart((current) => {
+      const existing = current.find(
+        (item) => item.id === product.id && item.size === defaultSize,
+      );
+      return existing
+        ? current.map((item) =>
+            item === existing
+              ? { ...item, quantity: Math.min(item.quantity + 1, 10) }
+              : item,
+          )
+        : [...current, { id: product.id, size: defaultSize, quantity: 1 }];
+    });
+    setToast(`${product.name} (${defaultSize}) savatga qo'shildi`);
+    haptic(tgRef.current, "success");
   }
 
   function changeQuantity(id: string, size: string, step: number) {
@@ -635,38 +617,30 @@ export default function App() {
           <button
             className="brand brand-velvorn"
             onClick={goHome}
-            aria-label="VELVORN"
+            aria-label="DREEM ROOM"
           >
             <Logo />
-          </button>
-          <button
-            type="button"
-            className="header-menu-btn"
-            onClick={() => openCatalog()}
-            aria-label="Menyu"
-          >
-            <Menu size={20} strokeWidth={1.8} />
           </button>
         </div>
 
         <nav className="nav velvorn-nav" aria-label="Asosiy menyu">
           <button
-            className={view === "catalog" && category === "Women" ? "nav-link is-active" : "nav-link"}
-            onClick={() => openCatalog("Women")}
+            className={view === "home" && !panel ? "nav-link is-active" : "nav-link"}
+            onClick={goHome}
           >
-            Women
+            Asosiy
           </button>
           <button
-            className={view === "catalog" && category === "Men" ? "nav-link is-active" : "nav-link"}
-            onClick={() => openCatalog("Men")}
-          >
-            Men
-          </button>
-          <button
-            className={view === "catalog" && category === allCategory ? "nav-link is-active" : "nav-link"}
+            className={view === "catalog" && !panel ? "nav-link is-active" : "nav-link"}
             onClick={() => openCatalog()}
           >
-            Categories
+            Katalog
+          </button>
+          <button
+            className={panel === "contact" ? "nav-link is-active" : "nav-link"}
+            onClick={openContact}
+          >
+            Kontakt
           </button>
         </nav>
 
@@ -705,11 +679,12 @@ export default function App() {
             {wishlist.length > 0 && <span className="action-badge">{wishlist.length}</span>}
           </button>
           <button
-            className={`action-btn ${panel === "cart" ? "is-active" : ""}`}
+            className={`action-btn action-cart-frame ${panel === "cart" ? "is-active" : ""}`}
             onClick={openCart}
             aria-label={`Savat, ${cartCount} ta mahsulot`}
           >
-            <ShoppingBag size={20} strokeWidth={1.6} />
+            <ShoppingBag size={18} strokeWidth={1.8} />
+            <span className="cart-frame-label">Savat</span>
             {cartCount > 0 && <span className="action-badge">{cartCount}</span>}
           </button>
         </div>
@@ -719,168 +694,180 @@ export default function App() {
         {view === "home" ? (
           <>
             {/* =================================================================
-                1. HERO SECTION: Power Meets Purpose • VELVORN
+                1. HERO SECTION: DREEM ROOM • Daily Winds For Colors (4 ta banner)
                 ================================================================= */}
-            <section className="velvorn-hero-section" aria-label="Asosiy banner">
+            <section
+              className="velvorn-hero-section"
+              aria-label="Asosiy banner"
+              onTouchStart={handleHeroTouchStart}
+              onTouchEnd={handleHeroTouchEnd}
+            >
               <div className="velvorn-hero-container">
-                <img
-                  src="/image-landing/hero-velvorn-1920.jpg"
-                  alt="VELVORN • Power Meets Purpose"
-                  className="velvorn-hero-bg"
-                  loading="eager"
-                  decoding="async"
-                />
+                {heroSlides.map((item, idx) => (
+                  <img
+                    key={item.src}
+                    src={item.src}
+                    alt={item.alt}
+                    className={`velvorn-hero-bg ${idx === slide ? "is-active" : ""}`}
+                    loading={idx === 0 ? "eager" : "lazy"}
+                    decoding="async"
+                  />
+                ))}
 
                 <div className="velvorn-hero-overlay">
-                  <button
-                    type="button"
-                    className="velvorn-cta-btn"
-                    onClick={() => {
-                      haptic(tgRef.current, "light");
-                      openCatalog();
-                    }}
-                    aria-label="Explore the Collection"
-                  >
-                    <span>Explore the Collection</span>
-                    <ArrowRight size={14} className="velvorn-cta-arrow" />
-                  </button>
+                  <div className="velvorn-hero-editorial">
+                    <div className="hero-eyebrow-row">
+                      <span className="hero-eyebrow-symbol">◈</span>
+                      <span className="hero-eyebrow-text">DREEM ROOM • COLLECTION</span>
+                    </div>
+                    <h1 className="hero-editorial-title">
+                      Daily Winds<br />For Colors
+                    </h1>
+                    <p className="hero-editorial-desc">
+                      Zamonaviy bichim va yuqori sifatli matolar. Har bir kun uchun nafislik va qulaylik uyg'unligi.
+                    </p>
+                    <button
+                      type="button"
+                      className="velvorn-cta-btn"
+                      onClick={() => {
+                        haptic(tgRef.current, "light");
+                        openCatalog();
+                      }}
+                      aria-label="To'plamni ko'rish"
+                    >
+                      <span>TO'PLAMNI KO'RISH</span>
+                      <ArrowRight size={14} className="velvorn-cta-arrow" />
+                    </button>
+                  </div>
+
+                  {/* Kapsula shaklidagi pastki indikator nuqtalari */}
+                  <div className="velvorn-hero-dots">
+                    {heroSlides.map((_, idx) => (
+                      <button
+                        key={"dot-" + idx}
+                        type="button"
+                        className={`velvorn-hero-dot ${idx === slide ? "is-active" : ""}`}
+                        onClick={() => setSlide(idx)}
+                        aria-label={`${idx + 1}-banner`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </section>
 
             {/* =================================================================
-                2. SECTION: Hot Style Steals Up to 70% Off Now
+                2. KATALOG (6 ta kartochka va BARCHASI tugmasi)
                 ================================================================= */}
-            <section className="velvorn-section" id="hot-deals">
-              <div className="velvorn-section-header">
-                <div className="velvorn-header-left">
-                  <h2 className="velvorn-heading-steals">
-                    <span>Hot Style Steals Up to</span>
-                    <strong className="accent-highlight">70% Off Now</strong>
-                  </h2>
-                </div>
-                <div className="velvorn-header-right">
-                  <p className="velvorn-subtext">
-                    Score up to 70% off premium activewear—designed for peak moves, built for style.
-                  </p>
-                  <button
-                    type="button"
-                    className="btn-dark-pill"
-                    onClick={() => {
-                      haptic(tgRef.current, "light");
-                      openCatalog("Hot Style Steals");
-                    }}
-                  >
-                    Shop Now
-                  </button>
-                </div>
+            <section className="velvorn-cards-section" id="katalog">
+              <div className="velvorn-section-header velvorn-center-header">
+                <h2 className="velvorn-heading-drops">Katalog</h2>
               </div>
-
-              <div className="velvorn-steals-grid">
-                {hotDeals.slice(0, 3).map((product) => (
+              <div className="velvorn-clean-grid grid-radiusless">
+                {productsList.slice(0, 6).map((product) => (
                   <ProductCard
-                    key={"deal-" + product.id}
+                    key={product.id}
                     product={product}
                     onOpen={openProduct}
-                    isLiked={wishlist.includes(product.id)}
-                    onToggleWishlist={toggleWishlist}
+                    onQuickAdd={handleQuickAdd}
                   />
                 ))}
               </div>
-            </section>
-
-            {/* =================================================================
-                3. SECTION: SPORTSWEAR COLLECTION Banner
-                ================================================================= */}
-            <section className="velvorn-sportswear-section" aria-label="Sportswear Collection">
-              <div className="velvorn-sportswear-container">
-                <div className="velvorn-sportswear-left">
-                  <img
-                    src="/image-landing/velvorn-sportswear-banner.jpg"
-                    alt="Sportswear Collection"
-                    className="velvorn-sportswear-photo"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="velvorn-sportswear-right">
-                  <h2 className="sportswear-title">SPORTSWEAR COLLECTION</h2>
-                  <p className="sportswear-desc">
-                    Push boundaries in activewear crafted for modern movement. From workouts to wind-downs, our gear is built to move with you.
-                  </p>
-                  <button
-                    type="button"
-                    className="btn-dark-pill"
-                    onClick={() => {
-                      haptic(tgRef.current, "light");
-                      openCatalog("Sportswear");
-                    }}
-                  >
-                    Explore the Collection
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* =================================================================
-                4. SECTION: Latest Drops
-                ================================================================= */}
-            <section className="velvorn-section" id="latest-drops">
-              <div className="velvorn-section-header">
-                <div className="velvorn-header-left">
-                  <h2 className="velvorn-heading-drops">Latest Drops</h2>
-                </div>
-                <div className="velvorn-header-right">
-                  <p className="velvorn-subtext">
-                    Elevate your look with our newest arrivals. Whether you're hitting the gym, heading out for a coffee run.
-                  </p>
-                  <button
-                    type="button"
-                    className="btn-dark-pill"
-                    onClick={() => {
-                      haptic(tgRef.current, "light");
-                      openCatalog("Latest Drops");
-                    }}
-                  >
-                    Browse the Latest
-                  </button>
-                </div>
-              </div>
-
-              <div className="velvorn-drops-grid">
-                {latestDrops.slice(0, 4).map((product) => (
-                  <ProductCard
-                    key={"drop-" + product.id}
-                    product={product}
-                    onOpen={openProduct}
-                    isLiked={wishlist.includes(product.id)}
-                    onToggleWishlist={toggleWishlist}
-                  />
-                ))}
-              </div>
-            </section>
-
-            {/* =================================================================
-                5. SECTION: Empower Every Move with Style (CTA Banner)
-                ================================================================= */}
-            <section className="velvorn-empower-section" aria-label="Empower Every Move with Style">
-              <div className="velvorn-empower-inner">
-                <h2 className="empower-heading">
-                  <span>Empower Every Move</span>
-                  <span>with Style</span>
-                </h2>
-                <p className="empower-subtext">
-                  Elevate confidence that transitions seamlessly from gym to street. Every piece is meticulously crafted to elevate your routine.
-                </p>
+              <div className="catalog-see-all-wrap">
                 <button
                   type="button"
-                  className="btn-dark-pill btn-empower-cta"
-                  onClick={() => {
-                    haptic(tgRef.current, "light");
-                    openCatalog();
-                  }}
+                  className="btn-see-all"
+                  onClick={() => openCatalog()}
+                  aria-label="Barcha mahsulotlarni ko'rish"
                 >
-                  Shop the Collection
+                  <span>BARCHASI</span>
+                  <ArrowRight size={15} />
                 </button>
+              </div>
+            </section>
+
+            {/* =================================================================
+                3. OMMABOP TO'PLAMLAR (3 talik kartochka: 10, 11, 12 rasmlari)
+                ================================================================= */}
+            <section className="velvorn-cards-section hot-sale-section" id="ommabop-toplamlar">
+              <div className="velvorn-section-header hot-sale-center-head">
+                <h2 className="velvorn-heading-drops hot-sale-title">Ommabop to'plamlar</h2>
+              </div>
+              <div className="hot-sale-grid">
+                <div className="hot-sale-card" onClick={() => openCatalog("Kurtka")}>
+                  <div className="hot-sale-media">
+                    <img
+                      src="/images/10.jpg"
+                      alt="Bahorgi to'plam"
+                      className="hot-sale-img"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="hot-sale-info">
+                    <h3 className="hot-sale-card-title">Bahorgi to'plam</h3>
+                    <button
+                      type="button"
+                      className="btn-shop-now"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCatalog("Kurtka");
+                      }}
+                    >
+                      <span>XARID QILISH</span>
+                      <span className="shop-arrow">→</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="hot-sale-card" onClick={() => openCatalog("Sviter")}>
+                  <div className="hot-sale-media">
+                    <img
+                      src="/images/11.png"
+                      alt="Prime to'plam"
+                      className="hot-sale-img"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="hot-sale-info">
+                    <h3 className="hot-sale-card-title">Prime to'plam</h3>
+                    <button
+                      type="button"
+                      className="btn-shop-now"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCatalog("Sviter");
+                      }}
+                    >
+                      <span>XARID QILISH</span>
+                      <span className="shop-arrow">→</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="hot-sale-card" onClick={() => openCatalog("Choponlar")}>
+                  <div className="hot-sale-media">
+                    <img
+                      src="/images/12.png"
+                      alt="Wonder to'plam"
+                      className="hot-sale-img"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="hot-sale-info">
+                    <h3 className="hot-sale-card-title">Wonder to'plam</h3>
+                    <button
+                      type="button"
+                      className="btn-shop-now"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCatalog("Choponlar");
+                      }}
+                    >
+                      <span>XARID QILISH</span>
+                      <span className="shop-arrow">→</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
           </>
@@ -952,8 +939,7 @@ export default function App() {
                     key={product.id}
                     product={product}
                     onOpen={openProduct}
-                    isLiked={wishlist.includes(product.id)}
-                    onToggleWishlist={toggleWishlist}
+                    onQuickAdd={handleQuickAdd}
                   />
                 ))}
               </div>
@@ -982,79 +968,78 @@ export default function App() {
             <button
               className="brand brand-velvorn"
               onClick={goHome}
-              aria-label="VELVORN"
+              aria-label="DREEM ROOM"
             >
               <Logo />
             </button>
+            <p className="footer-brand-desc">
+              Zamonaviy va premium sifatdagi kiyimlar to'plami. O'zbekiston bo'ylab tezkor va qulay yetkazib berish xizmati.
+            </p>
             <div className="footer-social-row">
+              <a href="https://t.me" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+                <MessageCircle size={17} />
+              </a>
               <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                 </svg>
               </a>
-              <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                </svg>
-              </a>
-              <a href="mailto:hello@velvorn.com" aria-label="Email">
+              <a href="mailto:info@dreemroom.uz" aria-label="Email">
                 <Mail size={17} />
               </a>
             </div>
           </div>
 
           <div className="footer-col">
-            <h3 className="footer-col-title">Shop</h3>
+            <h3 className="footer-col-title">Bo'limlar</h3>
             <ul className="footer-links">
-              <li><button onClick={() => openCatalog("Women")}>Women</button></li>
-              <li><button onClick={() => openCatalog("Men")}>Men</button></li>
-              <li><button onClick={() => openCatalog("Accessories")}>Accessories</button></li>
-              <li><button onClick={() => openCatalog("Performance Gear")}>Performance Gear</button></li>
-              <li><button onClick={() => openCatalog()}>Collection</button></li>
+              <li><button onClick={goHome}>Asosiy sahifa</button></li>
+              <li><button onClick={() => openCatalog()}>Katalog</button></li>
+              <li><button onClick={() => {
+                const el = document.getElementById("ommabop-toplamlar");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+                else openCatalog();
+              }}>Ommabop to'plamlar</button></li>
+              <li><button onClick={() => setPanel("wishlist")}>Sevimlilar</button></li>
+              <li><button onClick={openCart}>Savat</button></li>
             </ul>
           </div>
 
           <div className="footer-col">
-            <h3 className="footer-col-title">Help</h3>
+            <h3 className="footer-col-title">Mijozlarga yordam</h3>
             <ul className="footer-links">
-              <li><button onClick={openContact}>Customer support</button></li>
-              <li><button onClick={openProfile}>My Velvorn account</button></li>
-              <li><a href="#store-locator">Store locator</a></li>
-              <li><a href="#terms">Terms & privacy</a></li>
-              <li><button onClick={openContact}>Contact us</button></li>
-              <li><a href="#secure">Secure shopping</a></li>
-              <li><a href="#cookies">Cookie policy</a></li>
-              <li><a href="#cookie-pref">Cookie preferences</a></li>
+              <li><button onClick={openContact}>Biz bilan bog'lanish</button></li>
+              <li><button onClick={openProfile}>Mening profilim</button></li>
+              <li><button onClick={openContact}>Yetkazib berish va to'lov</button></li>
+              <li><button onClick={() => {
+                if (productsList[0]) openProduct(productsList[0]);
+                setShowSizeGuide(true);
+              }}>O'lchamlar jadvali</button></li>
             </ul>
           </div>
 
-          <div className="footer-col col-newsletter">
-            <h3 className="footer-col-title">Be First to know</h3>
-            <p className="footer-newsletter-text">
-              Sign up now and be the first to hear about new drops, exclusive offers, colors, and performance gear updates.
-            </p>
-            <form
-              className="footer-newsletter-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setToast("Rahmat! Yangiliklarimizga obuna bo'ldingiz.");
-              }}
-            >
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="footer-email-input"
-                required
-              />
-              <button type="submit" className="footer-submit-btn" aria-label="Subscribe">
-                <ArrowRight size={15} />
-              </button>
-            </form>
+          <div className="footer-col col-contact-info">
+            <h3 className="footer-col-title">Aloqa</h3>
+            <div className="footer-contact-items">
+              <a href="tel:+998901234567" className="footer-contact-link">
+                <Phone size={15} />
+                <span>+998 90 123 45 67</span>
+              </a>
+              <a href="https://t.me/dreemroom" target="_blank" rel="noopener noreferrer" className="footer-contact-link">
+                <MessageCircle size={15} />
+                <span>Telegram: @dreemroom</span>
+              </a>
+              <div className="footer-contact-link">
+                <MapPin size={15} />
+                <span>Toshkent shahri, O'zbekiston</span>
+              </div>
+              <p className="footer-work-hours">Ish vaqti: Har kuni 09:00 — 21:00</p>
+            </div>
           </div>
         </div>
 
         <div className="velvorn-footer-bottom">
-          <p>© {new Date().getFullYear()} - All Rights Reserved</p>
+          <p>© {new Date().getFullYear()} DREEM ROOM — Barcha huquqlar himoyalangan.</p>
         </div>
       </footer>
 
@@ -1130,161 +1115,168 @@ export default function App() {
             wide
             hideHeader={true}
           >
-            <div className="detail-screen">
-              <ProductGallery
-                product={activeProduct}
-                onClose={() => setPanel(null)}
-                haptic={(kind: "light" | "success" | "select") =>
-                  haptic(tgRef.current, kind)
-                }
-              />
-              <div className="detail-bottom-card">
-                {/* 2-rasm: Yangi/Ommabop va Yetkazib berish bepul nishonlari */}
-                <div className="detail-badges-row">
-                  {activeProduct.isPopular || (activeProduct.salesCount && activeProduct.salesCount > 0) ? (
-                    <span className="badge-pill badge-pill-popular">⭐ Ommabop model</span>
-                  ) : activeProduct.isNew ? (
-                    <span className="badge-pill badge-pill-new">Yangi</span>
-                  ) : null}
-                  <span className="badge-pill badge-pill-discount">Yetkazib berish bepul</span>
+            <div className="detail-screen-minimal">
+              <button
+                type="button"
+                className="detail-close-btn"
+                onClick={() => setPanel(null)}
+                aria-label="Yopish"
+              >
+                <X size={20} strokeWidth={1.5} />
+              </button>
+
+              <div className="detail-left-col">
+                <ProductGallery
+                  product={activeProduct}
+                  haptic={(kind: "light" | "success" | "select") =>
+                    haptic(tgRef.current, kind)
+                  }
+                />
+              </div>
+
+              <div className="detail-right-col">
+                <div className="detail-brand-eyebrow">
+                  <span>DREEM ROOM • {(activeProduct.category || "Kolleksiya").toUpperCase()}</span>
                 </div>
 
-                {/* 2-rasm: Mahsulot nomi, toifasi/rangi va sevimli (heart) tugmasi */}
-                <div className="detail-title-row">
-                  <div className="detail-title-col">
-                    <h1 className="detail-product-name">{activeProduct.name}</h1>
-                    <p className="detail-product-category">
-                      Ayollar to'plami · {activeProduct.color}
-                    </p>
+                <div className="detail-header-block">
+                  <h1 className="detail-minimal-title">{activeProduct.name}</h1>
+                  <p className="detail-minimal-price">
+                    {money(activeProduct.price, activeProduct.displayPrice)}
+                  </p>
+                </div>
+
+                {activeProduct.description && (
+                  <p className="detail-minimal-desc">{activeProduct.description}</p>
+                )}
+
+                <div className="detail-meta-row">
+                  <span className="detail-meta-label">Rang:</span>
+                  <span className="detail-meta-value">{activeProduct.color}</span>
+                </div>
+
+                {/* O'lcham tanlash */}
+                <div className="detail-size-section">
+                  <div className="detail-size-header">
+                    <span className="detail-size-label">O'LCHAM</span>
+                    <button
+                      type="button"
+                      className="detail-size-guide-btn"
+                      onClick={() => setShowSizeGuide(!showSizeGuide)}
+                    >
+                      O'lcham jadvali
+                    </button>
                   </div>
+
+                  <div className="detail-sizes-grid">
+                    {(activeProduct.sizes && activeProduct.sizes.length > 0
+                      ? activeProduct.sizes
+                      : sizes
+                    ).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`size-square-btn ${selectedSize === size ? "is-active" : ""}`}
+                        onClick={() => {
+                          setSelectedSize(size);
+                          setSizeError(false);
+                          haptic(tgRef.current, "select");
+                        }}
+                        aria-pressed={selectedSize === size}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  {sizeError && (
+                    <p className="detail-size-error" role="alert">
+                      Iltimos, o'lchamni tanlang.
+                    </p>
+                  )}
+
+                  {showSizeGuide && (
+                    <div className="detail-size-guide-box">
+                      <p className="size-guide-title">
+                        <strong>{selectedSize || "XS"}</strong> o'lchami tavsiyasi:
+                      </p>
+                      <div className="size-guide-row">
+                        <span>Bo'y</span>
+                        <strong>{sizeGuideData[selectedSize || "XS"]?.height || "Universal"}</strong>
+                      </div>
+                      <div className="size-guide-row">
+                        <span>Vazn</span>
+                        <strong>{sizeGuideData[selectedSize || "XS"]?.weight || "Universal"}</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Miqdor va Savatga qo'shish */}
+                <div className="detail-actions-row">
+                  <div className="detail-qty-stepper">
+                    <button
+                      type="button"
+                      className="qty-step-btn"
+                      onClick={() => {
+                        setProductQuantity((q) => Math.max(1, q - 1));
+                        haptic(tgRef.current, "light");
+                      }}
+                      aria-label="Kamaytirish"
+                    >
+                      <Minus size={14} strokeWidth={1.8} />
+                    </button>
+                    <span className="qty-step-val">{productQuantity}</span>
+                    <button
+                      type="button"
+                      className="qty-step-btn"
+                      onClick={() => {
+                        setProductQuantity((q) => Math.min(10, q + 1));
+                        haptic(tgRef.current, "light");
+                      }}
+                      aria-label="Ko'paytirish"
+                    >
+                      <Plus size={14} strokeWidth={1.8} />
+                    </button>
+                  </div>
+
                   <button
                     type="button"
-                    className={`detail-heart-btn ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
+                    className="detail-add-btn"
+                    onClick={() => addToCartWithQuantity(productQuantity)}
+                  >
+                    <span>SAVATGA QO'SHISH</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`detail-wish-btn ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
                     onClick={() => toggleWishlist(activeProduct.id)}
                     aria-label="Sevimlilar"
                   >
                     <Heart
-                      size={22}
+                      size={18}
                       strokeWidth={1.8}
-                      fill={wishlist.includes(activeProduct.id) ? "var(--brand, #403D4F)" : "none"}
-                      color={wishlist.includes(activeProduct.id) ? "var(--brand, #403D4F)" : "#1e1e24"}
+                      fill={wishlist.includes(activeProduct.id) ? "#111116" : "none"}
+                      color="#111116"
                     />
                   </button>
                 </div>
 
-                {/* 2-rasm: O'lchamni tanlang va O'lcham jadvali (Size Guide) havolasi */}
-                <div className="detail-size-header">
-                  <span className="detail-size-title">O'lchamni tanlang</span>
-                  <button
-                    type="button"
-                    className="detail-size-guide-link"
-                    onClick={() => setShowSizeGuide(!showSizeGuide)}
-                  >
-                    O'lcham jadvali
-                  </button>
-                </div>
-
-                {/* 2-rasm: Dumaloq/pill shakldagi o'lcham tugmalari */}
-                <div className="detail-sizes-circles">
-                  {(activeProduct.sizes && activeProduct.sizes.length > 0
-                    ? activeProduct.sizes
-                    : sizes
-                  ).map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      className={`size-circle ${selectedSize === size ? "is-active" : ""}`}
-                      onClick={() => {
-                        setSelectedSize(size);
-                        setSizeError(false);
-                        haptic(tgRef.current, "select");
-                      }}
-                      aria-pressed={selectedSize === size}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-                {sizeError && (
-                  <p className="error" role="alert">
-                    Iltimos, o'lchamni tanlang.
-                  </p>
-                )}
-
-                {/* O'lcham jadvali tavsiyasi (ochilganda) */}
-                {showSizeGuide && (
-                  <div className="size-guide">
-                    <p className="size-guide-title">
-                      <strong>{selectedSize || "XS"}</strong> o'lchami tavsiyasi:
-                    </p>
-                    <div className="size-guide-row">
-                      <span className="size-guide-label">Bo'y</span>
-                      <strong className="size-guide-val">
-                        {sizeGuideData[selectedSize || "XS"]?.height || "Universal"}
-                      </strong>
-                    </div>
-                    <div className="size-guide-row">
-                      <span className="size-guide-label">Vazn</span>
-                      <strong className="size-guide-val">
-                        {sizeGuideData[selectedSize || "XS"]?.weight || "Universal"}
-                      </strong>
-                    </div>
+                {/* Minimalist ma'lumotlar */}
+                <div className="detail-perks">
+                  <div className="detail-perk-item">
+                    <span>◈</span>
+                    <span>100% original sifat va milliy dizayn</span>
                   </div>
-                )}
-
-                {/* 2-rasm: Miqdor [ - ] 1 [ + ] va Jami narx bloki */}
-                <div className="detail-qty-price-row">
-                  <div className="detail-qty-block">
-                    <span className="detail-row-caption">Miqdori</span>
-                    <div className="qty-capsule">
-                      <button
-                        type="button"
-                        className="qty-capsule-btn"
-                        onClick={() => {
-                          setProductQuantity((q) => Math.max(1, q - 1));
-                          haptic(tgRef.current, "light");
-                        }}
-                        aria-label="Kamaytirish"
-                      >
-                        <Minus size={15} strokeWidth={2.4} />
-                      </button>
-                      <span className="qty-capsule-val">{productQuantity}</span>
-                      <button
-                        type="button"
-                        className="qty-capsule-btn"
-                        onClick={() => {
-                          setProductQuantity((q) => Math.min(10, q + 1));
-                          haptic(tgRef.current, "light");
-                        }}
-                        aria-label="Ko'paytirish"
-                      >
-                        <Plus size={15} strokeWidth={2.4} />
-                      </button>
-                    </div>
+                  <div className="detail-perk-item">
+                    <span>◈</span>
+                    <span>O'zbekiston bo'ylab tezkor yetkazib berish</span>
                   </div>
-
-                  <div className="detail-price-block">
-                    <span className="detail-row-caption">Jami narx</span>
-                    <div className="detail-price-values">
-                      <span className="detail-old-amount">
-                        {money(Math.round(activeProduct.price * 1.25 * productQuantity))}
-                      </span>
-                      <strong className="detail-new-amount">
-                        {money(activeProduct.price * productQuantity)}
-                      </strong>
-                    </div>
+                  <div className="detail-perk-item">
+                    <span>◈</span>
+                    <span>Qulay to'lov: Payme, Click yoki kuryerga naqd</span>
                   </div>
                 </div>
-
-                {/* 2-rasm: Katta qora to'liq kenglikdagi savatga qo'shish pill tugmasi */}
-                <button
-                  type="button"
-                  className="btn-add-bag"
-                  onClick={() => addToCartWithQuantity(productQuantity)}
-                >
-                  <ShoppingBag size={19} strokeWidth={1.8} />
-                  <span>Savatga qo'shish</span>
-                </button>
               </div>
             </div>
           </Sheet>
@@ -1366,7 +1358,7 @@ export default function App() {
           <Sheet key="contact" title="Biz bilan bog'lanish" onClose={() => setPanel(null)}>
             <div className="contact-sheet">
               <div className="contact-card">
-                <h3>DREEM ROOM MAYBE</h3>
+                <h3>DREEM ROOM</h3>
                 <p className="contact-desc">
                   Savollaringiz, takliflaringiz yoki buyurtma bo'yicha yordam kerak bo'lsa, biz bilan bog'laning.
                 </p>
@@ -1378,18 +1370,18 @@ export default function App() {
                       <span>+998 90 123 45 67</span>
                     </div>
                   </a>
-                  <a href="https://t.me/dreemroom_bot" target="_blank" rel="noreferrer" className="contact-item">
+                  <a href="https://t.me/dreemroom" target="_blank" rel="noreferrer" className="contact-item">
                     <span className="contact-icon"><MessageCircle size={18} /></span>
                     <div>
-                      <strong>Telegram Bot (Buyurtma)</strong>
-                      <span>@dreemroom_bot</span>
+                      <strong>Telegram (Qo'llab-quvvatlash)</strong>
+                      <span>@dreemroom</span>
                     </div>
                   </a>
-                  <a href="mailto:hello@dreemroom.uz" className="contact-item">
+                  <a href="mailto:info@dreemroom.uz" className="contact-item">
                     <span className="contact-icon"><Mail size={18} /></span>
                     <div>
                       <strong>Elektron pochta</strong>
-                      <span>hello@dreemroom.uz</span>
+                      <span>info@dreemroom.uz</span>
                     </div>
                   </a>
                   <div className="contact-item">

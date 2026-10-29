@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { Heart, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { money, type Product } from "../data";
 
 type Props = {
@@ -7,161 +6,58 @@ type Props = {
   onOpen: (product: Product) => void;
   isLiked?: boolean;
   onToggleWishlist?: (id: string) => void;
+  onQuickAdd?: (product: Product) => void;
 };
 
-/** Mahsulot kartasi: uchta rakursi surilishi/hoversi bilan ko'riladi. */
+/** Minimalist moda kartochkasi — xuddi namunadagi toza va to'g'ri burchakli kartochka (Zen Tank uslubi) */
 export default function ProductCard({
   product,
   onOpen,
-  isLiked = false,
-  onToggleWishlist,
+  onQuickAdd,
 }: Props) {
-  const [index, setIndex] = useState(0);
-  const timers = useRef<number[]>([]);
-
-  useEffect(
-    () => () => {
-      timers.current.forEach((timer) => window.clearTimeout(timer));
-    },
-    [],
-  );
-
   const fallbackSvg =
-    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22' letter-spacing='2'>DREEM ROOM</text></svg>";
+    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='700' fill='%23eae6df'><rect width='600' height='700' fill='%23eae6df'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%238c899a' font-family='sans-serif' font-size='20'>DREEM ROOM</text></svg>";
 
-  const cardImages =
-    product.images && product.images.length > 0
-      ? product.images
-      : [{ src: fallbackSvg, alt: product.name }];
-
-  function previewSide(direction: number) {
-    setIndex(
-      (current) =>
-        (current + direction + cardImages.length) % cardImages.length,
-    );
-  }
-
-  function startAuto() {
-    clearAuto();
-    timers.current = cardImages
-      .slice(1)
-      .map((_, i) => window.setTimeout(() => setIndex(i + 1), 430 * (i + 1)));
-  }
-
-  function clearAuto() {
-    timers.current.forEach((timer) => window.clearTimeout(timer));
-    timers.current = [];
-  }
+  const mainImage = product.images?.[0]?.src || fallbackSvg;
 
   return (
-    <article className="card">
-      <div
-        className="card-media"
-        onPointerEnter={() => {
-          if (window.matchMedia("(hover: hover)").matches) startAuto();
-        }}
-        onPointerLeave={() => {
-          clearAuto();
-          setIndex(0);
-        }}
-      >
-        <button
-          className="card-open"
-          onClick={() => onOpen(product)}
-          aria-label={`${product.name} — batafsil`}
-          aria-describedby={`${product.id}-price`}
-        >
-          {cardImages.map((image, i) => (
-            <img
-              key={image.src + image.alt + i}
-              src={image.src}
-              alt=""
-              loading="lazy"
-              width="640"
-              height="800"
-              className={i === index ? "is-active" : ""}
-              aria-hidden={i !== index}
-              title={image.alt}
-              onError={(e) => {
-                const target = e.currentTarget;
-                if (!target.src.startsWith("data:image/svg+xml")) {
-                  target.src = fallbackSvg;
-                }
-              }}
-            />
-          ))}
-        </button>
-
-        {/* 1-rasmdagi chap yuqori qismdagi dumaloq sevimli (heart) tugmasi */}
-        <button
-          type="button"
-          className={`card-wishlist-circle ${isLiked ? "is-liked" : ""}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleWishlist?.(product.id);
+    <article className="card velvorn-clean-card" onClick={() => onOpen(product)}>
+      <div className="card-media velvorn-card-media">
+        <img
+          src={mainImage}
+          alt={product.name}
+          loading="lazy"
+          className="velvorn-card-img"
+          onError={(e) => {
+            const target = e.currentTarget;
+            if (!target.src.startsWith("data:image/svg+xml")) {
+              target.src = fallbackSvg;
+            }
           }}
-          aria-label={isLiked ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
-        >
-          <Heart
-            size={17}
-            strokeWidth={1.8}
-            fill={isLiked ? "var(--brand, #403D4F)" : "none"}
-            color={isLiked ? "var(--brand, #403D4F)" : "#1e1e24"}
-          />
-        </button>
-
-        {product.isPopular || (product.salesCount && product.salesCount > 0) ? (
-          <span className="card-flag card-flag-popular">Ommabop</span>
-        ) : product.isNew ? (
-          <span className="card-flag">Yangi</span>
-        ) : null}
-        <span className="card-dots" aria-hidden="true">
-          {cardImages.map((image, i) => (
-            <span
-              key={image.src + i}
-              className={i === index ? "is-active" : ""}
-            />
-          ))}
-        </span>
-        <div className="card-navigation" aria-hidden="false">
-          <button
-            type="button"
-            tabIndex={-1}
-            aria-label={`${product.name} oldingi rakursi`}
-            onClick={() => previewSide(-1)}
-          />
-          <button
-            type="button"
-            tabIndex={-1}
-            aria-label={`${product.name} keyingi rakursi`}
-            onClick={() => previewSide(1)}
-          />
-        </div>
+        />
       </div>
-      <div className="card-info" onClick={() => onOpen(product)}>
-        <div className="card-meta">
-          <h3>{product.name}</h3>
-          <div className="card-price-row">
-            <span className="card-price" id={`${product.id}-price`}>
-              {money(product.price, product.displayPrice)}
-            </span>
-            {(product.oldPrice || product.displayOldPrice) && (
-              <span className="card-old-price">
-                {product.displayOldPrice || (product.oldPrice ? money(product.oldPrice) : "")}
-              </span>
-            )}
-          </div>
+
+      <div className="card-info velvorn-card-info">
+        <div className="velvorn-card-text">
+          <h3 className="velvorn-card-title">{product.name}</h3>
+          <p className="velvorn-card-price" id={`${product.id}-price`}>
+            {money(product.price, product.displayPrice)}
+          </p>
         </div>
         <button
           type="button"
-          className="card-add"
+          className="velvorn-card-plus-btn"
           onClick={(e) => {
             e.stopPropagation();
-            onOpen(product);
+            if (onQuickAdd) {
+              onQuickAdd(product);
+            } else {
+              onOpen(product);
+            }
           }}
-          aria-label={`${product.name} ni tanlash`}
+          aria-label={`${product.name} savatga qo'shish`}
         >
-          <Plus size={15} strokeWidth={2} />
+          <Plus size={15} strokeWidth={1.8} />
         </button>
       </div>
     </article>

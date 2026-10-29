@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
@@ -23,23 +23,6 @@ export default function Sheet({
   const close = useRef(onClose);
   close.current = onClose;
   const titleId = useId();
-
-  const [isMobile, setIsMobile] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      (window.matchMedia("(max-width: 800px)").matches ||
-        document.body.classList.contains("in-telegram")),
-  );
-
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 800px)");
-    const sync = () =>
-      setIsMobile(
-        query.matches || document.body.classList.contains("in-telegram"),
-      );
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -103,7 +86,7 @@ export default function Sheet({
       <div className="overlay-backdrop" onClick={onClose} aria-hidden="true" />
       <motion.section
         ref={dialog}
-        className={`dialog ${wide ? "dialog-wide" : ""} ${isMobile && hideHeader ? "dialog-no-head" : ""}`.trim()}
+        className={`dialog ${wide ? "dialog-wide" : ""} ${hideHeader ? "dialog-no-head" : ""}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -113,7 +96,7 @@ export default function Sheet({
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
       >
-        {!(isMobile && hideHeader) && (
+        {!hideHeader && (
           <header className="dialog-head">
             <h2 id={titleId}>{title}</h2>
             <button className="dialog-close" aria-label="Oynani yopish" onClick={onClose}>
