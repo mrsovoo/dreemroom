@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { Heart, Plus } from "lucide-react";
 import { money, type Product } from "../data";
 
 type Props = {
   product: Product;
   onOpen: (product: Product) => void;
+  isLiked?: boolean;
+  onToggleWishlist?: (id: string) => void;
 };
 
 /** Mahsulot kartasi: uchta rakursi surilishi/hoversi bilan ko'riladi. */
-export default function ProductCard({ product, onOpen }: Props) {
+export default function ProductCard({
+  product,
+  onOpen,
+  isLiked = false,
+  onToggleWishlist,
+}: Props) {
   const [index, setIndex] = useState(0);
   const timers = useRef<number[]>([]);
 
@@ -84,6 +91,25 @@ export default function ProductCard({ product, onOpen }: Props) {
             />
           ))}
         </button>
+
+        {/* 1-rasmdagi chap yuqori qismdagi dumaloq sevimli (heart) tugmasi */}
+        <button
+          type="button"
+          className={`card-wishlist-circle ${isLiked ? "is-liked" : ""}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleWishlist?.(product.id);
+          }}
+          aria-label={isLiked ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+        >
+          <Heart
+            size={17}
+            strokeWidth={1.8}
+            fill={isLiked ? "var(--brand, #403D4F)" : "none"}
+            color={isLiked ? "var(--brand, #403D4F)" : "#1e1e24"}
+          />
+        </button>
+
         {product.isNew && <span className="card-flag">Yangi</span>}
         <span className="card-dots" aria-hidden="true">
           {cardImages.map((image, i) => (
@@ -108,14 +134,18 @@ export default function ProductCard({ product, onOpen }: Props) {
           />
         </div>
       </div>
-      <div className="card-info">
+      <div className="card-info" onClick={() => onOpen(product)}>
         <div>
           <h3>{product.name}</h3>
           <p id={`${product.id}-price`}>{money(product.price)}</p>
         </div>
         <button
+          type="button"
           className="card-add"
-          onClick={() => onOpen(product)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(product);
+          }}
           aria-label={`${product.name} ni tanlash`}
         >
           <Plus size={17} strokeWidth={1.7} />

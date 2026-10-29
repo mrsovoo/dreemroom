@@ -130,6 +130,8 @@ export default function App() {
   const [activeProduct, setActiveProduct] = useState<Product | null>(products[0] || null);
   const [selectedSize, setSelectedSize] = useState("");
   const [sizeError, setSizeError] = useState(false);
+  const [productQuantity, setProductQuantity] = useState(1);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [toast, setToast] = useState("");
   const [slide, setSlide] = useState(0);
@@ -350,6 +352,8 @@ export default function App() {
     const prodSizes = product.sizes && product.sizes.length > 0 ? product.sizes : sizes;
     setSelectedSize(prodSizes[0] || "XS");
     setSizeError(false);
+    setProductQuantity(1);
+    setShowSizeGuide(false);
     setPanel("product");
   }
 
@@ -367,7 +371,7 @@ export default function App() {
     });
   }
 
-  function addToCart() {
+  function addToCartWithQuantity(qty = 1) {
     if (!activeProduct) return;
     if (!selectedSize) {
       setSizeError(true);
@@ -380,16 +384,21 @@ export default function App() {
       return existing
         ? current.map((item) =>
             item === existing
-              ? { ...item, quantity: Math.min(item.quantity + 1, 10) }
+              ? { ...item, quantity: Math.min(item.quantity + qty, 10) }
               : item,
           )
         : [
             ...current,
-            { id: activeProduct.id, size: selectedSize, quantity: 1 },
+            { id: activeProduct.id, size: selectedSize, quantity: qty },
           ];
     });
     setPanel(null);
-    setToast(`${activeProduct.name} savatga qo'shildi`);
+    setToast(`${activeProduct.name} (${qty} dona) savatga qo'shildi`);
+    haptic(tgRef.current, "success");
+  }
+
+  function addToCart() {
+    addToCartWithQuantity(productQuantity);
   }
 
   function changeQuantity(id: string, size: string, step: number) {
@@ -663,114 +672,135 @@ export default function App() {
       <main id="main">
         {view === "home" ? (
           <>
+            {/* 1-rasm: Nike ilovasi uslubidagi qorong'i Featured Card banner */}
             <section
-              className="hero"
+              className="hero-featured-section"
               onTouchStart={handleHeroTouchStart}
               onTouchEnd={handleHeroTouchEnd}
             >
-              <div className="hero-slides" aria-hidden="true">
-                {heroSlides.map((item, index) => (
-                  <img
-                    key={item.src}
-                    src={item.src}
-                    alt=""
-                    decoding="async"
-                    loading={index === 0 ? "eager" : "lazy"}
-                    fetchPriority={index === 0 ? "high" : "low"}
-                    className={`${index === slide ? "is-active" : ""} ${item.mirrored ? "is-mirrored" : ""}`.trim()}
-                    width="1920"
-                    height="1080"
-                  />
-                ))}
-              </div>
-              <div
-                className="hero-dots"
-                role="tablist"
-                aria-label="Hero suratlari"
-              >
-                {heroSlides.map((item, index) => (
-                  <button
-                    key={item.src}
-                    role="tab"
-                    aria-selected={index === slide}
-                    aria-label={`${index + 1}-surat`}
-                    className={
-                      index === slide ? "hero-dot is-active" : "hero-dot"
-                    }
-                    onClick={() => setSlide(index)}
-                  />
-                ))}
-              </div>
-              <div className="hero-inner">
-                <motion.div
-                  className="hero-card"
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.65 }}
-                >
-                  <p className="hero-tag">Ayollar uchun</p>
-                  <h1>
-                    Kuch maqsad
-                    <br />
-                    bilan uchrashadi
+              <div className="hero-featured-card">
+                <div className="hero-featured-left">
+                  <span className="hero-featured-eyebrow">DREEM ROOM</span>
+                  <h1 className="hero-featured-title">
+                    Yangi mavsum ayollar to'plami
                   </h1>
-                  <p className="hero-text">
-                    Harakat erkinligi uchun to'qilgan sport kiyimlari —
-                    mashg'ulotdan kundalik hayotgacha.
+                  <p className="hero-featured-sub">
+                    Kuch va nafislik uyg'unligi
                   </p>
-                  <div className="hero-actions">
-                    <button
-                      className="btn btn-light"
-                      onClick={() => openCatalog()}
-                    >
-                      Katalog
-                      <ArrowRight size={16} />
-                    </button>
-                    <button
-                      className="btn btn-ghost"
-                      onClick={openContact}
-                    >
-                      Kontakt
-                    </button>
-                  </div>
-                </motion.div>
-              </div>
-            </section>
 
-            {productsList.length > 0 && (
-              <section className="section" aria-labelledby="catalog-categories-title">
-                <div className="section-head">
-                  <div>
-                    <span className="section-eyebrow">TO'PLAMLAR</span>
-                    <h2 id="catalog-categories-title">Kiyimlar Katalogi</h2>
+                  {/* 3 ta mini kvadrat ko'rinishidagi mahsulot suratlari */}
+                  <div className="hero-mini-previews">
+                    {productsList.slice(0, 3).map((p, idx) => (
+                      <button
+                        key={p.id + idx}
+                        type="button"
+                        className="hero-mini-thumb"
+                        onClick={() => openProduct(p)}
+                        aria-label={p.name}
+                      >
+                        <img
+                          src={p.images?.[0]?.src || heroSlides[idx % heroSlides.length].src}
+                          alt=""
+                          loading="lazy"
+                        />
+                      </button>
+                    ))}
                   </div>
-                  <button className="link-btn" onClick={() => openCatalog()}>
-                    Barchasi
-                    <ArrowUpRight size={14} />
+
+                  <button
+                    type="button"
+                    className="hero-featured-btn"
+                    onClick={() => openCatalog()}
+                  >
+                    <span>Katalog</span>
+                    <span className="hero-chevron">❯❯</span>
                   </button>
                 </div>
 
-                <div className="chips" aria-label="Kategoriyalar" style={{ marginBottom: "22px" }}>
-                  {dynamicCategories.map((item) => (
-                    <button
-                      key={item}
-                      className={category === item ? "chip is-active" : "chip"}
-                      onClick={() => {
-                        haptic(tgRef.current, "select");
-                        openCatalog(item);
-                      }}
-                    >
-                      {item}
-                    </button>
-                  ))}
+                <div className="hero-featured-right">
+                  <img
+                    src={heroSlides[slide].src}
+                    alt="Model"
+                    className="hero-featured-model"
+                  />
+                </div>
+              </div>
+
+              {/* 1-rasm: Kapsula shaklidagi nuqtalar indikatori (— • •) */}
+              <div className="hero-capsule-dots">
+                {heroSlides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`capsule-dot ${idx === slide ? "is-active" : ""}`}
+                    onClick={() => setSlide(idx)}
+                    aria-label={`${idx + 1}-slayd`}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* 1-rasm: 1-bo'lim — Ommabop modellar (New Popular Item) */}
+            {productsList.length > 0 && (
+              <section className="section section-popular" aria-labelledby="popular-title">
+                <div className="section-head">
+                  <div>
+                    <h2 id="popular-title">Ommabop modellar</h2>
+                  </div>
+                  <button className="link-btn" onClick={() => openCatalog()}>
+                    Barchasi &gt;
+                  </button>
                 </div>
 
                 <div className="grid">
-                  {productsList.map((product) => (
+                  {productsList.slice(0, 2).map((product) => (
                     <ProductCard
                       key={product.id}
                       product={product}
                       onOpen={openProduct}
+                      isLiked={wishlist.includes(product.id)}
+                      onToggleWishlist={toggleWishlist}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 1-rasm: Gorizontal suriladigan kategoriya chipslari */}
+            <div className="section-chips-carousel" aria-label="Kategoriyalar">
+              <div className="chips chips-scrollable">
+                {dynamicCategories.map((item) => (
+                  <button
+                    key={item}
+                    className={category === item ? "chip is-active" : "chip"}
+                    onClick={() => {
+                      haptic(tgRef.current, "select");
+                      openCatalog(item);
+                    }}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 1-rasm: 2-bo'lim — Yangi to'plam */}
+            {productsList.length > 0 && (
+              <section className="section section-new-collection" aria-labelledby="new-collection-title">
+                <div className="section-head">
+                  <div>
+                    <h2 id="new-collection-title">Yangi to'plam</h2>
+                  </div>
+                </div>
+
+                <div className="grid">
+                  {(productsList.length > 2 ? productsList.slice(2) : productsList).map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onOpen={openProduct}
+                      isLiked={wishlist.includes(product.id)}
+                      onToggleWishlist={toggleWishlist}
                     />
                   ))}
                 </div>
@@ -844,6 +874,8 @@ export default function App() {
                     key={product.id}
                     product={product}
                     onOpen={openProduct}
+                    isLiked={wishlist.includes(product.id)}
+                    onToggleWishlist={toggleWishlist}
                   />
                 ))}
               </div>
@@ -972,45 +1004,68 @@ export default function App() {
             title={activeProduct.name}
             onClose={() => setPanel(null)}
             wide
+            hideHeader={true}
           >
-            <div className="detail">
+            <div className="detail-screen">
               <ProductGallery
                 product={activeProduct}
+                onClose={() => setPanel(null)}
                 haptic={(kind: "light" | "success" | "select") =>
                   haptic(tgRef.current, kind)
                 }
               />
-              <div className="detail-body">
-                <div className="detail-header-row">
-                  <p className="detail-meta">
-                    {activeProduct.category} · {activeProduct.color}
-                  </p>
+              <div className="detail-bottom-card">
+                {/* 2-rasm: Yangi va Yetkazib berish bepul nishonlari */}
+                <div className="detail-badges-row">
+                  <span className="badge-pill badge-pill-new">Yangi</span>
+                  <span className="badge-pill badge-pill-discount">Yetkazib berish bepul</span>
+                </div>
+
+                {/* 2-rasm: Mahsulot nomi, toifasi/rangi va sevimli (heart) tugmasi */}
+                <div className="detail-title-row">
+                  <div className="detail-title-col">
+                    <h1 className="detail-product-name">{activeProduct.name}</h1>
+                    <p className="detail-product-category">
+                      Ayollar to'plami · {activeProduct.color}
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    className={`detail-like-btn ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
+                    className={`detail-heart-btn ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
                     onClick={() => toggleWishlist(activeProduct.id)}
                     aria-label="Sevimlilar"
                   >
                     <Heart
-                      size={18}
+                      size={22}
                       strokeWidth={1.8}
-                      fill={wishlist.includes(activeProduct.id) ? "var(--brand)" : "none"}
+                      fill={wishlist.includes(activeProduct.id) ? "var(--brand, #403D4F)" : "none"}
+                      color={wishlist.includes(activeProduct.id) ? "var(--brand, #403D4F)" : "#1e1e24"}
                     />
                   </button>
                 </div>
-                <p className="detail-price">{money(activeProduct.price)}</p>
-                <p className="detail-text">{activeProduct.description}</p>
-                <p className="detail-label">O'lchamni tanlang</p>
-                <div className="sizes">
+
+                {/* 2-rasm: O'lchamni tanlang va O'lcham jadvali (Size Guide) havolasi */}
+                <div className="detail-size-header">
+                  <span className="detail-size-title">O'lchamni tanlang</span>
+                  <button
+                    type="button"
+                    className="detail-size-guide-link"
+                    onClick={() => setShowSizeGuide(!showSizeGuide)}
+                  >
+                    O'lcham jadvali
+                  </button>
+                </div>
+
+                {/* 2-rasm: Dumaloq/pill shakldagi o'lcham tugmalari */}
+                <div className="detail-sizes-circles">
                   {(activeProduct.sizes && activeProduct.sizes.length > 0
                     ? activeProduct.sizes
                     : sizes
                   ).map((size) => (
                     <button
                       key={size}
-                      className={
-                        selectedSize === size ? "size is-active" : "size"
-                      }
+                      type="button"
+                      className={`size-circle ${selectedSize === size ? "is-active" : ""}`}
                       onClick={() => {
                         setSelectedSize(size);
                         setSizeError(false);
@@ -1028,29 +1083,79 @@ export default function App() {
                   </p>
                 )}
 
-                {sizeGuideData[selectedSize || "XS"] && (
+                {/* O'lcham jadvali tavsiyasi (ochilganda) */}
+                {showSizeGuide && (
                   <div className="size-guide">
                     <p className="size-guide-title">
-                      <strong>{selectedSize || "XS"}</strong> o'lchami mos keladi:
+                      <strong>{selectedSize || "XS"}</strong> o'lchami tavsiyasi:
                     </p>
                     <div className="size-guide-row">
                       <span className="size-guide-label">Bo'y</span>
                       <strong className="size-guide-val">
-                        {sizeGuideData[selectedSize || "XS"]?.height}
+                        {sizeGuideData[selectedSize || "XS"]?.height || "Universal"}
                       </strong>
                     </div>
                     <div className="size-guide-row">
                       <span className="size-guide-label">Vazn</span>
                       <strong className="size-guide-val">
-                        {sizeGuideData[selectedSize || "XS"]?.weight}
+                        {sizeGuideData[selectedSize || "XS"]?.weight || "Universal"}
                       </strong>
                     </div>
                   </div>
                 )}
 
-                <button className="btn btn-full detail-cart-btn" onClick={addToCart}>
+                {/* 2-rasm: Miqdor [ - ] 1 [ + ] va Jami narx bloki */}
+                <div className="detail-qty-price-row">
+                  <div className="detail-qty-block">
+                    <span className="detail-row-caption">Miqdori</span>
+                    <div className="qty-capsule">
+                      <button
+                        type="button"
+                        className="qty-capsule-btn"
+                        onClick={() => {
+                          setProductQuantity((q) => Math.max(1, q - 1));
+                          haptic(tgRef.current, "light");
+                        }}
+                        aria-label="Kamaytirish"
+                      >
+                        <Minus size={15} strokeWidth={2.4} />
+                      </button>
+                      <span className="qty-capsule-val">{productQuantity}</span>
+                      <button
+                        type="button"
+                        className="qty-capsule-btn"
+                        onClick={() => {
+                          setProductQuantity((q) => Math.min(10, q + 1));
+                          haptic(tgRef.current, "light");
+                        }}
+                        aria-label="Ko'paytirish"
+                      >
+                        <Plus size={15} strokeWidth={2.4} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="detail-price-block">
+                    <span className="detail-row-caption">Jami narx</span>
+                    <div className="detail-price-values">
+                      <span className="detail-old-amount">
+                        {money(Math.round(activeProduct.price * 1.25 * productQuantity))}
+                      </span>
+                      <strong className="detail-new-amount">
+                        {money(activeProduct.price * productQuantity)}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2-rasm: Katta qora to'liq kenglikdagi savatga qo'shish pill tugmasi */}
+                <button
+                  type="button"
+                  className="btn-add-bag"
+                  onClick={() => addToCartWithQuantity(productQuantity)}
+                >
+                  <ShoppingBag size={19} strokeWidth={1.8} />
                   <span>Savatga qo'shish</span>
-                  <ShoppingBag size={18} strokeWidth={1.6} />
                 </button>
               </div>
             </div>

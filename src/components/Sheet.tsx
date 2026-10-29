@@ -8,10 +8,11 @@ type Props = {
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  hideHeader?: boolean;
 };
 
 /** Kompyuterda markazdagi oyna, telefonda pastdan chiqadigan ilova sheet'i. */
-export default function Sheet({ title, children, onClose, wide = false }: Props) {
+export default function Sheet({ title, children, onClose, wide = false, hideHeader = false }: Props) {
   const dialog = useRef<HTMLElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
@@ -89,7 +90,7 @@ export default function Sheet({ title, children, onClose, wide = false }: Props)
       <div className="overlay-backdrop" onClick={onClose} aria-hidden="true" />
       <motion.section
         ref={dialog}
-        className={`dialog ${wide ? "dialog-wide" : ""}`}
+        className={`dialog ${wide ? "dialog-wide" : ""} ${hideHeader ? "dialog-no-head" : ""}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -99,13 +100,15 @@ export default function Sheet({ title, children, onClose, wide = false }: Props)
         exit={isMobile ? { y: "100%" } : { y: 14, opacity: 0 }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       >
-        <header className="dialog-head">
-          <span className="sheet-grabber" aria-hidden="true" />
-          <h2 id={titleId}>{title}</h2>
-          <button className="dialog-close" aria-label="Oynani yopish" onClick={onClose}>
-            <X size={19} strokeWidth={1.6} />
-          </button>
-        </header>
+        {!hideHeader && (
+          <header className="dialog-head">
+            <span className="sheet-grabber" aria-hidden="true" />
+            <h2 id={titleId}>{title}</h2>
+            <button className="dialog-close" aria-label="Oynani yopish" onClick={onClose}>
+              <X size={19} strokeWidth={1.6} />
+            </button>
+          </header>
+        )}
         <div className="dialog-body">{children}</div>
       </motion.section>
     </motion.div>,

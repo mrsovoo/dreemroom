@@ -2241,6 +2241,605 @@ p {
   }
 }
 
+/* ==========================================================================
+   YANGI MOBIL ILOVA USLUBI (1-RASM VA 2-RASM SPETSIFIKATSIYASI)
+   ========================================================================== */
+
+/* ---------- 1-rasm: Qorong'i Featured Card banner ---------- */
+.hero-featured-section {
+  width: min(100% - 28px, 1200px);
+  margin: 14px auto 20px;
+  position: relative;
+}
+.hero-featured-card {
+  position: relative;
+  background: #2b2836;
+  border-radius: 24px;
+  padding: 22px 20px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 200px;
+  box-shadow: 0 12px 32px rgba(43, 40, 54, 0.22);
+}
+.hero-featured-left {
+  flex: 1;
+  max-width: 65%;
+  z-index: 2;
+}
+.hero-featured-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 4px;
+}
+.hero-featured-title {
+  font-size: clamp(17px, 4vw, 26px);
+  line-height: 1.18;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 5px;
+  letter-spacing: -0.02em;
+}
+.hero-featured-sub {
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hero-mini-previews {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.hero-mini-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.hero-mini-thumb:active {
+  transform: scale(0.92);
+}
+.hero-mini-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hero-featured-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #2b2836;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  transition: transform 0.15s ease, background 0.18s ease;
+}
+.hero-featured-btn:active {
+  transform: scale(0.95);
+}
+.hero-chevron {
+  font-size: 9px;
+  opacity: 0.8;
+  letter-spacing: -2px;
+}
+.hero-featured-right {
+  position: absolute;
+  right: -6px;
+  bottom: 0;
+  top: 0;
+  width: 44%;
+  max-width: 200px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+.hero-featured-model {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  object-position: top center;
+  mask-image: linear-gradient(to right, transparent 0%, black 28%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 28%);
+}
+.hero-capsule-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 12px;
+}
+.capsule-dot {
+  height: 5px;
+  width: 5px;
+  border-radius: 50%;
+  background: #d8d6e0;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.capsule-dot.is-active {
+  width: 20px;
+  border-radius: 999px;
+  background: #2b2836;
+}
+
+/* ---------- 1-rasm: Chap yuqori suzuvchi dumaloq sevimli (heart) tugmasi ---------- */
+.card-wishlist-circle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e1e24;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.18s ease;
+}
+.card-wishlist-circle:active {
+  transform: scale(0.9);
+}
+.card-wishlist-circle.is-liked {
+  color: var(--brand, #403D4F);
+}
+
+/* ---------- 1-rasm: Gorizontal toifa chipslari karuseli ---------- */
+.section-chips-carousel {
+  width: min(100% - 28px, 1200px);
+  margin: 6px auto 14px;
+}
+.chips-scrollable {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.chips-scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- 2-rasm: Mahsulot tafsiloti oynasi (Nike uslubi) ---------- */
+.dialog-no-head {
+  border-radius: 28px !important;
+  overflow: hidden !important;
+}
+.dialog-no-head .dialog-body {
+  padding: 0 !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+}
+.detail-screen {
+  position: relative;
+  background: #ffffff;
+}
+.detail-gallery {
+  position: relative;
+  width: 100%;
+  background: #f8f8fa;
+  min-height: 360px;
+  max-height: 460px;
+  overflow: hidden;
+}
+.detail-gallery .detail-image {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  max-height: 460px;
+  object-fit: cover;
+  object-position: center 20%;
+}
+
+/* 2-rasm: Chap va o'ng yuqori qora dumaloq suzuvchi tugmalar */
+.gallery-float-btn {
+  position: absolute;
+  z-index: 20;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #1e1e24;
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.18s ease;
+}
+.gallery-float-btn:active {
+  transform: scale(0.9);
+}
+.gallery-float-back {
+  top: 14px;
+  left: 14px;
+}
+.gallery-float-share {
+  top: 14px;
+  right: 14px;
+}
+
+/* 2-rasm: Suratning o'ng chekkasida vertikal ustun bo'lib turgan thumbnail suratlari */
+.gallery-thumbs-vertical {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gallery-thumb-item {
+  width: 44px;
+  height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  opacity: 0.85;
+  transition: all 0.2s ease;
+}
+.gallery-thumb-item.is-active {
+  opacity: 1;
+  border-color: #2b2836;
+  transform: scale(1.06);
+  box-shadow: 0 4px 12px rgba(43, 40, 54, 0.28);
+}
+.gallery-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 2-rasm: Surat ostidagi oq bottom sheet kartasi */
+.detail-bottom-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: 28px 28px 0 0;
+  margin-top: -24px;
+  z-index: 10;
+  padding: 22px 20px 28px;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.05);
+}
+
+/* 2-rasm: Yangi va Yetkazib berish bepul pill nishonlari */
+.detail-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.badge-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+}
+.badge-pill-new {
+  background: #ff6b4a;
+  color: #ffffff;
+}
+.badge-pill-discount {
+  background: #d4f7dc;
+  color: #15803d;
+}
+
+/* 2-rasm: Nomi, toifasi/rangi va sevimli (heart) */
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.detail-product-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e1e24;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+.detail-product-category {
+  font-size: 13px;
+  color: #8c899a;
+  font-weight: 500;
+}
+.detail-heart-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #ebe9f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e1e24;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.detail-heart-btn.is-liked {
+  border-color: var(--brand, #403D4F);
+  color: var(--brand, #403D4F);
+}
+
+/* 2-rasm: O'lchamni tanlang va O'lcham jadvali */
+.detail-size-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.detail-size-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e1e24;
+}
+.detail-size-guide-link {
+  font-size: 12.5px;
+  color: #64748b;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* 2-rasm: Dumaloq o'lcham tugmalari */
+.detail-sizes-circles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 18px;
+  scrollbar-width: none;
+}
+.detail-sizes-circles::-webkit-scrollbar {
+  display: none;
+}
+.size-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #f8f8fa;
+  color: #1e1e24;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+.size-circle.is-active {
+  background: #2b2836 !important;
+  border-color: #2b2836 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(43, 40, 54, 0.25);
+  transform: scale(1.05);
+}
+
+/* 2-rasm: Miqdori [ - ] 1 [ + ] va Jami narx bloki */
+.detail-qty-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding-top: 6px;
+}
+.detail-row-caption {
+  display: block;
+  font-size: 12px;
+  color: #8c899a;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.qty-capsule {
+  display: inline-flex;
+  align-items: center;
+  background: #f4f3f7;
+  border-radius: 999px;
+  padding: 4px 6px;
+  gap: 12px;
+}
+.qty-capsule-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  color: #1e1e24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease;
+}
+.qty-capsule-btn:active {
+  transform: scale(0.9);
+}
+.qty-capsule-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e1e24;
+  min-width: 16px;
+  text-align: center;
+}
+.detail-price-block {
+  text-align: right;
+}
+.detail-price-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.detail-old-amount {
+  font-size: 12px;
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+.detail-new-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e1e24;
+  letter-spacing: -0.01em;
+}
+
+/* 2-rasm: Katta to'liq kenglikdagi savatga qo'shish pill tugmasi */
+.btn-add-bag {
+  width: 100%;
+  height: 54px;
+  border-radius: 999px;
+  background: #2b2836;
+  color: #ffffff;
+  border: none;
+  font-size: 15.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(43, 40, 54, 0.28);
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+.btn-add-bag:active {
+  transform: scale(0.98);
+  background: #1e1c26;
+}
+
+/* ---------- 1-rasm: Suzuvchi pastki dok menyu (Floating Tabbar Dock) ---------- */
+@media (max-width: 800px) {
+  .tabbar {
+    position: fixed !important;
+    z-index: 90 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+    width: calc(100% - 32px) !important;
+    max-width: 380px !important;
+    height: 60px !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid rgba(64, 61, 79, 0.12) !important;
+    box-shadow: 0 12px 36px rgba(43, 40, 54, 0.16), 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    align-items: center !important;
+    padding: 0 6px !important;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #8c899a;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    font-size: 0px !important; /* faqat toza piktogrammalar (Screen 1 dock) */
+    transition: color 0.2s ease, transform 0.15s ease;
+  }
+  .tab:active {
+    transform: scale(0.9);
+  }
+  .tab.is-active {
+    color: #2b2836 !important;
+  }
+  .tab.is-active .tab-icon {
+    background: rgba(43, 40, 54, 0.08);
+    color: #2b2836;
+  }
+  .tab-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    position: relative;
+  }
+  .tab-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #2b2836;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    border: 1.5px solid #ffffff;
+  }
+  .profile-dot {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2b2836;
+    border: 1.5px solid #ffffff;
+  }
+  #main {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
