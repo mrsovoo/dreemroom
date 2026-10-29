@@ -714,6 +714,9 @@ p {
 }
 
 @media (max-width: 768px) {
+  .footer {
+    display: none !important;
+  }
   .popular-cat-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
@@ -1855,21 +1858,12 @@ p {
     font-size: 12.5px;
   }
 
+  /* Mobil versiyada veb-footer butunlay ko'rinmasin (haqiqiy mobil ilova qolipi) */
   .footer {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    display: none !important;
   }
   .card-open {
     border-radius: inherit;
-  }
-  .footer-inner {
-    width: calc(100% - 36px);
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 28px 0;
-  }
-  .footer-nav {
-    gap: 18px;
   }
 
   /* Pastki tab menyu — haqiqiy mobil ilova ko'rinishi (5 ta bo'lim). */
@@ -1974,7 +1968,7 @@ p {
     padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   }
   body.in-telegram .footer {
-    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    display: none !important;
   }
   body.in-telegram .tabbar {
     display: grid !important;
