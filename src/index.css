@@ -2242,6 +2242,43 @@ p {
 }
 
 /* ==========================================================================
+   DESKTOP VA MOBIL KO'RINISHNI BIR-BIRIDAN AJRATISH
+   - Kompyuterda (desktop >= 769px): Katta to'liq ekranli Hero va keng katalog
+   - Mobil telefonda (<= 768px yoki Telegram ichida): Nike ilovasi uslubi
+   ========================================================================== */
+.hero-desktop-view {
+  display: block;
+}
+.desktop-catalog-section {
+  display: block;
+}
+.mobile-app-layout {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .hero-desktop-view {
+    display: none !important;
+  }
+  .desktop-catalog-section {
+    display: none !important;
+  }
+  .mobile-app-layout {
+    display: block !important;
+  }
+}
+
+body.in-telegram .hero-desktop-view {
+  display: none !important;
+}
+body.in-telegram .desktop-catalog-section {
+  display: none !important;
+}
+body.in-telegram .mobile-app-layout {
+  display: block !important;
+}
+
+/* ==========================================================================
    YANGI MOBIL ILOVA USLUBI (1-RASM VA 2-RASM SPETSIFIKATSIYASI)
    ========================================================================== */
 
@@ -2444,6 +2481,44 @@ p {
 .detail-screen {
   position: relative;
   background: #ffffff;
+}
+
+@media (min-width: 801px) {
+  .dialog-wide .dialog-body {
+    overflow-y: hidden !important;
+    padding: 0 !important;
+  }
+  .detail-screen {
+    display: grid !important;
+    grid-template-columns: 1.05fr 1fr !important;
+    max-height: calc(85vh - 65px) !important;
+    overflow: hidden;
+  }
+  .detail-gallery {
+    min-height: 520px !important;
+    max-height: 100% !important;
+    height: 100% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .detail-gallery .detail-image {
+    min-height: 520px !important;
+    max-height: 100% !important;
+    height: 100% !important;
+    object-position: center !important;
+  }
+  .gallery-float-back {
+    display: none !important;
+  }
+  .detail-bottom-card {
+    border-radius: 0 !important;
+    margin-top: 0 !important;
+    box-shadow: none !important;
+    overflow-y: auto !important;
+    max-height: calc(85vh - 65px) !important;
+    padding: 30px 34px !important;
+  }
 }
 .detail-gallery {
   position: relative;

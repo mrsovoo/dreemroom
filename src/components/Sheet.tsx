@@ -79,6 +79,8 @@ export default function Sheet({ title, children, onClose, wide = false, hideHead
     };
   }, []);
 
+  const shouldHideHeader = hideHeader && isMobile;
+
   return createPortal(
     <motion.div
       className={`overlay ${isMobile ? "overlay-sheet" : ""}`}
@@ -90,7 +92,7 @@ export default function Sheet({ title, children, onClose, wide = false, hideHead
       <div className="overlay-backdrop" onClick={onClose} aria-hidden="true" />
       <motion.section
         ref={dialog}
-        className={`dialog ${wide ? "dialog-wide" : ""} ${hideHeader ? "dialog-no-head" : ""}`.trim()}
+        className={`dialog ${wide ? "dialog-wide" : ""} ${shouldHideHeader ? "dialog-no-head" : ""}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -100,7 +102,7 @@ export default function Sheet({ title, children, onClose, wide = false, hideHead
         exit={isMobile ? { y: "100%" } : { y: 14, opacity: 0 }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       >
-        {!hideHeader && (
+        {!shouldHideHeader && (
           <header className="dialog-head">
             <span className="sheet-grabber" aria-hidden="true" />
             <h2 id={titleId}>{title}</h2>
