@@ -149,28 +149,25 @@ export default function App() {
     saveProfile: () => {},
   });
 
-  // Admin panel (localhost:3000) bilan mahsulotlarni real-vaqtda sinxronlash
+  // Backend / Admin panel bilan mahsulotlarni xavfsiz sinxronlash
   useEffect(() => {
     let active = true;
     async function syncProducts() {
       try {
-        let res = await fetch("/api/products").catch(() => null);
-        if (!res || !res.ok) {
-          res = await fetch("http://localhost:3000/api/products").catch(() => null);
-        }
-        if (res && res.ok && active) {
+        const res = await fetch("/api/products");
+        if (res.ok && active) {
           const data: Product[] = await res.json();
-          if (Array.isArray(data)) {
+          if (Array.isArray(data) && data.length > 0) {
             setProductsList(data);
           }
         }
       } catch {
-        /* Server vaqtincha uzilgan bo'lsa lokal mahsulotlar ishlaydi. */
+        /* Backend uzilgan bo'lsa ham data.ts dagi boshlang'ich mahsulotlar ishlayveradi */
       }
     }
 
     syncProducts();
-    const interval = setInterval(syncProducts, 3000);
+    const interval = setInterval(syncProducts, 15000);
     return () => {
       active = false;
       clearInterval(interval);
@@ -657,6 +654,20 @@ export default function App() {
           >
             Kontakt
           </button>
+          <a
+            href="/admin"
+            className="nav-link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Admin panel
+          </a>
+          <a
+            href="mailto:hello@dreemroom.uz"
+            className="nav-link nav-email"
+          >
+            hello@dreemroom.uz
+          </a>
         </nav>
         <div className="header-zone header-actions">
           <button
@@ -738,8 +749,64 @@ export default function App() {
               </div>
             </section>
 
-            {/* Desktop uchun mahsulotlar to'liq katalogi */}
-            <section className="section desktop-catalog-section" id="katalog">
+            {/* =================================================================
+                2. MOBIL / TELEGRAM MINI APP UCHUN QORONG'I FEATURED BANNER
+                ================================================================= */}
+            <section className="hero-mobile-view" aria-label="Mobil banner">
+              <div
+                className="mobile-hero-wrapper"
+                onClick={() => {
+                  haptic(tgRef.current, "light");
+                  openCatalog();
+                }}
+              >
+                <img
+                  src="/image-landing/mobile-banner-dark.png"
+                  alt="DREEM ROOM • Yangi mavsum ayollar to'plami"
+                  className="mobile-hero-banner-img"
+                  loading="eager"
+                />
+              </div>
+            </section>
+
+            {/* =================================================================
+                3. OMMABOP MODELLAR (Ko'p sotilgan va yaxshi buyurtma bo'lganlar)
+                ================================================================= */}
+            {popularProducts.length > 0 && (
+              <section className="section popular-section" id="ommabop">
+                <div className="section-head popular-head">
+                  <div>
+                    <span className="section-eyebrow">Ko'p sotilganlar</span>
+                    <h2>Ommabop modellar</h2>
+                  </div>
+                  <button
+                    className="link-btn popular-see-all"
+                    onClick={() => {
+                      haptic(tgRef.current, "light");
+                      openCatalog();
+                    }}
+                  >
+                    Barchasi &gt;
+                  </button>
+                </div>
+                <div className="grid popular-grid">
+                  {popularProducts.slice(0, 4).map((product) => (
+                    <ProductCard
+                      key={"pop-" + product.id}
+                      product={product}
+                      onOpen={openProduct}
+                      isLiked={wishlist.includes(product.id)}
+                      onToggleWishlist={toggleWishlist}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* =================================================================
+                4. MAHSULOTLAR KATALOGI
+                ================================================================= */}
+            <section className="section catalog-section" id="katalog">
               <div className="section-head">
                 <div>
                   <span className="section-eyebrow">Kolleksiya</span>
@@ -786,179 +853,6 @@ export default function App() {
                 ))}
               </div>
             </section>
-
-            {/* =================================================================
-                2. TELEFON / MOBIL VA TELEGRAM MINI APP UCHUN DIZAYN
-                (Nike uslubidagi ixcham featured card, 2-ustunli grid, gorizontal chipslar)
-                ================================================================= */}
-            <div className="mobile-app-layout">
-              {/* 1-rasm: Nike ilovasi uslubidagi qorong'i Featured Card banner */}
-              <section
-                className="hero-featured-section"
-                onTouchStart={handleHeroTouchStart}
-                onTouchEnd={handleHeroTouchEnd}
-              >
-                <div className="hero-featured-card">
-                  <div className="hero-featured-left">
-                    <span className="hero-featured-eyebrow">DREEM ROOM</span>
-                    <h1 className="hero-featured-title">
-                      Yangi mavsum ayollar to'plami
-                    </h1>
-                    <p className="hero-featured-sub">
-                      Kuch va nafislik uyg'unligi
-                    </p>
-
-                    {/* 3 ta mini kvadrat ko'rinishidagi mahsulot suratlari */}
-                    <div className="hero-mini-previews">
-                      {productsList.slice(0, 3).map((p, idx) => (
-                        <button
-                          key={p.id + idx}
-                          type="button"
-                          className="hero-mini-thumb"
-                          onClick={() => openProduct(p)}
-                          aria-label={p.name}
-                        >
-                          <img
-                            src={p.images?.[0]?.src || heroSlides[idx % heroSlides.length].src}
-                            alt=""
-                            loading="lazy"
-                          />
-                        </button>
-                      ))}
-                    </div>
-
-                    <button
-                      type="button"
-                      className="hero-featured-btn"
-                      onClick={() => openCatalog()}
-                    >
-                      <span>Katalog</span>
-                      <span className="hero-chevron">❯❯</span>
-                    </button>
-                  </div>
-
-                  <div className="hero-featured-right">
-                    <img
-                      src={heroSlides[slide].src}
-                      alt="Model"
-                      className="hero-featured-model"
-                    />
-                  </div>
-                </div>
-
-                {/* 1-rasm: Kapsula shaklidagi nuqtalar indikatori (— • •) */}
-                <div className="hero-capsule-dots">
-                  {heroSlides.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className={`capsule-dot ${idx === slide ? "is-active" : ""}`}
-                      onClick={() => setSlide(idx)}
-                      aria-label={`${idx + 1}-slayd`}
-                    />
-                  ))}
-                </div>
-              </section>
-
-              {/* 1-rasm: 1-bo'lim — Ommabop modellar (Eng ko'p sotilgan va yaxshi buyurtma bo'layotgan modellar) */}
-              {popularProducts.length > 0 && (
-                <section className="section section-popular" aria-labelledby="popular-title">
-                  <div className="section-head">
-                    <div>
-                      <h2 id="popular-title">Ommabop modellar</h2>
-                    </div>
-                    <button
-                      className="link-btn"
-                      onClick={() => {
-                        haptic(tgRef.current, "light");
-                        openCatalog(allCategory, "popular");
-                      }}
-                    >
-                      Barchasi &gt;
-                    </button>
-                  </div>
-
-                  <div className="grid">
-                    {popularProducts.slice(0, 2).map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onOpen={openProduct}
-                        isLiked={wishlist.includes(product.id)}
-                        onToggleWishlist={toggleWishlist}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* 1-rasm: Gorizontal suriladigan kategoriya chipslari */}
-              <div className="section-chips-carousel" aria-label="Kategoriyalar">
-                <div className="chips chips-scrollable">
-                  {dynamicCategories.map((item) => (
-                    <button
-                      key={item}
-                      className={category === item ? "chip is-active" : "chip"}
-                      onClick={() => {
-                        haptic(tgRef.current, "select");
-                        setCategory(item);
-                      }}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 1-rasm: 2-bo'lim — Mahsulotlar katalogi ("Yangi to'plam" o'rniga) */}
-              {homeCatalogProducts.length > 0 ? (
-                <section className="section section-new-collection" aria-labelledby="new-collection-title">
-                  <div className="section-head">
-                    <div>
-                      <h2 id="new-collection-title">
-                        {category === allCategory ? "Mahsulotlar katalogi" : `${category} katalogi`}
-                      </h2>
-                    </div>
-                    <button
-                      className="link-btn"
-                      onClick={() => {
-                        haptic(tgRef.current, "light");
-                        openCatalog(category);
-                      }}
-                    >
-                      Katalogda ko'rish ({homeCatalogProducts.length}) &gt;
-                    </button>
-                  </div>
-
-                  <div className="grid">
-                    {homeCatalogProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onOpen={openProduct}
-                        isLiked={wishlist.includes(product.id)}
-                        onToggleWishlist={toggleWishlist}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ) : (
-                <section className="section section-new-collection">
-                  <div className="empty">
-                    <p>Ushbu toifada mahsulot topilmadi.</p>
-                    <button
-                      className="btn"
-                      onClick={() => {
-                        haptic(tgRef.current, "light");
-                        setCategory(allCategory);
-                      }}
-                    >
-                      Barcha mahsulotlar
-                    </button>
-                  </div>
-                </section>
-              )}
-            </div>
           </>
         ) : (
           <section className="section catalog">
@@ -1065,89 +959,73 @@ export default function App() {
             <button onClick={goHome}>Asosiy</button>
             <button onClick={() => openCatalog()}>Katalog</button>
             <button onClick={openContact}>Kontakt</button>
-            <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer">Admin panel</a>
+            <a href="/admin" target="_blank" rel="noopener noreferrer">Admin panel</a>
             <a href="mailto:hello@dreemroom.uz">hello@dreemroom.uz</a>
           </nav>
         </div>
-        <p className="footer-bottom">© {new Date().getFullYear()} DREEM ROOM</p>
+        <p className="footer-bottom">© {new Date().getFullYear()} DREEM ROOM MAYBE</p>
       </footer>
 
-      <nav className="tabbar" aria-label="Mobil menyu">
+      {/* Mobil telefonlar uchun pastki suzuvchi dok navigatsiya paneli (Tabbar Dock) */}
+      <nav className="tabbar" aria-label="Mobil navigatsiya">
         <button
           className={view === "home" && !panel ? "tab is-active" : "tab"}
-          aria-current={view === "home" && !panel ? "page" : undefined}
-          onClick={() => {
-            haptic(tgRef.current, "light");
-            goHome();
-          }}
+          onClick={goHome}
+          aria-label="Asosiy"
         >
           <span className="tab-icon">
-            <Home size={21} strokeWidth={1.7} />
+            <Home size={22} strokeWidth={1.8} />
           </span>
-          Asosiy
+          <span className="tab-label">Asosiy</span>
         </button>
+
         <button
           className={view === "catalog" && !panel ? "tab is-active" : "tab"}
-          aria-current={view === "catalog" && !panel ? "page" : undefined}
-          onClick={() => {
-            haptic(tgRef.current, "light");
-            openCatalog();
-          }}
+          onClick={() => openCatalog()}
+          aria-label="Katalog"
         >
           <span className="tab-icon">
-            <Grid2X2 size={20} strokeWidth={1.7} />
+            <Grid2X2 size={22} strokeWidth={1.8} />
           </span>
-          Katalog
+          <span className="tab-label">Katalog</span>
         </button>
+
         <button
           className={panel === "wishlist" ? "tab is-active" : "tab"}
-          aria-current={panel === "wishlist" ? "page" : undefined}
           onClick={() => {
             haptic(tgRef.current, "light");
             setPanel("wishlist");
           }}
+          aria-label="Sevimlilar"
         >
           <span className="tab-icon">
-            <Heart size={20} strokeWidth={1.7} />
-            {wishlist.length > 0 && (
-              <span className="tab-badge" aria-hidden="true">
-                {wishlist.length}
-              </span>
-            )}
+            <Heart size={22} strokeWidth={1.8} />
+            {wishlist.length > 0 && <span className="tab-badge">{wishlist.length}</span>}
           </span>
-          Sevimlilar
+          <span className="tab-label">Sevimlilar</span>
         </button>
-        <button
-          className={panel === "cart" ? "tab is-active" : "tab"}
-          aria-current={panel === "cart" ? "page" : undefined}
-          onClick={() => {
-            haptic(tgRef.current, "light");
-            openCart();
-          }}
-        >
-          <span className="tab-icon">
-            <ShoppingBag size={20} strokeWidth={1.7} />
-            {cartCount > 0 && (
-              <span className="tab-badge" aria-hidden="true">
-                {cartCount}
-              </span>
-            )}
-          </span>
-          Savat
-        </button>
+
         <button
           className={panel === "profile" ? "tab is-active" : "tab"}
-          aria-current={panel === "profile" ? "page" : undefined}
-          onClick={() => {
-            haptic(tgRef.current, "light");
-            openProfile();
-          }}
+          onClick={openProfile}
+          aria-label="Profil"
         >
           <span className="tab-icon">
-            <UserRound size={20} strokeWidth={1.7} />
-            {profile && <span className="profile-dot" aria-hidden="true" />}
+            <UserRound size={22} strokeWidth={1.8} />
           </span>
-          Profil
+          <span className="tab-label">Profil</span>
+        </button>
+
+        <button
+          className={panel === "cart" ? "tab is-active" : "tab"}
+          onClick={openCart}
+          aria-label="Savat"
+        >
+          <span className="tab-icon">
+            <ShoppingBag size={22} strokeWidth={1.8} />
+            {cartCount > 0 && <span className="tab-badge">{cartCount}</span>}
+          </span>
+          <span className="tab-label">Savat</span>
         </button>
       </nav>
 

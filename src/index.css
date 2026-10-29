@@ -2925,8 +2925,92 @@ body.in-telegram .mobile-app-layout {
   background: #1e1c26;
 }
 
+/* Desktop va Mobil moslashuv */
+.tabbar {
+  display: none;
+}
+.hero-desktop-view {
+  display: block;
+}
+.hero-mobile-view {
+  display: none;
+}
+
+.hero-mobile-view {
+  width: min(100% - 24px, 560px);
+  margin: 12px auto 16px;
+}
+.mobile-hero-wrapper {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(43, 40, 54, 0.16);
+  cursor: pointer;
+  transition: transform 0.18s ease;
+  background: #2b2836;
+}
+.mobile-hero-wrapper:active {
+  transform: scale(0.98);
+}
+.mobile-hero-banner-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  aspect-ratio: 1024 / 226;
+  object-fit: cover;
+}
+
+.popular-section {
+  margin-top: 10px;
+  margin-bottom: 24px;
+}
+.popular-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.popular-see-all {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e1e24;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+.popular-see-all:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.popular-grid {
+  margin-bottom: 8px;
+}
+
+.nav-email {
+  color: #8c899a !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  text-decoration: none !important;
+  margin-left: 8px;
+}
+.nav-email:hover {
+  color: #1e1e24 !important;
+}
+
 /* ---------- 1-rasm: Suzuvchi pastki dok menyu (Floating Tabbar Dock) ---------- */
 @media (max-width: 800px) {
+  .hero-desktop-view {
+    display: none !important;
+  }
+  .hero-mobile-view {
+    display: block !important;
+  }
   .tabbar {
     position: fixed !important;
     z-index: 90 !important;

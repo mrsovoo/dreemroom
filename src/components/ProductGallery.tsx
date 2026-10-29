@@ -55,19 +55,22 @@ export default function ProductGallery({ product, haptic, onClose, onShare }: Pr
 
   return (
     <div className="detail-gallery">
-      {/* 2-rasm: Chap yuqori suzuvchi qora dumaloq orqaga qaytish tugmasi */}
+      {/* 2-rasm: Chap yuqori suzuvchi orqaga qaytish tugmasi */}
       {onClose && (
         <button
           type="button"
           className="gallery-float-btn gallery-float-back"
-          onClick={onClose}
+          onClick={() => {
+            haptic?.("light");
+            onClose();
+          }}
           aria-label="Orqaga"
         >
           <ChevronLeft size={22} strokeWidth={2.4} />
         </button>
       )}
 
-      {/* 2-rasm: O'ng yuqori suzuvchi qora dumaloq ulashish tugmasi */}
+      {/* O'ng yuqori suzuvchi ulashish tugmasi */}
       <button
         type="button"
         className="gallery-float-btn gallery-float-share"
