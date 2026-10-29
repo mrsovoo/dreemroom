@@ -2,12 +2,28 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawn } from "node:child_process";
 
 try {
   if (typeof process.loadEnvFile === "function") {
     process.loadEnvFile();
   }
 } catch {}
+
+// Railway yoki serverda Telegram botni avtomatik ishga tushirish
+if (!process.env.DEV_ALL) {
+  try {
+    const botProcess = spawn("node", ["bot.js"], {
+      stdio: "inherit",
+      env: process.env,
+    });
+    botProcess.on("error", (err) => {
+      console.error("[BOT START ERROR]:", err.message);
+    });
+  } catch (err) {
+    console.error("[BOT SPAWN ERROR]:", err.message);
+  }
+}
 
 import {
   getProducts,

@@ -8,6 +8,8 @@ console.log("\x1b[90m⚙️  Admin panel:  http://localhost:3000\x1b[0m");
 console.log("\x1b[90m🤖 Telegram bot: node bot.js\x1b[0m");
 console.log("\x1b[1m\x1b[35m=========================================\x1b[0m\n");
 
+process.env.DEV_ALL = "true";
+
 // 1. Admin server (port 3000)
 const admin = spawn("node", ["server.js"], {
   stdio: "inherit",

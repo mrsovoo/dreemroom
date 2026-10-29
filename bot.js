@@ -368,18 +368,7 @@ async function handleMessage(msg) {
   const isAuth = config.adminIds && config.adminIds.includes(userId);
 
   if (!isAuth) {
-    if (text === "/start") {
-      await callTelegram("sendMessage", {
-        chat_id: chatId,
-        text:
-          `👋 <b>DREEM ROOM Admin Botiga xush kelibsiz!</b>\n\n` +
-          `🔐 <i>Iltimos, adminlik kalit so'zini kiriting:</i>`,
-        parse_mode: "HTML",
-      });
-      return;
-    }
-
-    if (text.toLowerCase() === secretKey) {
+    if (text === "/start" || text.toLowerCase() === secretKey) {
       if (!config.adminIds) config.adminIds = [];
       if (!config.adminIds.includes(userId)) config.adminIds.push(userId);
       saveConfig(config);
@@ -387,19 +376,11 @@ async function handleMessage(msg) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
         text:
-          `✅ <b>Kalit so'z to'g'ri! Siz admin sifatida tasdiqlandingiz.</b>\n\n` +
-          `Quyidagi menyudan kerakli bo'limni tanlang:`,
+          `👋 <b>Assalomu alaykum, Admin! DREEM ROOM botiga xush kelibsiz.</b>\n\n` +
+          `📢 Ulangan kanal: <code>${config.targetChatId || "Belgilanmagan"}</code>\n\n` +
+          `Kerakli bo'limni tanlang yoki to'g'ridan-to'g'ri 4 ta rasm yuboring:`,
         parse_mode: "HTML",
         reply_markup: MAIN_KEYBOARD,
-      });
-      return;
-    } else {
-      await callTelegram("sendMessage", {
-        chat_id: chatId,
-        text:
-          `❌ <b>Noto'g'ri kalit so'z!</b>\n\n` +
-          `Iltimos, adminlik kalit so'zini kiriting (masalan: <code>dreemroom-adm</code>):`,
-        parse_mode: "HTML",
       });
       return;
     }
