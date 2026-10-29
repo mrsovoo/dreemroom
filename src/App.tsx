@@ -707,74 +707,34 @@ export default function App() {
         {view === "home" ? (
           <>
             {/* =================================================================
-                1. KOMPYUTER (DESKTOP) UCHUN ASOSIY SAHIFA DIZAYNI
-                (Keng ekranlarda to'liq ekranli premium hero banner va 4-ustunli katalog)
+                1. KOMPYUTER VA TABLET (DESKTOP & TABLET) UCHUN ASOSIY BANNER
+                (VELVORN — Power Meets Purpose uslubidagi yangi banner)
                 ================================================================= */}
-            <section
-              className="hero hero-desktop-view"
-              onTouchStart={handleHeroTouchStart}
-              onTouchEnd={handleHeroTouchEnd}
-            >
-              <div className="hero-slides" aria-hidden="true">
-                {heroSlides.map((item, index) => (
-                  <img
-                    key={item.src}
-                    src={item.src}
-                    alt=""
-                    decoding="async"
-                    loading={index === 0 ? "eager" : "lazy"}
-                    fetchPriority={index === 0 ? "high" : "low"}
-                    className={`${index === slide ? "is-active" : ""}${
-                      item.mirrored ? " is-mirrored" : ""
-                    }`}
-                  />
-                ))}
-              </div>
+            <section className="hero-desktop-view velvorn-hero" aria-label="Asosiy banner">
+              <div className="velvorn-hero-container">
+                <img
+                  src="/image-landing/hero-velvorn-1920.jpg"
+                  alt="VELVORN • Power Meets Purpose"
+                  className="velvorn-hero-bg"
+                  loading="eager"
+                  decoding="async"
+                />
 
-              <div className="hero-inner">
-                <div className="hero-card">
-                  <p className="hero-tag">DREEM ROOM • 2026</p>
-                  <h1>Nafislik va sifat uyg'unligi</h1>
-                  <p className="hero-text">
-                    Har bir ayol uchun maxsus yaratilgan zamonaviy va bejirim
-                    kiyimlar kolleksiyasi. Qulaylik va nafis uslub birlashuvi.
-                  </p>
-                  <div className="hero-actions">
-                    <button
-                      className="btn btn-light"
-                      onClick={() => {
-                        haptic(tgRef.current, "light");
-                        openCatalog();
-                      }}
-                    >
-                      Katalogga o'tish
-                      <ArrowRight size={16} />
-                    </button>
-                    <button
-                      className="btn btn-ghost"
-                      onClick={() => {
-                        haptic(tgRef.current, "light");
-                        openContact();
-                      }}
-                    >
-                      Biz bilan bog'lanish
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="hero-dots">
-                {heroSlides.map((_, index) => (
+                {/* Bosiladigan interaktiv qatlam va Katalogga o'tish tugmasi */}
+                <div className="velvorn-hero-overlay">
                   <button
-                    key={index}
-                    className={index === slide ? "hero-dot is-active" : "hero-dot"}
+                    type="button"
+                    className="velvorn-cta-btn"
                     onClick={() => {
-                      haptic(tgRef.current, "select");
-                      setSlide(index);
+                      haptic(tgRef.current, "light");
+                      openCatalog();
                     }}
-                    aria-label={`${index + 1}-slayd`}
-                  />
-                ))}
+                    aria-label="Explore the Collection — Katalogga o'tish"
+                  >
+                    <span>Explore the Collection</span>
+                    <ArrowRight size={14} className="velvorn-cta-arrow" />
+                  </button>
+                </div>
               </div>
             </section>
 
