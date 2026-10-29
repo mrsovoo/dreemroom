@@ -2650,6 +2650,10 @@ body.in-telegram .mobile-app-layout {
 }
 
 @media (max-width: 800px) {
+  .overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
   .dialog-no-head {
     width: 100% !important;
     max-width: 100% !important;
@@ -2663,13 +2667,37 @@ body.in-telegram .mobile-app-layout {
     -webkit-overflow-scrolling: touch;
   }
   .modal-product-card {
-    padding: 12px 14px 24px !important;
+    padding: 12px 14px 20px !important;
     gap: 14px !important;
+    min-height: calc(92dvh - 20px);
+    display: flex !important;
+    flex-direction: column !important;
   }
   .modal-gallery-main {
     min-height: 280px !important;
     max-height: 380px !important;
     border-radius: 18px !important;
+  }
+  .modal-right-col {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    padding: 4px 0 0 !important;
+  }
+  .modal-bottom-actions {
+    margin-top: auto !important;
+    width: 100%;
+  }
+  .modal-add-cart-wrap {
+    position: sticky;
+    bottom: 0;
+    background: #ffffff;
+    margin-left: -14px;
+    margin-right: -14px;
+    padding: 10px 14px max(14px, env(safe-area-inset-bottom));
+    z-index: 25;
+    box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.06);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
   }
 }
 
@@ -2849,11 +2877,14 @@ body.in-telegram .mobile-app-layout {
   gap: 16px;
   padding: 8px 4px 6px;
   background: #ffffff;
+  height: 100%;
+  box-sizing: border-box;
 }
 @media (min-width: 801px) {
   .modal-right-col {
     padding: 6px 8px 6px 14px;
     gap: 18px;
+    height: 100%;
   }
 }
 
@@ -3076,9 +3107,27 @@ body.in-telegram .mobile-app-layout {
   letter-spacing: -0.02em;
 }
 
-/* Savatga qo'shish tugmasi */
+/* Pastki harakatlar guruhi: Miqdor, narx va savatga qo'shish */
+.modal-bottom-actions {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 14px;
+}
+
+.modal-add-cart-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Savatga qo'shish tugmasi (Bottom Center qadalgan) */
 .modal-add-cart-btn {
   width: 100%;
+  max-width: 440px;
   height: 52px;
   border-radius: 9999px;
   background: #18181b;
@@ -3096,7 +3145,7 @@ body.in-telegram .mobile-app-layout {
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(24, 24, 27, 0.22);
   transition: all 0.15s ease;
-  margin-top: 4px;
+  margin: 0 auto;
 }
 .modal-add-cart-btn:hover {
   background: #000000;

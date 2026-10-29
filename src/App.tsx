@@ -1364,57 +1364,62 @@ export default function App() {
                   );
                 })()}
 
-                {/* Miqdori va Jami Narx */}
-                <div className="modal-qty-price-row">
-                  <div className="modal-qty-container">
-                    <span className="modal-field-title">Miqdori</span>
-                    <div className="modal-qty-stepper">
-                      <button
-                        type="button"
-                        className="modal-qty-btn"
-                        onClick={() => {
-                          setProductQuantity((q) => Math.max(1, q - 1));
-                          haptic(tgRef.current, "light");
-                        }}
-                        aria-label="Kamaytirish"
-                      >
-                        <Minus size={13} strokeWidth={2.5} />
-                      </button>
-                      <span className="modal-qty-num">{productQuantity}</span>
-                      <button
-                        type="button"
-                        className="modal-qty-btn"
-                        onClick={() => {
-                          setProductQuantity((q) => Math.min(10, q + 1));
-                          haptic(tgRef.current, "light");
-                        }}
-                        aria-label="Ko'paytirish"
-                      >
-                        <Plus size={13} strokeWidth={2.5} />
-                      </button>
+                {/* Pastki harakatlar guruhi: Miqdor, Narx va Savatga qo'shish */}
+                <div className="modal-bottom-actions">
+                  {/* Miqdori va Jami Narx */}
+                  <div className="modal-qty-price-row">
+                    <div className="modal-qty-container">
+                      <span className="modal-field-title">Miqdori</span>
+                      <div className="modal-qty-stepper">
+                        <button
+                          type="button"
+                          className="modal-qty-btn"
+                          onClick={() => {
+                            setProductQuantity((q) => Math.max(1, q - 1));
+                            haptic(tgRef.current, "light");
+                          }}
+                          aria-label="Kamaytirish"
+                        >
+                          <Minus size={13} strokeWidth={2.5} />
+                        </button>
+                        <span className="modal-qty-num">{productQuantity}</span>
+                        <button
+                          type="button"
+                          className="modal-qty-btn"
+                          onClick={() => {
+                            setProductQuantity((q) => Math.min(10, q + 1));
+                            haptic(tgRef.current, "light");
+                          }}
+                          aria-label="Ko'paytirish"
+                        >
+                          <Plus size={13} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="modal-price-container">
+                      <span className="modal-field-title text-right">Jami narx</span>
+                      <span className="modal-price-old">
+                        {money(Math.round(activeProduct.price * 1.25) * productQuantity)}
+                      </span>
+                      <span className="modal-price-val">
+                        {money(activeProduct.price * productQuantity)}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="modal-price-container">
-                    <span className="modal-field-title text-right">Jami narx</span>
-                    <span className="modal-price-old">
-                      {money(Math.round(activeProduct.price * 1.25) * productQuantity)}
-                    </span>
-                    <span className="modal-price-val">
-                      {money(activeProduct.price * productQuantity)}
-                    </span>
+                  {/* Savatga qo'shish tugmasi */}
+                  <div className="modal-add-cart-wrap">
+                    <button
+                      type="button"
+                      className="modal-add-cart-btn"
+                      onClick={() => addToCartWithQuantity(productQuantity)}
+                    >
+                      <ShoppingBag size={18} strokeWidth={1.8} />
+                      <span>SAVATGA QO'SHISH</span>
+                    </button>
                   </div>
                 </div>
-
-                {/* Savatga qo'shish tugmasi */}
-                <button
-                  type="button"
-                  className="modal-add-cart-btn"
-                  onClick={() => addToCartWithQuantity(productQuantity)}
-                >
-                  <ShoppingBag size={18} strokeWidth={1.8} />
-                  <span>SAVATGA QO'SHISH</span>
-                </button>
               </div>
             </div>
           </Sheet>
