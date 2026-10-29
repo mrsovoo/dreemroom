@@ -53,36 +53,36 @@ const defaultHeroSlides: HeroSlide[] = [
     id: "banner-1",
     src: "/image-landing/banner-1.jpg?v=2",
     alt: "DREEM ROOM • Yangi mavsum",
-    title: "Daily Winds\nFor Colors",
+    title: "Har Kunlik Nafislik\nVa Go'zallik",
     subtitle: "Zamonaviy bichim va yuqori sifatli matolar. Har bir kun uchun nafislik va qulaylik uyg'unligi.",
-    eyebrow: "DREEM ROOM • COLLECTION",
+    eyebrow: "DREEM ROOM • TO'PLAM",
     buttonText: "TO'PLAMNI KO'RISH",
   },
   {
     id: "banner-2",
     src: "/image-landing/banner-2.jpg?v=2",
     alt: "DREEM ROOM • Eksklyuziv to'plam",
-    title: "Exclusive Winter\nEdition",
+    title: "Eksklyuziv Qishki\nTo'plam",
     subtitle: "Har bir detalda nozik did va qulaylik. Cheklangan miqdordagi eksklyuziv modellar.",
-    eyebrow: "DREEM ROOM • COLLECTION",
+    eyebrow: "DREEM ROOM • TO'PLAM",
     buttonText: "TO'PLAMNI KO'RISH",
   },
   {
     id: "banner-3",
     src: "/image-landing/banner-3.jpg?v=2",
     alt: "DREEM ROOM • Premium uslub",
-    title: "Premium Urban\nWear",
+    title: "Zamonaviy Shahar\nUslubi",
     subtitle: "Zamonaviy shahar ritmi uchun maxsus yaratilgan qulay va bejirim kiyimlar.",
-    eyebrow: "DREEM ROOM • COLLECTION",
+    eyebrow: "DREEM ROOM • TO'PLAM",
     buttonText: "TO'PLAMNI KO'RISH",
   },
   {
     id: "banner-4",
     src: "/image-landing/banner-4.jpg?v=2",
     alt: "DREEM ROOM • Nafis kolleksiya",
-    title: "Timeless\nElegance",
+    title: "Qulaylik Va\nNafis Did",
     subtitle: "Har doim urfda bo'ladigan klassik va zamonaviy uslub uyg'unligi.",
-    eyebrow: "DREEM ROOM • COLLECTION",
+    eyebrow: "DREEM ROOM • TO'PLAM",
     buttonText: "TO'PLAMNI KO'RISH",
   },
 ];
@@ -167,8 +167,34 @@ export default function App() {
   const [cart, setCart] = useCart();
   const [wishlist, setWishlist] = useWishlist();
   const [profile, setProfile] = useProfile();
-  const [productsList, setProductsList] = useState<Product[]>(products);
-  const [heroSlidesList, setHeroSlidesList] = useState<HeroSlide[]>(defaultHeroSlides);
+  const [productsList, setProductsList] = useState<Product[]>(() => {
+    try {
+      const cached = localStorage.getItem("dreemroom_cached_prods");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return products;
+  });
+  const [heroSlidesList, setHeroSlidesList] = useState<HeroSlide[]>(() => {
+    try {
+      const cached = localStorage.getItem("dreemroom_cached_slides");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return defaultHeroSlides;
+  });
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(() => {
+    try {
+      const cached = localStorage.getItem("dreemroom_cached_prods");
+      return !cached || JSON.parse(cached).length === 0;
+    } catch {
+      return true;
+    }
+  });
   const [activeProduct, setActiveProduct] = useState<Product | null>(products[0] || null);
   const [selectedSize, setSelectedSize] = useState("");
   const [sizeError, setSizeError] = useState(false);
@@ -191,7 +217,7 @@ export default function App() {
     saveProfile: () => {},
   });
 
-  // Backend / Admin panel bilan mahsulotlarni xavfsiz sinxronlash
+  // Backend / Admin panel bilan mahsulotlarni xavfsiz sinxronlash (Tezkor kesh bilan)
   useEffect(() => {
     let active = true;
     async function syncProducts() {
@@ -199,12 +225,17 @@ export default function App() {
         const res = await fetch("/api/products");
         if (res.ok && active) {
           const data: Product[] = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             setProductsList(data);
+            try {
+              localStorage.setItem("dreemroom_cached_prods", JSON.stringify(data));
+            } catch {}
           }
         }
       } catch {
-        /* Backend uzilgan bo'lsa ham data.ts dagi boshlang'ich mahsulotlar ishlayveradi */
+        /* Backend uzilgan bo'lsa ham keshdagi mahsulotlar ishlayveradi */
+      } finally {
+        if (active) setIsLoadingProducts(false);
       }
     }
 
@@ -216,7 +247,7 @@ export default function App() {
     };
   }, []);
 
-  // Backend / Admin panel bilan bannyerlarni sinxronlash
+  // Backend / Admin panel bilan bannyerlarni sinxronlash (Tezkor kesh bilan)
   useEffect(() => {
     let active = true;
     async function syncBanners() {
@@ -226,6 +257,9 @@ export default function App() {
           const data: HeroSlide[] = await res.json();
           if (Array.isArray(data) && data.length > 0) {
             setHeroSlidesList(data);
+            try {
+              localStorage.setItem("dreemroom_cached_slides", JSON.stringify(data));
+            } catch {}
           }
         }
       } catch {
@@ -825,11 +859,11 @@ export default function App() {
                     <div className="hero-eyebrow-row">
                       <span className="hero-eyebrow-symbol">◈</span>
                       <span className="hero-eyebrow-text">
-                        {heroSlidesList[slide]?.eyebrow || "DREEM ROOM • COLLECTION"}
+                        {heroSlidesList[slide]?.eyebrow || "DREEM ROOM • TO'PLAM"}
                       </span>
                     </div>
                     <h1 className="hero-editorial-title">
-                      {heroSlidesList[slide]?.title || "Daily Winds\nFor Colors"}
+                      {heroSlidesList[slide]?.title || "Har Kunlik Nafislik\nVa Go'zallik"}
                     </h1>
                     <p className="hero-editorial-desc">
                       {heroSlidesList[slide]?.subtitle ||
@@ -874,7 +908,19 @@ export default function App() {
               <div className="velvorn-section-header velvorn-center-header">
                 <h2 className="velvorn-heading-drops">Katalog</h2>
               </div>
-              {productsList.length > 0 ? (
+              {isLoadingProducts && productsList.length === 0 ? (
+                <div className="velvorn-clean-grid grid-radiusless">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <div key={n} className="card-skeleton">
+                      <div className="card-skeleton-img" />
+                      <div className="card-skeleton-info">
+                        <div className="card-skeleton-line" />
+                        <div className="card-skeleton-line short" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : productsList.length > 0 ? (
                 <>
                   <div className="velvorn-clean-grid grid-radiusless">
                     {productsList.slice(0, 6).map((product) => (
@@ -901,10 +947,10 @@ export default function App() {
               ) : (
                 <div style={{ textAlign: "center", padding: "48px 20px", color: "#71717a" }}>
                   <p style={{ fontSize: "15px", fontWeight: 500, margin: "0 0 6px" }}>
-                    Hozircha mahsulotlar kiritilmagan.
+                    Hozircha mahsulotlar mavjud emas.
                   </p>
                   <p style={{ fontSize: "13px", color: "#a1a1aa", margin: 0 }}>
-                    Admin panel orqali yangi mahsulotlarni kiritishingiz mumkin.
+                    Yangi to'plamlar tez orada qo'shiladi.
                   </p>
                 </div>
               )}

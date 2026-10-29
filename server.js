@@ -118,7 +118,10 @@ const server = http.createServer(async (req, res) => {
   // 1. API: Get all products
   if (req.method === "GET" && pathname === "/api/products") {
     const products = await getProducts();
-    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "public, s-maxage=10, stale-while-revalidate=60",
+    });
     res.end(JSON.stringify(products));
     return;
   }

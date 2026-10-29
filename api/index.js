@@ -133,6 +133,7 @@ export default async function handler(req, res) {
     // 3. API: Banners
     if (pathname === "/api/banners" && req.method === "GET") {
       const banners = await getBanners();
+      res.setHeader("Cache-Control", "public, s-maxage=10, stale-while-revalidate=60");
       return sendJson(res, 200, banners);
     }
 
@@ -158,6 +159,7 @@ export default async function handler(req, res) {
     // 4. API: Products
     if (pathname === "/api/products" && req.method === "GET") {
       const products = await getProducts();
+      res.setHeader("Cache-Control", "public, s-maxage=10, stale-while-revalidate=60");
       return sendJson(res, 200, products);
     }
 

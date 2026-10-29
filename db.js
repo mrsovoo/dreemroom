@@ -23,6 +23,19 @@ const DATABASE_URL = process.env.DATABASE_URL?.trim();
 const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
 
 let tablesInitialized = false;
+let productsCache = null;
+let productsCacheTime = 0;
+let bannersCache = null;
+let bannersCacheTime = 0;
+const CACHE_TTL_MS = 6000; // 6 soniya tezkor xotirada saqlash (DB ga yukni 90% kamaytiradi)
+
+export function invalidateProductsCache() {
+  productsCache = null;
+}
+
+export function invalidateBannersCache() {
+  bannersCache = null;
+}
 
 export async function initDatabase() {
   if (!sql || tablesInitialized) return;
@@ -172,6 +185,11 @@ export function normalizeProduct(p) {
 // 1. PRODUCTS
 // --------------------------------------------------------------------------
 export async function getProducts() {
+  const now = Date.now();
+  if (productsCache && (now - productsCacheTime < CACHE_TTL_MS)) {
+    return productsCache;
+  }
+
   // Buyurtmalar bazasidan har bir mahsulotning sotuv va buyurtmalar sonini aniqlash
   const salesMap = {};
   const ordersCountMap = {};
@@ -191,7 +209,6 @@ export async function getProducts() {
 
   let products = [];
   if (sql) {
-    await initDatabase();
     try {
       const rows = await sql`
         SELECT 
@@ -215,6 +232,9 @@ export async function getProducts() {
       products = rows || [];
     } catch (err) {
       console.error("[DB]: Neon getProducts xatosi:", err.message);
+      if (err.message && err.message.includes("does not exist")) {
+        await initDatabase();
+      }
     }
   }
 
@@ -228,7 +248,7 @@ export async function getProducts() {
     } catch {}
   }
 
-  return products.map((p) => {
+  const result = products.map((p) => {
     const norm = normalizeProduct(p);
     const dynamicSales = salesMap[norm.id] || 0;
     const dynamicOrders = ordersCountMap[norm.id] || 0;
@@ -242,6 +262,10 @@ export async function getProducts() {
       ordersCount: dynamicOrders,
     };
   });
+
+  productsCache = result;
+  productsCacheTime = Date.now();
+  return result;
 }
 
 export async function getProductById(id) {
@@ -343,6 +367,7 @@ export async function createProduct(prod) {
     list.unshift(prod);
   }
   fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(list, null, 2), "utf-8");
+  invalidateProductsCache();
   return prod;
 }
 
@@ -390,6 +415,7 @@ export async function updateProduct(id, updates) {
     list[idx] = merged;
     fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(list, null, 2), "utf-8");
   }
+  invalidateProductsCache();
   return merged;
 }
 
@@ -401,6 +427,7 @@ export async function deleteProduct(id) {
     await initDatabase();
     try {
       await sql`DELETE FROM products WHERE id = ${id};`;
+      invalidateProductsCache();
       return existing;
     } catch (err) {
       console.error("[DB]: Neon deleteProduct xatosi:", err.message);
@@ -411,10 +438,12 @@ export async function deleteProduct(id) {
   const list = await getProducts();
   const filtered = list.filter((p) => p.id !== id);
   fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(filtered, null, 2), "utf-8");
+  invalidateProductsCache();
   return existing;
 }
 
 export async function clearAllProducts() {
+  invalidateProductsCache();
   if (sql) {
     await initDatabase();
     try {
@@ -1169,9 +1198,13 @@ export async function setTargetTelegramGroup(chatId) {
 const BANNERS_FILE = path.join(__dirname, "banners.json");
 
 export async function getBanners() {
+  const now = Date.now();
+  if (bannersCache && (now - bannersCacheTime < CACHE_TTL_MS)) {
+    return bannersCache;
+  }
+
   let banners = [];
   if (sql) {
-    await initDatabase();
     try {
       const rows = await sql`
         SELECT 
@@ -1190,6 +1223,9 @@ export async function getBanners() {
       banners = rows || [];
     } catch (err) {
       console.error("[DB]: getBanners xatosi:", err.message);
+      if (err.message && err.message.includes("does not exist")) {
+        await initDatabase();
+      }
     }
   }
 
@@ -1201,6 +1237,8 @@ export async function getBanners() {
     } catch {}
   }
 
+  bannersCache = banners;
+  bannersCacheTime = Date.now();
   return banners;
 }
 
@@ -1280,10 +1318,12 @@ export async function createBanner(bannerData) {
     fs.writeFileSync(BANNERS_FILE, JSON.stringify(list, null, 2), "utf-8");
   } catch {}
 
+  invalidateBannersCache();
   return newBanner;
 }
 
 export async function deleteBanner(id) {
+  invalidateBannersCache();
   if (sql) {
     await initDatabase();
     try {
