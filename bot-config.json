@@ -1,0 +1,10 @@
+{
+  "botToken": "8977841290:AAG4PpBjjq-sbHA_5NWiggjP0yqR6gMYF2A",
+  "adminSecret": "dreemroom-adm",
+  "adminIds": [
+    6728378751
+  ],
+  "targetChatId": -1004367729128,
+  "webAppUrl": "http://localhost:5173",
+  "orderBotUsername": "dreemroom_bot"
+}

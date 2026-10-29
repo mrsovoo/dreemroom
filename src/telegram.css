@@ -1,0 +1,64 @@
+/* ================================================================
+   TELEGRAM MINI APP
+   WebApp safe-area, barqaror balandlik va pastdagi asosiy tugma.
+   ================================================================ */
+:root {
+  --sat: var(--tg-safe-area-inset-top, 0px);
+  --sab: var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+body.in-telegram {
+  overscroll-behavior-y: none;
+}
+
+.in-telegram .header {
+  height: calc(68px + var(--sat));
+  padding-top: var(--sat);
+}
+
+/* Telegram asosiy tugmasi ko'ringanda oynadagi takroriy tugma yashirinadi. */
+.tg-mainbutton-on .detail-body .btn-full,
+.tg-mainbutton-on .order-form .btn-full,
+.tg-mainbutton-on .profile-form .btn-full,
+.tg-mainbutton-on .done .btn-full {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  .tabbar {
+    height: calc(62px + var(--sab));
+    padding-bottom: var(--sab);
+  }
+
+  .in-telegram .header {
+    height: calc(58px + var(--sat));
+  }
+
+  .in-telegram .overlay-sheet .dialog {
+    max-height: calc(var(--app-height, 100dvh) * 0.94);
+    padding-bottom: var(--sab);
+  }
+
+  .toast {
+    bottom: calc(72px + var(--sab));
+  }
+
+  /* Asosiy tugma oynaning pastki qismini yopib qo'ymaydi. */
+  .tg-mainbutton-on .overlay-sheet .dialog-body {
+    padding-bottom: calc(72px + var(--sab));
+  }
+}
