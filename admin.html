@@ -1171,10 +1171,14 @@
               <label class="field-label">Rangi *</label>
               <input type="text" id="fieldColor" class="field-input" required placeholder="Masalan: Qora">
             </div>
-            <div class="field-group" style="justify-content: center;">
+            <div class="field-group" style="justify-content: center; flex-direction: row; gap: 16px;">
               <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 18px; font-size: 13px;">
                 <input type="checkbox" id="fieldIsNew" style="accent-color: var(--brand);">
-                <span>Yangi to'plam deb belgilash</span>
+                <span>Yangi mahsulot</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 18px; font-size: 13px;">
+                <input type="checkbox" id="fieldIsPopular" style="accent-color: var(--brand);">
+                <span>⭐ Ommabop model (Ko'p sotilgan)</span>
               </label>
             </div>
           </div>
@@ -1465,7 +1469,11 @@
               <div class="product-row-info">
                 <img src="${img}" class="product-row-img" alt="">
                 <div>
-                  <div class="product-name">${p.name}</div>
+                  <div class="product-name">
+                    ${p.name}
+                    ${p.isPopular ? '<span style="background: #2b2836; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 999px; margin-left: 6px; font-weight: 600;">⭐ Ommabop</span>' : ''}
+                    ${(p.salesCount && p.salesCount > 0) ? `<span style="background: #d4f7dc; color: #15803d; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; margin-left: 4px; font-weight: 600;">${p.salesCount} ta sotilgan</span>` : ''}
+                  </div>
                   <div style="font-size: 11.5px; color: var(--ink-muted);">${p.color || ''}</div>
                 </div>
               </div>
@@ -1631,6 +1639,7 @@
       document.getElementById("fieldSeason").value = "Barchasi";
       document.getElementById("fieldColor").value = "";
       document.getElementById("fieldIsNew").checked = true;
+      document.getElementById("fieldIsPopular").checked = false;
       document.getElementById("fieldDescription").value = "";
 
       selectedSizes = ["XS", "S", "M", "L", "XL"];
@@ -1652,6 +1661,7 @@
       document.getElementById("fieldSeason").value = p.season || "Barchasi";
       document.getElementById("fieldColor").value = p.color || "";
       document.getElementById("fieldIsNew").checked = Boolean(p.isNew);
+      document.getElementById("fieldIsPopular").checked = Boolean(p.isPopular);
       document.getElementById("fieldDescription").value = p.description || "";
 
       selectedSizes = (p.sizes && p.sizes.length) ? [...p.sizes] : ["XS", "S", "M", "L", "XL"];
@@ -1687,6 +1697,7 @@
       const season = document.getElementById("fieldSeason").value;
       const color = document.getElementById("fieldColor").value.trim();
       const isNew = document.getElementById("fieldIsNew").checked;
+      const isPopular = document.getElementById("fieldIsPopular").checked;
       const description = document.getElementById("fieldDescription").value.trim();
 
       // Mavjud mahsulot rasmlarini o'zgarishsiz to'liq saqlab qolamiz
@@ -1702,6 +1713,7 @@
         season,
         color,
         isNew,
+        isPopular,
         description,
         sizes: selectedSizes,
         images: finalImages

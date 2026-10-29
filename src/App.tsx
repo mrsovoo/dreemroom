@@ -136,7 +136,7 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [slide, setSlide] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
+  const [sortBy, setSortBy] = useState<"default" | "popular" | "price-asc" | "price-desc">("default");
   const [profileName, setProfileName] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
   const tgRef = useRef<TgWebApp | null>(null);
@@ -270,7 +270,14 @@ export default function App() {
           p.description.toLowerCase().includes(q),
       );
     }
-    if (sortBy === "price-asc") {
+    if (sortBy === "popular") {
+      result = [...result].sort((a, b) => {
+        const aScore = (a.salesCount || 0) * 10 + (a.ordersCount || 0) * 5 + (a.isPopular ? 1000 : 0);
+        const bScore = (b.salesCount || 0) * 10 + (b.ordersCount || 0) * 5 + (b.isPopular ? 1000 : 0);
+        if (bScore !== aScore) return bScore - aScore;
+        return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
+      });
+    } else if (sortBy === "price-asc") {
       result = [...result].sort((a, b) => a.price - b.price);
     } else if (sortBy === "price-desc") {
       result = [...result].sort((a, b) => b.price - a.price);
@@ -288,6 +295,29 @@ export default function App() {
       );
     }),
   );
+
+  // Desktop va mobil asosiy sahifadagi mahsulotlar ro'yxati (Kategoriya bo'yicha)
+  const homeCatalogProducts = useMemo(() => {
+    if (category && category !== allCategory) {
+      const q = category.toLowerCase().trim();
+      return productsList.filter(
+        (p) =>
+          (p.category && p.category.toLowerCase().trim() === q) ||
+          (p.name && p.name.toLowerCase().includes(q)),
+      );
+    }
+    return productsList;
+  }, [productsList, category]);
+
+  // Eng ko'p sotilgan va yaxshi buyurtma bo'layotgan ommabop modellar
+  const popularProducts = useMemo(() => {
+    return [...productsList].sort((a, b) => {
+      const aSales = (a.salesCount || 0) * 10 + (a.ordersCount || 0) * 5 + (a.isPopular ? 1000 : 0);
+      const bSales = (b.salesCount || 0) * 10 + (b.ordersCount || 0) * 5 + (b.isPopular ? 1000 : 0);
+      if (bSales !== aSales) return bSales - aSales;
+      return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
+    });
+  }, [productsList]);
 
   useEffect(() => {
     if (!toast) return;
@@ -339,8 +369,12 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
   }
 
-  function openCatalog(nextCategory = allCategory) {
+  function openCatalog(
+    nextCategory = allCategory,
+    nextSort: "default" | "popular" | "price-asc" | "price-desc" = "default",
+  ) {
     setCategory(nextCategory);
+    setSortBy(nextSort);
     setView("catalog");
     setSearchQuery("");
     setPanel(null);
@@ -749,16 +783,18 @@ export default function App() {
               <div className="section-head">
                 <div>
                   <span className="section-eyebrow">Kolleksiya</span>
-                  <h2>Bizning mahsulotlar</h2>
+                  <h2>
+                    {category === allCategory ? "Mahsulotlar katalogi" : `${category} katalogi`}
+                  </h2>
                 </div>
                 <button
                   className="link-btn"
                   onClick={() => {
                     haptic(tgRef.current, "light");
-                    openCatalog();
+                    openCatalog(category);
                   }}
                 >
-                  Barchasini ko'rish ({productsList.length})
+                  Barchasini ko'rish ({homeCatalogProducts.length})
                   <ArrowRight size={14} />
                 </button>
               </div>
@@ -770,7 +806,7 @@ export default function App() {
                     className={category === item ? "chip is-active" : "chip"}
                     onClick={() => {
                       haptic(tgRef.current, "select");
-                      openCatalog(item);
+                      setCategory(item);
                     }}
                   >
                     {item}
@@ -779,7 +815,7 @@ export default function App() {
               </div>
 
               <div className="grid">
-                {productsList.map((product) => (
+                {homeCatalogProducts.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -864,20 +900,26 @@ export default function App() {
                 </div>
               </section>
 
-              {/* 1-rasm: 1-bo'lim — Ommabop modellar (New Popular Item) */}
-              {productsList.length > 0 && (
+              {/* 1-rasm: 1-bo'lim — Ommabop modellar (Eng ko'p sotilgan va yaxshi buyurtma bo'layotgan modellar) */}
+              {popularProducts.length > 0 && (
                 <section className="section section-popular" aria-labelledby="popular-title">
                   <div className="section-head">
                     <div>
                       <h2 id="popular-title">Ommabop modellar</h2>
                     </div>
-                    <button className="link-btn" onClick={() => openCatalog()}>
+                    <button
+                      className="link-btn"
+                      onClick={() => {
+                        haptic(tgRef.current, "light");
+                        openCatalog(allCategory, "popular");
+                      }}
+                    >
                       Barchasi &gt;
                     </button>
                   </div>
 
                   <div className="grid">
-                    {productsList.slice(0, 2).map((product) => (
+                    {popularProducts.slice(0, 2).map((product) => (
                       <ProductCard
                         key={product.id}
                         product={product}
@@ -899,7 +941,7 @@ export default function App() {
                       className={category === item ? "chip is-active" : "chip"}
                       onClick={() => {
                         haptic(tgRef.current, "select");
-                        openCatalog(item);
+                        setCategory(item);
                       }}
                     >
                       {item}
@@ -908,17 +950,28 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 1-rasm: 2-bo'lim — Yangi to'plam */}
-              {productsList.length > 0 && (
+              {/* 1-rasm: 2-bo'lim — Mahsulotlar katalogi ("Yangi to'plam" o'rniga) */}
+              {homeCatalogProducts.length > 0 ? (
                 <section className="section section-new-collection" aria-labelledby="new-collection-title">
                   <div className="section-head">
                     <div>
-                      <h2 id="new-collection-title">Yangi to'plam</h2>
+                      <h2 id="new-collection-title">
+                        {category === allCategory ? "Mahsulotlar katalogi" : `${category} katalogi`}
+                      </h2>
                     </div>
+                    <button
+                      className="link-btn"
+                      onClick={() => {
+                        haptic(tgRef.current, "light");
+                        openCatalog(category);
+                      }}
+                    >
+                      Katalogda ko'rish ({homeCatalogProducts.length}) &gt;
+                    </button>
                   </div>
 
                   <div className="grid">
-                    {(productsList.length > 2 ? productsList.slice(2) : productsList).map((product) => (
+                    {homeCatalogProducts.map((product) => (
                       <ProductCard
                         key={product.id}
                         product={product}
@@ -927,6 +980,21 @@ export default function App() {
                         onToggleWishlist={toggleWishlist}
                       />
                     ))}
+                  </div>
+                </section>
+              ) : (
+                <section className="section section-new-collection">
+                  <div className="empty">
+                    <p>Ushbu toifada mahsulot topilmadi.</p>
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        haptic(tgRef.current, "light");
+                        setCategory(allCategory);
+                      }}
+                    >
+                      Barcha mahsulotlar
+                    </button>
                   </div>
                 </section>
               )}
@@ -966,12 +1034,13 @@ export default function App() {
                     value={sortBy}
                     onChange={(e) =>
                       setSortBy(
-                        e.target.value as "default" | "price-asc" | "price-desc",
+                        e.target.value as "default" | "popular" | "price-asc" | "price-desc",
                       )
                     }
                     aria-label="Saralash"
                   >
                     <option value="default">Standart saralash</option>
+                    <option value="popular">Ommabop (Eng ko'p sotilganlar)</option>
                     <option value="price-asc">Narx: Arzondan qimmatga</option>
                     <option value="price-desc">Narx: Qimmatdan arzonga</option>
                   </select>
@@ -1140,9 +1209,13 @@ export default function App() {
                 }
               />
               <div className="detail-bottom-card">
-                {/* 2-rasm: Yangi va Yetkazib berish bepul nishonlari */}
+                {/* 2-rasm: Yangi/Ommabop va Yetkazib berish bepul nishonlari */}
                 <div className="detail-badges-row">
-                  <span className="badge-pill badge-pill-new">Yangi</span>
+                  {activeProduct.isPopular || (activeProduct.salesCount && activeProduct.salesCount > 0) ? (
+                    <span className="badge-pill badge-pill-popular">⭐ Ommabop model</span>
+                  ) : activeProduct.isNew ? (
+                    <span className="badge-pill badge-pill-new">Yangi</span>
+                  ) : null}
                   <span className="badge-pill badge-pill-discount">Yetkazib berish bepul</span>
                 </div>
 

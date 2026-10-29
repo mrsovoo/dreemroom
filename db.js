@@ -37,6 +37,8 @@ export async function initDatabase() {
         category TEXT,
         season TEXT,
         is_new BOOLEAN DEFAULT true,
+        is_popular BOOLEAN DEFAULT false,
+        sales_count INTEGER DEFAULT 0,
         color TEXT,
         sizes JSONB NOT NULL DEFAULT '[]'::jsonb,
         description TEXT,
@@ -44,6 +46,13 @@ export async function initDatabase() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
+
+    await sql`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS is_popular BOOLEAN DEFAULT false;
+    `.catch(() => {});
+    await sql`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS sales_count INTEGER DEFAULT 0;
+    `.catch(() => {});
 
     await sql`
       CREATE TABLE IF NOT EXISTS orders (
@@ -148,6 +157,24 @@ export function normalizeProduct(p) {
 // 1. PRODUCTS
 // --------------------------------------------------------------------------
 export async function getProducts() {
+  // Buyurtmalar bazasidan har bir mahsulotning sotuv va buyurtmalar sonini aniqlash
+  const salesMap = {};
+  const ordersCountMap = {};
+  try {
+    const orders = await getOrders();
+    for (const ord of orders || []) {
+      const items = Array.isArray(ord.items) ? ord.items : [];
+      for (const item of items) {
+        if (item && item.id) {
+          const qty = Number(item.quantity) || 1;
+          salesMap[item.id] = (salesMap[item.id] || 0) + qty;
+          ordersCountMap[item.id] = (ordersCountMap[item.id] || 0) + 1;
+        }
+      }
+    }
+  } catch {}
+
+  let products = [];
   if (sql) {
     await initDatabase();
     try {
@@ -160,6 +187,8 @@ export async function getProducts() {
           category, 
           season, 
           is_new as "isNew", 
+          COALESCE(is_popular, false) as "isPopular",
+          COALESCE(sales_count, 0) as "salesCount",
           color, 
           sizes, 
           description, 
@@ -168,20 +197,36 @@ export async function getProducts() {
         FROM products 
         ORDER BY created_at DESC;
       `;
-      return (rows || []).map(normalizeProduct);
+      products = rows || [];
     } catch (err) {
       console.error("[DB]: Neon getProducts xatosi:", err.message);
     }
   }
 
   // Fallback to local products.json
-  try {
-    if (fs.existsSync(PRODUCTS_FILE)) {
-      const list = JSON.parse(fs.readFileSync(PRODUCTS_FILE, "utf-8"));
-      return Array.isArray(list) ? list.map(normalizeProduct) : [];
-    }
-  } catch {}
-  return [];
+  if (!products.length) {
+    try {
+      if (fs.existsSync(PRODUCTS_FILE)) {
+        const list = JSON.parse(fs.readFileSync(PRODUCTS_FILE, "utf-8"));
+        products = Array.isArray(list) ? list : [];
+      }
+    } catch {}
+  }
+
+  return products.map((p) => {
+    const norm = normalizeProduct(p);
+    const dynamicSales = salesMap[norm.id] || 0;
+    const dynamicOrders = ordersCountMap[norm.id] || 0;
+    const manualSales = Number(norm.salesCount) || 0;
+    const totalSales = dynamicSales + manualSales;
+    const isPopular = Boolean(norm.isPopular || totalSales > 0 || dynamicOrders > 0);
+    return {
+      ...norm,
+      isPopular,
+      salesCount: totalSales,
+      ordersCount: dynamicOrders,
+    };
+  });
 }
 
 export async function getProductById(id) {
@@ -230,12 +275,15 @@ export async function createProduct(prod) {
     prod.id = `${slug || "item"}-${Date.now().toString(36)}`;
   }
 
+  const isPopular = Boolean(prod.isPopular);
+  const salesCount = Number(prod.salesCount) || 0;
+
   if (sql) {
     await initDatabase();
     try {
       await sql`
         INSERT INTO products (
-          id, name, price, images, category, season, is_new, color, sizes, description, telegram
+          id, name, price, images, category, season, is_new, is_popular, sales_count, color, sizes, description, telegram
         ) VALUES (
           ${prod.id},
           ${prod.name},
@@ -244,6 +292,8 @@ export async function createProduct(prod) {
           ${prod.category || "Dvoyka"},
           ${prod.season || "Barchasi"},
           ${Boolean(prod.isNew)},
+          ${isPopular},
+          ${salesCount},
           ${prod.color || "Asosiy"},
           ${JSON.stringify(prod.sizes || ["XS", "S", "M", "L", "XL"])},
           ${prod.description || ""},
@@ -256,6 +306,8 @@ export async function createProduct(prod) {
           category = EXCLUDED.category,
           season = EXCLUDED.season,
           is_new = EXCLUDED.is_new,
+          is_popular = EXCLUDED.is_popular,
+          sales_count = EXCLUDED.sales_count,
           color = EXCLUDED.color,
           sizes = EXCLUDED.sizes,
           description = EXCLUDED.description,
@@ -302,7 +354,14 @@ export async function updateProduct(id, updates) {
           category = ${merged.category || "Dvoyka"},
           season = ${merged.season || "Barchasi"},
           is_new = ${Boolean(merged.isNew)},
+          is_popular = ${Boolean(merged.isPopular)},
+          sales_count = ${Number(merged.salesCount) || 0},
           color = ${merged.color || "Asosiy"},
+          sizes = ${JSON.stringify(merged.sizes || [])},
+          description = ${merged.description || ""},
+          telegram = ${JSON.stringify(merged.telegram || null)}
+        WHERE id = ${id};
+      `;
           sizes = ${JSON.stringify(merged.sizes || [])},
           description = ${merged.description || ""},
           telegram = ${JSON.stringify(merged.telegram || null)}

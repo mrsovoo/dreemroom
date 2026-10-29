@@ -110,7 +110,11 @@ export default function ProductCard({
           />
         </button>
 
-        {product.isNew && <span className="card-flag">Yangi</span>}
+        {product.isPopular || (product.salesCount && product.salesCount > 0) ? (
+          <span className="card-flag card-flag-popular">Ommabop</span>
+        ) : product.isNew ? (
+          <span className="card-flag">Yangi</span>
+        ) : null}
         <span className="card-dots" aria-hidden="true">
           {cardImages.map((image, i) => (
             <span

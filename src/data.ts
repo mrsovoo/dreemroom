@@ -11,6 +11,9 @@ export type Product = {
   category: string;
   season?: string;
   isNew: boolean;
+  isPopular?: boolean;
+  salesCount?: number;
+  ordersCount?: number;
   color: string;
   description: string;
   sizes?: string[];

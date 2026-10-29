@@ -882,6 +882,12 @@ p {
   letter-spacing: 0.02em;
   z-index: 2;
 }
+.card-flag-popular {
+  background: #2b2836 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(43, 40, 54, 0.28);
+}
 .card-info {
   display: flex;
   align-items: flex-start;
@@ -2631,6 +2637,10 @@ body.in-telegram .mobile-app-layout {
 }
 .badge-pill-new {
   background: #ff6b4a;
+  color: #ffffff;
+}
+.badge-pill-popular {
+  background: #2b2836;
   color: #ffffff;
 }
 .badge-pill-discount {
