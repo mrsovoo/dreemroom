@@ -51,6 +51,8 @@ import {
   getBanners,
   createBanner,
   deleteBanner,
+  getContacts,
+  setContacts,
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -480,6 +482,35 @@ const server = http.createServer(async (req, res) => {
     await deleteBanner(id);
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ success: true, id }));
+    return;
+  }
+
+  // 22. API: Get site contacts (GET /api/contacts)
+  if (req.method === "GET" && pathname === "/api/contacts") {
+    const contacts = await getContacts();
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    });
+    res.end(JSON.stringify(contacts));
+    return;
+  }
+
+  // 23. API: Update site contacts (POST /api/contacts)
+  if ((req.method === "POST" || req.method === "PUT") && pathname === "/api/contacts") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      try {
+        const data = JSON.parse(body || "{}");
+        const updated = await setContacts(data);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(updated));
+      } catch (err) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
     return;
   }
 

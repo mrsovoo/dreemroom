@@ -160,6 +160,30 @@ function useProfile() {
   return [profile, setProfile] as const;
 }
 
+type SiteContacts = {
+  phone: string;
+  telegram: string;
+  telegramUrl: string;
+  instagram: string;
+  instagramUrl: string;
+  address: string;
+  workHours: string;
+  email: string;
+  brandDesc: string;
+};
+
+const defaultSiteContacts: SiteContacts = {
+  phone: "+998 90 123 45 67",
+  telegram: "@dreemroom",
+  telegramUrl: "https://t.me/dreemroom",
+  instagram: "@dreemroom",
+  instagramUrl: "https://instagram.com/dreemroom",
+  address: "Toshkent shahri, O'zbekiston",
+  workHours: "Har kuni 09:00 — 21:00",
+  email: "info@dreemroom.uz",
+  brandDesc: "Zamonaviy va premium sifatdagi kiyimlar to'plami. O'zbekiston bo'ylab tezkor va qulay yetkazib berish xizmati.",
+};
+
 export default function App() {
   const [view, setView] = useState<View>("home");
   const [panel, setPanel] = useState<Panel>(null);
@@ -186,6 +210,16 @@ export default function App() {
       }
     } catch {}
     return defaultHeroSlides;
+  });
+  const [siteContacts, setSiteContacts] = useState<SiteContacts>(() => {
+    try {
+      const cached = localStorage.getItem("dreemroom_cached_contacts");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === "object") return { ...defaultSiteContacts, ...parsed };
+      }
+    } catch {}
+    return defaultSiteContacts;
   });
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(() => {
     try {
@@ -269,6 +303,32 @@ export default function App() {
 
     syncBanners();
     const interval = setInterval(syncBanners, 20000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Backend / Admin panel bilan sayt kontaktlarini sinxronlash
+  useEffect(() => {
+    let active = true;
+    async function syncContacts() {
+      try {
+        const res = await fetch("/api/contacts");
+        if (res.ok && active) {
+          const data = await res.json();
+          if (data && typeof data === "object") {
+            setSiteContacts((prev) => ({ ...prev, ...data }));
+            try {
+              localStorage.setItem("dreemroom_cached_contacts", JSON.stringify(data));
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+
+    syncContacts();
+    const interval = setInterval(syncContacts, 30000);
     return () => {
       active = false;
       clearInterval(interval);
@@ -1098,6 +1158,26 @@ export default function App() {
       </main>
 
       <footer className="velvorn-footer" id="contact">
+        {/* Orqa fondagi DREEM ROOM suv belgisi (Watermark) */}
+        <div className="footer-bg-watermark" aria-hidden="true">
+          <svg
+            id="_Слой_1"
+            data-name="Слой 1"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1033.19 90"
+            className="footer-watermark-svg"
+          >
+            <path d="M9.12,0h31.02c5.08,0,10.04.52,14.9,1.56,4.85,1.04,9.34,2.48,13.45,4.34,4.11,1.85,7.9,4.11,11.37,6.78,3.46,2.67,6.4,5.58,8.81,8.73,2.41,3.15,4.29,6.6,5.64,10.34,1.35,3.74,2.03,7.57,2.03,11.48s-.68,7.74-2.03,11.48c-1.35,3.74-3.23,7.19-5.64,10.34-2.41,3.15-5.35,6.06-8.81,8.73-3.47,2.67-7.25,4.93-11.37,6.78-4.11,1.85-8.6,3.3-13.45,4.34-4.86,1.04-9.82,1.56-14.9,1.56H.56c-.15,0-.28-.06-.39-.17-.11-.11-.17-.24-.17-.39V.56c0-.15.06-.28.17-.39.11-.11.24-.17.39-.17h8.56ZM17.12,77.83h23.01c5.52,0,10.78-.91,15.79-2.72,5-1.82,9.33-4.26,12.98-7.34,3.65-3.08,6.54-6.75,8.67-11.03,2.13-4.28,3.2-8.77,3.2-13.48,0-5-1.07-9.67-3.2-14.01-2.13-4.34-5.02-8-8.67-10.98-3.65-2.98-7.97-5.34-12.95-7.06-4.98-1.72-10.26-2.59-15.82-2.59h-23.01v69.21Z"/>
+            <path d="M119.46,0h47.25c3.85,0,7.56.32,11.12.95s6.97,1.66,10.23,3.09c3.26,1.43,6.11,3.18,8.53,5.25,2.43,2.08,4.38,4.65,5.86,7.73,1.48,3.08,2.28,6.49,2.39,10.23.11,3.3-.44,6.41-1.64,9.34-1.2,2.93-2.87,5.47-5,7.62-2.13,2.15-4.59,4-7.37,5.56-2.78,1.56-5.72,2.72-8.81,3.5-3.09.78-6.18,1.17-9.26,1.17h-6.95c20.42,15.9,33.3,25.92,38.64,30.07.41.33.53.74.36,1.22-.17.48-.51.72-1.03.72h-20.79c-.3,0-.56-.11-.78-.33-4.45-4.45-10.03-10.02-16.76-16.71-6.73-6.69-11.74-11.68-15.04-14.98h-22.96v31.46c0,.15-.05.28-.14.39-.09.11-.21.17-.36.17h-16.07c-.15,0-.28-.06-.39-.17-.11-.11-.17-.24-.17-.39V.56c0-.15.06-.28.17-.39.11-.11.24-.17.39-.17h8.56ZM127.47,45.81h45.31c2.56,0,4.9-.41,7.03-1.22,2.13-.82,3.87-1.87,5.23-3.17,1.35-1.3,2.5-2.78,3.45-4.45.95-1.67,1.61-3.32,2-4.95.39-1.63.58-3.22.58-4.78s-.25-3.21-.75-4.84c-.5-1.63-1.36-3.28-2.58-4.95-1.22-1.67-2.73-3.15-4.53-4.45-1.8-1.3-4.12-2.35-6.98-3.17-2.85-.81-6.02-1.22-9.51-1.22h-39.25v37.19Z"/>
+            <path d="M295.63,86.44h-75.71c-.15,0-.28-.06-.39-.17-.11-.11-.17-.24-.17-.39V.56c0-.15.06-.28.17-.39.11-.11.24-.17.39-.17h75.71c.15,0,.27.06.36.17.09.11.14.24.14.39v4.34c0,.15-.05.27-.14.36s-.21.14-.36.14h-59.15v37.86h35.69c.15,0,.28.05.39.14s.17.21.17.36v4.34c0,.15-.06.28-.17.39s-.24.17-.39.17h-35.69v32.41h59.15c.15,0,.27.05.36.14s.14.21.14.36v4.34c0,.15-.05.28-.14.39-.09.11-.21.17-.36.17Z"/>
+            <path d="M386.68,86.44h-75.71c-.15,0-.28-.06-.39-.17-.11-.11-.17-.24-.17-.39V.56c0-.15.06-.28.17-.39.11-.11.24-.17.39-.17h75.71c.15,0,.27.06.36.17.09.11.14.24.14.39v4.34c0,.15-.05.27-.14.36s-.21.14-.36.14h-59.15v37.86h35.69c.15,0,.28.05.39.14s.17.21.17.36v4.34c0,.15-.06.28-.17.39s-.24.17-.39.17h-35.69v32.41h59.15c.15,0,.27.05.36.14s.14.21.14.36v4.34c0,.15-.05.28-.14.39-.09.11-.21.17-.36.17Z"/>
+            <path d="M502.81.5c.18,2.37,1.37,16.65,3.56,42.83,2.19,26.18,3.37,40.35,3.56,42.5,0,.19-.05.33-.14.44-.09.11-.23.17-.42.17h-13.34c-.33,0-.52-.17-.56-.5-.41-5.23-2.52-30.65-6.34-76.27-22.12,43.92-33.6,66.69-34.41,68.32-.07.19-.24.28-.5.28h-4.67c-.22,0-.39-.08-.5-.22-5.37-9.67-17.33-31.09-35.86-64.26-3.3,32.84-5.71,56.89-7.23,72.16-.04.33-.22.5-.56.5h-7.5c-.19,0-.32-.06-.42-.17-.09-.11-.14-.26-.14-.44,4.22-42.36,7.06-70.8,8.51-85.33.04-.33.22-.5.56-.5h15.9c.22,0,.39.09.5.28.67,1.19,3.34,5.98,8.01,14.37s9.95,17.85,15.84,28.38c5.89,10.53,9.45,16.88,10.67,19.07C477.65,21.7,488,1.09,488.41.28c.11-.19.28-.28.5-.28h13.34c.33,0,.52.17.56.5Z"/>
+            <path d="M630.39,0h47.25c3.85,0,7.56.32,11.12.95s6.97,1.66,10.23,3.09c3.26,1.43,6.11,3.18,8.53,5.25,2.43,2.08,4.38,4.65,5.86,7.73,1.48,3.08,2.28,6.49,2.39,10.23.11,3.3-.44,6.41-1.64,9.34-1.2,2.93-2.87,5.47-5,7.62-2.13,2.15-4.59,4-7.37,5.56-2.78,1.56-5.72,2.72-8.81,3.5-3.09.78-6.18,1.17-9.26,1.17h-6.95c20.42,15.9,33.3,25.92,38.64,30.07.41.33.53.74.36,1.22-.17.48-.51.72-1.03.72h-20.79c-.3,0-.56-.11-.78-.33-4.45-4.45-10.03-10.02-16.76-16.71-6.73-6.69-11.74-11.68-15.04-14.98h-22.96v31.46c0,.15-.05.28-.14.39-.09.11-.21.17-.36.17h-16.07c-.15,0-.28-.06-.39-.17-.11-.11-.17-.24-.17-.39V.56c0-.15.06-.28.17-.39.11-.11.24-.17.39-.17h8.56ZM638.39,45.81h45.31c2.56,0,4.9-.41,7.03-1.22,2.13-.82,3.87-1.87,5.23-3.17,1.35-1.3,2.5-2.78,3.45-4.45.95-1.67,1.61-3.32,2-4.95.39-1.63.58-3.22.58-4.78s-.25-3.21-.75-4.84c-.5-1.63-1.36-3.28-2.58-4.95-1.22-1.67-2.73-3.15-4.53-4.45-1.8-1.3-4.12-2.35-6.98-3.17-2.85-.81-6.02-1.22-9.51-1.22h-39.25v37.19Z"/>
+            <path d="M855.36,0c5.23,0,10.32.54,15.29,1.61,4.97,1.08,9.55,2.59,13.76,4.53,4.21,1.95,8.09,4.3,11.65,7.06,3.56,2.76,6.57,5.79,9.03,9.09,2.46,3.3,4.39,6.89,5.78,10.78,1.39,3.89,2.08,7.88,2.08,11.95s-.69,8.06-2.08,11.95c-1.39,3.89-3.32,7.48-5.78,10.76-2.47,3.28-5.48,6.31-9.03,9.09-3.56,2.78-7.44,5.13-11.65,7.06-4.21,1.93-8.79,3.43-13.76,4.5-4.97,1.07-10.06,1.61-15.29,1.61-6.78,0-13.28-.88-19.48-2.64-6.21-1.76-11.83-4.25-16.87-7.48-5.08,3.22-10.72,5.72-16.93,7.48-6.21,1.76-12.7,2.64-19.48,2.64-5.19,0-10.28-.54-15.26-1.61-4.98-1.08-9.58-2.58-13.79-4.5-4.21-1.93-8.08-4.28-11.62-7.06-3.54-2.78-6.55-5.81-9.03-9.09-2.48-3.28-4.41-6.87-5.78-10.76-1.37-3.89-2.06-7.87-2.06-11.95s.69-8.06,2.06-11.95c1.37-3.89,3.3-7.49,5.78-10.78,2.48-3.3,5.49-6.33,9.03-9.09,3.54-2.76,7.41-5.11,11.62-7.06,4.21-1.95,8.8-3.46,13.79-4.53,4.98-1.07,10.07-1.61,15.26-1.61,6.78,0,13.28.88,19.48,2.64,6.21,1.76,11.85,4.25,16.93,7.48,5.04-3.22,10.66-5.72,16.87-7.48,6.21-1.76,12.7-2.64,19.48-2.64ZM782.59,9.01c-3.74,0-7.42.47-11.03,1.42-3.61.95-6.93,2.24-9.95,3.89-3.02,1.65-5.83,3.63-8.42,5.95-2.59,2.32-4.78,4.79-6.56,7.42-1.78,2.63-3.17,5.44-4.17,8.42-1,2.98-1.5,5.95-1.5,8.89s.5,5.91,1.5,8.89c1,2.98,2.39,5.8,4.17,8.45,1.78,2.65,3.96,5.12,6.56,7.42,2.59,2.3,5.4,4.27,8.42,5.92,3.02,1.65,6.34,2.96,9.95,3.92,3.61.96,7.29,1.45,11.03,1.45,4.97,0,9.73-.8,14.29-2.39,4.56-1.59,8.71-3.8,12.45-6.62-3.71-3.85-6.55-8.08-8.53-12.67-1.98-4.59-2.97-9.39-2.97-14.37s.99-9.77,2.97-14.37c1.98-4.59,4.83-8.8,8.53-12.62-3.74-2.85-7.89-5.07-12.45-6.64-4.56-1.57-9.32-2.36-14.29-2.36ZM819,28.29c-3.52,5.41-5.28,10.98-5.28,16.71s1.76,11.29,5.28,16.7c3.52-5.41,5.28-10.98,5.28-16.7s-1.76-11.29-5.28-16.71ZM828.68,72.04c3.71,2.82,7.85,5.02,12.42,6.62,4.58,1.59,9.33,2.39,14.26,2.39,3.74,0,7.43-.48,11.06-1.45,3.63-.96,6.96-2.27,9.98-3.92,3.02-1.65,5.82-3.62,8.39-5.92,2.58-2.3,4.75-4.77,6.53-7.42,1.78-2.65,3.17-5.47,4.17-8.45,1-2.98,1.5-5.95,1.5-8.89s-.5-5.91-1.5-8.89c-1-2.98-2.39-5.79-4.17-8.42-1.78-2.63-3.96-5.1-6.53-7.42-2.58-2.32-5.37-4.3-8.39-5.95-3.02-1.65-6.35-2.95-9.98-3.89-3.63-.95-7.32-1.42-11.06-1.42-4.93,0-9.68.79-14.26,2.36-4.58,1.58-8.72,3.79-12.42,6.64,3.67,3.82,6.5,8.02,8.51,12.62,2,4.6,3,9.39,3,14.37s-1,9.77-3,14.37c-2,4.6-4.84,8.82-8.51,12.67Z"/>
+            <path d="M1026.08.5c.18,2.37,1.37,16.65,3.56,42.83,2.19,26.18,3.37,40.35,3.56,42.5,0,.19-.05.33-.14.44-.09.11-.23.17-.42.17h-13.34c-.33,0-.52-.17-.56-.5-.41-5.23-2.52-30.65-6.34-76.27-22.12,43.92-33.6,66.69-34.41,68.32-.07.19-.24.28-.5.28h-4.67c-.22,0-.39-.08-.5-.22-5.37-9.67-17.33-31.09-35.86-64.26-3.3,32.84-5.71,56.89-7.23,72.16-.04.33-.22.5-.56.5h-7.5c-.19,0-.32-.06-.42-.17-.09-.11-.14-.26-.14-.44,4.22-42.36,7.06-70.8,8.51-85.33.04-.33.22-.5.56-.5h15.9c.22,0,.39.09.5.28.67,1.19,3.34,5.98,8.01,14.37s9.95,17.85,15.84,28.38c5.89,10.53,9.45,16.88,10.67,19.07,20.31-40.39,30.67-61,31.07-61.82.11-.19.28-.28.5-.28h13.34c.33,0,.52.17.56.5Z"/>
+          </svg>
+        </div>
+
         <div className="velvorn-footer-inner">
           <div className="footer-col col-brand">
             <button
@@ -1108,18 +1188,18 @@ export default function App() {
               <Logo />
             </button>
             <p className="footer-brand-desc">
-              Zamonaviy va premium sifatdagi kiyimlar to'plami. O'zbekiston bo'ylab tezkor va qulay yetkazib berish xizmati.
+              {siteContacts.brandDesc}
             </p>
             <div className="footer-social-row">
-              <a href="https://t.me" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+              <a href={siteContacts.telegramUrl} target="_blank" rel="noopener noreferrer" aria-label="Telegram">
                 <MessageCircle size={17} />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <a href={siteContacts.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                 </svg>
               </a>
-              <a href="mailto:info@dreemroom.uz" aria-label="Email">
+              <a href={`mailto:${siteContacts.email}`} aria-label="Email">
                 <Mail size={17} />
               </a>
             </div>
@@ -1156,19 +1236,19 @@ export default function App() {
           <div className="footer-col col-contact-info">
             <h3 className="footer-col-title">Aloqa</h3>
             <div className="footer-contact-items">
-              <a href="tel:+998901234567" className="footer-contact-link">
+              <a href={`tel:${siteContacts.phone.replace(/[^0-9+]/g, '')}`} className="footer-contact-link">
                 <Phone size={15} />
-                <span>+998 90 123 45 67</span>
+                <span>{siteContacts.phone}</span>
               </a>
-              <a href="https://t.me/dreemroom" target="_blank" rel="noopener noreferrer" className="footer-contact-link">
+              <a href={siteContacts.telegramUrl} target="_blank" rel="noopener noreferrer" className="footer-contact-link">
                 <MessageCircle size={15} />
-                <span>Telegram: @dreemroom</span>
+                <span>Telegram: {siteContacts.telegram}</span>
               </a>
               <div className="footer-contact-link">
                 <MapPin size={15} />
-                <span>Toshkent shahri, O'zbekiston</span>
+                <span>{siteContacts.address}</span>
               </div>
-              <p className="footer-work-hours">Ish vaqti: Har kuni 09:00 — 21:00</p>
+              <p className="footer-work-hours">Ish vaqti: {siteContacts.workHours}</p>
             </div>
           </div>
         </div>
@@ -1506,37 +1586,37 @@ export default function App() {
                   Savollaringiz, takliflaringiz yoki buyurtma bo'yicha yordam kerak bo'lsa, biz bilan bog'laning.
                 </p>
                 <div className="contact-list">
-                  <a href="tel:+998901234567" className="contact-item">
+                  <a href={`tel:${siteContacts.phone.replace(/[^0-9+]/g, '')}`} className="contact-item">
                     <span className="contact-icon"><Phone size={18} /></span>
                     <div>
                       <strong>Telefon</strong>
-                      <span>+998 90 123 45 67</span>
+                      <span>{siteContacts.phone}</span>
                     </div>
                   </a>
-                  <a href="https://t.me/dreemroom" target="_blank" rel="noreferrer" className="contact-item">
+                  <a href={siteContacts.telegramUrl} target="_blank" rel="noreferrer" className="contact-item">
                     <span className="contact-icon"><MessageCircle size={18} /></span>
                     <div>
                       <strong>Telegram (Qo'llab-quvvatlash)</strong>
-                      <span>@dreemroom</span>
+                      <span>{siteContacts.telegram}</span>
                     </div>
                   </a>
-                  <a href="mailto:info@dreemroom.uz" className="contact-item">
+                  <a href={`mailto:${siteContacts.email}`} className="contact-item">
                     <span className="contact-icon"><Mail size={18} /></span>
                     <div>
                       <strong>Elektron pochta</strong>
-                      <span>info@dreemroom.uz</span>
+                      <span>{siteContacts.email}</span>
                     </div>
                   </a>
                   <div className="contact-item">
                     <span className="contact-icon"><MapPin size={18} /></span>
                     <div>
                       <strong>Manzil</strong>
-                      <span>Toshkent shahri, O'zbekiston</span>
+                      <span>{siteContacts.address}</span>
                     </div>
                   </div>
                 </div>
                 <div className="contact-actions">
-                  <a href="tel:+998901234567" className="btn btn-full">
+                  <a href={`tel:${siteContacts.phone.replace(/[^0-9+]/g, '')}`} className="btn btn-full">
                     Qo'ng'iroq qilish
                     <Phone size={16} />
                   </a>

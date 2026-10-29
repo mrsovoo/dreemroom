@@ -1344,4 +1344,94 @@ export async function deleteBanner(id) {
   return true;
 }
 
+// --------------------------------------------------------------------------
+// 7. CONTACTS & SITE SETTINGS (ALOQA VA MA'LUMOTLAR)
+// --------------------------------------------------------------------------
+const CONTACTS_FILE = path.join(__dirname, "contacts.json");
+const DEFAULT_CONTACTS = {
+  phone: "+998 90 123 45 67",
+  telegram: "@dreemroom",
+  telegramUrl: "https://t.me/dreemroom",
+  instagram: "@dreemroom",
+  instagramUrl: "https://instagram.com/dreemroom",
+  address: "Toshkent shahri, O'zbekiston",
+  workHours: "Har kuni 09:00 — 21:00",
+  email: "info@dreemroom.uz",
+  brandDesc: "Zamonaviy va premium sifatdagi kiyimlar to'plami. O'zbekiston bo'ylab tezkor va qulay yetkazib berish xizmati.",
+};
+
+export async function getContacts() {
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`SELECT value FROM bot_config WHERE key = 'contacts' LIMIT 1;`;
+      if (rows && rows.length > 0 && rows[0].value) {
+        return { ...DEFAULT_CONTACTS, ...rows[0].value };
+      }
+    } catch (err) {
+      console.warn("[DB WARNING]: Kontaklar o'qishda xatolik:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(CONTACTS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(CONTACTS_FILE, "utf-8"));
+      return { ...DEFAULT_CONTACTS, ...data };
+    }
+  } catch {}
+
+  return DEFAULT_CONTACTS;
+}
+
+export async function setContacts(data) {
+  let tgUrl = (data.telegramUrl || "").trim();
+  let tgHandle = (data.telegram || "").trim();
+  if (tgHandle && !tgUrl) {
+    tgUrl = tgHandle.startsWith("http") ? tgHandle : `https://t.me/${tgHandle.replace(/^@/, "")}`;
+  }
+  if (!tgHandle && tgUrl) {
+    tgHandle = tgUrl.replace(/^https?:\/\/t\.me\//, "@");
+  }
+
+  let igUrl = (data.instagramUrl || "").trim();
+  let igHandle = (data.instagram || "").trim();
+  if (igHandle && !igUrl) {
+    igUrl = igHandle.startsWith("http") ? igHandle : `https://instagram.com/${igHandle.replace(/^@/, "")}`;
+  }
+  if (!igHandle && igUrl) {
+    igHandle = igUrl.replace(/^https?:\/\/instagram\.com\//, "@").replace(/\/$/, "");
+  }
+
+  const merged = {
+    phone: data.phone?.trim() || DEFAULT_CONTACTS.phone,
+    telegram: tgHandle || DEFAULT_CONTACTS.telegram,
+    telegramUrl: tgUrl || DEFAULT_CONTACTS.telegramUrl,
+    instagram: igHandle || DEFAULT_CONTACTS.instagram,
+    instagramUrl: igUrl || DEFAULT_CONTACTS.instagramUrl,
+    address: data.address?.trim() || DEFAULT_CONTACTS.address,
+    workHours: data.workHours?.trim() || DEFAULT_CONTACTS.workHours,
+    email: data.email?.trim() || DEFAULT_CONTACTS.email,
+    brandDesc: data.brandDesc?.trim() || DEFAULT_CONTACTS.brandDesc,
+  };
+
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        INSERT INTO bot_config (key, value)
+        VALUES ('contacts', ${JSON.stringify(merged)})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+      `;
+    } catch (err) {
+      console.warn("[DB WARNING]: Kontaklar yozishda xatolik:", err.message);
+    }
+  }
+
+  try {
+    fs.writeFileSync(CONTACTS_FILE, JSON.stringify(merged, null, 2), "utf-8");
+  } catch {}
+
+  return merged;
+}
+
 

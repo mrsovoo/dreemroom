@@ -24,6 +24,8 @@ import {
   getBanners,
   createBanner,
   deleteBanner,
+  getContacts,
+  setContacts,
 } from "../db.js";
 
 function sendJson(res, statusCode, data) {
@@ -285,6 +287,18 @@ export default async function handler(req, res) {
       const id = decodeURIComponent(pathname.replace("/api/admin/groups/", "").split("?")[0]);
       await deleteTelegramGroup(id);
       return sendJson(res, 200, { success: true, id });
+    }
+
+    // 9. API: Contacts (GET & POST)
+    if (pathname === "/api/contacts" && req.method === "GET") {
+      const contacts = await getContacts();
+      return sendJson(res, 200, contacts);
+    }
+
+    if (pathname === "/api/contacts" && (req.method === "POST" || req.method === "PUT")) {
+      const body = await parseBody(req);
+      const updated = await setContacts(body);
+      return sendJson(res, 200, updated);
     }
 
     return sendJson(res, 404, { error: `Endpoint topilmadi: ${req.method} ${pathname}` });
