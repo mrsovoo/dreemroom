@@ -2668,21 +2668,32 @@ body.in-telegram .mobile-app-layout {
   }
   .modal-product-card {
     padding: 12px 14px 20px !important;
-    gap: 14px !important;
-    min-height: calc(92dvh - 20px);
+    gap: 16px !important;
     display: flex !important;
     flex-direction: column !important;
   }
+  .modal-left-col {
+    width: 100% !important;
+    height: auto !important;
+    flex-shrink: 0 !important;
+  }
+  .modal-gallery-container {
+    width: 100% !important;
+    height: auto !important;
+  }
   .modal-gallery-main {
+    width: 100% !important;
+    height: 360px !important;
     min-height: 280px !important;
-    max-height: 380px !important;
+    max-height: 48vh !important;
     border-radius: 18px !important;
   }
   .modal-right-col {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
-    padding: 4px 0 0 !important;
+    padding: 2px 0 0 !important;
+    gap: 14px !important;
   }
   .modal-bottom-actions {
     margin-top: auto !important;

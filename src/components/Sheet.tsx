@@ -39,7 +39,7 @@ export default function Sheet({
 
     const frame = requestAnimationFrame(() => {
       const initial = dialog.current?.querySelector<HTMLElement>("[data-autofocus]");
-      (initial || dialog.current)?.focus();
+      (initial || dialog.current)?.focus({ preventScroll: true });
     });
 
     const handleKey = (event: KeyboardEvent) => {
