@@ -223,8 +223,6 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({ success: true, id }));
     return;
   }
-    return;
-  }
 
   // 10. Serve static files from public/ (images, fonts, etc.)
   if (pathname.startsWith("/images/") || pathname.startsWith("/image-landing/")) {
