@@ -406,7 +406,7 @@ export async function getBotConfig() {
   } catch {}
 
   return {
-    botToken: process.env.ADMIN_BOT_TOKEN || process.env.BOT_TOKEN || fileCfg.botToken || "8977841290:AAG4PpBjjq-sbHA_5NWiggjP0yqR6gMYF2A",
+    botToken: process.env.ADMIN_BOT_TOKEN || process.env.BOT_TOKEN || fileCfg.botToken || "",
     adminBotUsername: process.env.ADMIN_BOT_USERNAME || fileCfg.adminBotUsername || "dreemroom_adm_bot",
     orderBotToken: process.env.ORDER_BOT_TOKEN || fileCfg.orderBotToken || "",
     orderBotUsername: process.env.ORDER_BOT_USERNAME || fileCfg.orderBotUsername || "dreemroom_bot",

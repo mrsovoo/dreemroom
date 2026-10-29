@@ -34,7 +34,7 @@ function loadConfig() {
 
   return {
     // 1. Admin Bot Token (@dreemroom_adm_bot)
-    botToken: process.env.ADMIN_BOT_TOKEN || process.env.BOT_TOKEN || fileCfg.botToken || "8977841290:AAG4PpBjjq-sbHA_5NWiggjP0yqR6gMYF2A",
+    botToken: process.env.ADMIN_BOT_TOKEN || process.env.BOT_TOKEN || fileCfg.botToken || "",
     adminBotUsername: process.env.ADMIN_BOT_USERNAME || fileCfg.adminBotUsername || "dreemroom_adm_bot",
 
     // 2. Mijozlar uchun Buyurtma Boti (@dreemroom_bot)
