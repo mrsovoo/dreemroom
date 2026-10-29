@@ -17,12 +17,12 @@ export default function Sheet({ title, children, onClose, wide = false }: Props)
   close.current = onClose;
   const titleId = useId();
   const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches,
+    () => typeof window !== "undefined" && (window.matchMedia("(max-width: 800px)").matches || document.body.classList.contains("in-telegram")),
   );
 
   useEffect(() => {
-    const query = window.matchMedia("(max-width: 700px)");
-    const sync = () => setIsMobile(query.matches);
+    const query = window.matchMedia("(max-width: 800px)");
+    const sync = () => setIsMobile(query.matches || document.body.classList.contains("in-telegram"));
     query.addEventListener("change", sync);
     return () => query.removeEventListener("change", sync);
   }, []);

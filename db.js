@@ -357,6 +357,10 @@ export async function createOrder(order) {
           ${order.createdAt}
         );
       `;
+
+      // Yangi buyurtma haqida Telegram adminga avtomatik xabar yuborish
+      notifyTelegramOrder(order).catch(() => null);
+
       return order;
     } catch (err) {
       console.error("[DB]: Neon createOrder xatosi:", err.message);
@@ -366,7 +370,43 @@ export async function createOrder(order) {
   const list = await getOrders();
   list.unshift(order);
   fs.writeFileSync(ORDERS_FILE, JSON.stringify(list, null, 2), "utf-8");
+  notifyTelegramOrder(order).catch(() => null);
   return order;
+}
+
+async function notifyTelegramOrder(order) {
+  try {
+    const cfg = await getBotConfig();
+    const token = cfg.botToken;
+    const targetChat = cfg.targetChatId;
+    if (!token || !targetChat) return;
+
+    const itemsList = (order.items || [])
+      .map((it) => `• <b>${it.name}</b> (O'lcham: ${it.size}) × ${it.quantity} ta — ${(Number(it.price || 0) * it.quantity).toLocaleString("ru-RU")} so'm`)
+      .join("\n");
+
+    const msg =
+      `🛍 <b>YANGI BUYURTMA #${order.id}</b>\n\n` +
+      `👤 <b>Mijoz:</b> ${order.customer?.name || "Noma'lum"}\n` +
+      `📞 <b>Telefon:</b> ${order.customer?.phone || "Kiritilmagan"}\n` +
+      `📍 <b>Yetkazish manzili:</b> ${order.customer?.address || "Kiritilmagan"}\n` +
+      `💳 <b>To'lov turi:</b> ${order.paymentMethod || "Naqd / Karta"}\n\n` +
+      `📦 <b>Xarid qilingan modellar:</b>\n${itemsList || "—"}\n\n` +
+      `💰 <b>JAMI:</b> <b>${Number(order.total || 0).toLocaleString("ru-RU")} so'm</b>\n` +
+      `🕒 <b>Vaqt:</b> ${new Date().toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent" })}`;
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: targetChat,
+        text: msg,
+        parse_mode: "HTML",
+      }),
+    });
+  } catch (err) {
+    console.warn("[ORDER NOTIFY ERROR]:", err.message);
+  }
 }
 
 export async function updateOrder(id, updates) {

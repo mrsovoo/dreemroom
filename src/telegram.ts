@@ -21,6 +21,7 @@ export type TgWebApp = {
   expand: () => void;
   setHeaderColor?: (color: string) => void;
   setBackgroundColor?: (color: string) => void;
+  enableClosingConfirmation?: () => void;
   disableVerticalSwipes?: () => void;
   onEvent?: (event: string, handler: () => void) => void;
   offEvent?: (event: string, handler: () => void) => void;
@@ -35,34 +36,31 @@ export type TgWebApp = {
 
 type TelegramGlobal = { Telegram?: { WebApp?: TgWebApp } };
 
-/** Faqat Telegram ichida ochilganda WebApp obyektini qaytaradi. */
+/** Telegram ichida ochilganda WebApp obyektini qaytaradi. */
 export function getTelegramWebApp(): TgWebApp | null {
   try {
     const tg = (window as unknown as TelegramGlobal).Telegram?.WebApp;
-    if (!tg) return null;
-    const hasData = typeof tg.initData === "string" && tg.initData.length > 0;
-    const hasUser =
-      !!tg.initDataUnsafe && Object.keys(tg.initDataUnsafe).length > 0;
-    const knownPlatform =
-      typeof tg.platform === "string" &&
-      tg.platform !== "" &&
-      tg.platform !== "unknown";
-    return hasData || (knownPlatform && hasUser) ? tg : null;
+    if (tg && typeof tg.ready === "function") {
+      return tg;
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-export type HapticKind = "light" | "success" | "select";
+export type HapticKind = "light" | "medium" | "heavy" | "success" | "warning" | "error" | "select";
 
-export function haptic(tg: TgWebApp | null, kind: HapticKind) {
+export function haptic(tg: TgWebApp | null, kind: HapticKind = "light") {
   try {
     const feedback = tg?.HapticFeedback;
     if (!feedback) return;
-    if (kind === "success") feedback.notificationOccurred("success");
-    else if (kind === "select") feedback.selectionChanged();
-    else feedback.impactOccurred("light");
-  } catch {
-    /* Eski Telegram versiyalarida bo'lmasligi mumkin. */
-  }
+    if (kind === "success" || kind === "warning" || kind === "error") {
+      feedback.notificationOccurred(kind);
+    } else if (kind === "select") {
+      feedback.selectionChanged();
+    } else {
+      feedback.impactOccurred(kind);
+    }
+  } catch {}
 }

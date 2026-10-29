@@ -408,6 +408,8 @@ export default function App() {
     const form = orderFormRef.current;
     const customerName = (form?.elements.namedItem("name") as HTMLInputElement)?.value || profile?.name || "Mijoz";
     const customerPhone = (form?.elements.namedItem("phone") as HTMLInputElement)?.value || profile?.phone || "+998 90 000 00 00";
+    const customerAddress = (form?.elements.namedItem("address") as HTMLInputElement)?.value || "Yetkazib berish (Telegram)";
+    const paymentMethod = (form?.elements.namedItem("paymentMethod") as HTMLSelectElement)?.value || "Naqd pul / Karta (kuryerga)";
 
     const orderPayload = {
       id: "ORD-" + Math.floor(100000 + Math.random() * 900000),
@@ -415,7 +417,7 @@ export default function App() {
       customer: {
         name: customerName,
         phone: customerPhone,
-        address: "Yetkazib berish (Veb / Telegram)"
+        address: customerAddress,
       },
       items: cart.map((item) => {
         const prod = productsList.find((p) => p.id === item.id);
@@ -425,12 +427,12 @@ export default function App() {
           size: item.size,
           quantity: item.quantity,
           price: prod?.price || 0,
-          image: prod?.images?.[0]?.src || "/images/core-top.jpg",
+          image: prod?.images?.[0]?.src || "",
         };
       }),
       total,
       status: "Yangi",
-      paymentMethod: "Naqd / Karta",
+      paymentMethod: paymentMethod,
     };
 
     fetch("/api/orders", {
@@ -438,6 +440,11 @@ export default function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(orderPayload),
     }).catch(() => null);
+
+    // Profilga ism va telefonni eslab qolish
+    if (customerName && customerPhone) {
+      setProfile({ name: customerName, phone: customerPhone });
+    }
 
     setCart([]);
     setOrdered(true);
@@ -610,8 +617,21 @@ export default function App() {
         </nav>
         <div className="header-zone header-actions">
           <button
+            className="action-btn"
+            onClick={() => {
+              haptic(tgRef.current, "light");
+              openCatalog();
+            }}
+            aria-label="Katalogdan qidirish"
+          >
+            <Search size={20} strokeWidth={1.6} />
+          </button>
+          <button
             className={`action-btn ${panel === "wishlist" ? "is-active" : ""}`}
-            onClick={() => setPanel("wishlist")}
+            onClick={() => {
+              haptic(tgRef.current, "light");
+              setPanel("wishlist");
+            }}
             aria-label={`Sevimlilar, ${wishlist.length} ta mahsulot`}
           >
             <Heart size={20} strokeWidth={1.6} />
@@ -721,13 +741,28 @@ export default function App() {
               <section className="section" aria-labelledby="catalog-categories-title">
                 <div className="section-head">
                   <div>
-                    <span className="section-eyebrow">KATALOG</span>
-                    <h2 id="catalog-categories-title">Katalog</h2>
+                    <span className="section-eyebrow">TO'PLAMLAR</span>
+                    <h2 id="catalog-categories-title">Kiyimlar Katalogi</h2>
                   </div>
                   <button className="link-btn" onClick={() => openCatalog()}>
-                    Katalogga o'tish
+                    Barchasi
                     <ArrowUpRight size={14} />
                   </button>
+                </div>
+
+                <div className="chips" aria-label="Kategoriyalar" style={{ marginBottom: "22px" }}>
+                  {dynamicCategories.map((item) => (
+                    <button
+                      key={item}
+                      className={category === item ? "chip is-active" : "chip"}
+                      onClick={() => {
+                        haptic(tgRef.current, "select");
+                        openCatalog(item);
+                      }}
+                    >
+                      {item}
+                    </button>
+                  ))}
                 </div>
 
                 <div className="grid">
@@ -855,7 +890,10 @@ export default function App() {
         <button
           className={view === "home" && !panel ? "tab is-active" : "tab"}
           aria-current={view === "home" && !panel ? "page" : undefined}
-          onClick={goHome}
+          onClick={() => {
+            haptic(tgRef.current, "light");
+            goHome();
+          }}
         >
           <span className="tab-icon">
             <Home size={21} strokeWidth={1.7} />
@@ -865,7 +903,10 @@ export default function App() {
         <button
           className={view === "catalog" && !panel ? "tab is-active" : "tab"}
           aria-current={view === "catalog" && !panel ? "page" : undefined}
-          onClick={() => openCatalog()}
+          onClick={() => {
+            haptic(tgRef.current, "light");
+            openCatalog();
+          }}
         >
           <span className="tab-icon">
             <Grid2X2 size={20} strokeWidth={1.7} />
@@ -875,7 +916,10 @@ export default function App() {
         <button
           className={panel === "wishlist" ? "tab is-active" : "tab"}
           aria-current={panel === "wishlist" ? "page" : undefined}
-          onClick={() => setPanel("wishlist")}
+          onClick={() => {
+            haptic(tgRef.current, "light");
+            setPanel("wishlist");
+          }}
         >
           <span className="tab-icon">
             <Heart size={20} strokeWidth={1.7} />
@@ -890,7 +934,10 @@ export default function App() {
         <button
           className={panel === "cart" ? "tab is-active" : "tab"}
           aria-current={panel === "cart" ? "page" : undefined}
-          onClick={openCart}
+          onClick={() => {
+            haptic(tgRef.current, "light");
+            openCart();
+          }}
         >
           <span className="tab-icon">
             <ShoppingBag size={20} strokeWidth={1.7} />
@@ -905,7 +952,10 @@ export default function App() {
         <button
           className={panel === "profile" ? "tab is-active" : "tab"}
           aria-current={panel === "profile" ? "page" : undefined}
-          onClick={openProfile}
+          onClick={() => {
+            haptic(tgRef.current, "light");
+            openProfile();
+          }}
         >
           <span className="tab-icon">
             <UserRound size={20} strokeWidth={1.7} />
@@ -1289,11 +1339,12 @@ export default function App() {
                   onSubmit={placeOrder}
                 >
                   <label>
-                    Ismingiz
+                    Ism va familiya
                     <input
                       name="name"
                       autoComplete="name"
                       defaultValue={profile?.name ?? ""}
+                      placeholder="Ismingizni kiriting"
                       required
                     />
                   </label>
@@ -1308,8 +1359,31 @@ export default function App() {
                       required
                     />
                   </label>
+                  <label>
+                    Yetkazib berish manzili
+                    <input
+                      name="address"
+                      autoComplete="street-address"
+                      placeholder="Shahar, tuman, ko'cha, xonadon raqami"
+                      required
+                    />
+                  </label>
+                  <label>
+                    To'lov turi
+                    <select
+                      name="paymentMethod"
+                      defaultValue="Naqd pul / Karta (kuryerga)"
+                    >
+                      <option value="Naqd pul / Karta (kuryerga)">Naqd pul / Karta (kuryerga)</option>
+                      <option value="Payme / Click (oldindan to'lov)">Payme / Click (oldindan to'lov)</option>
+                    </select>
+                  </label>
+                  <div className="cart-delivery-hint">
+                    <span>🚚 Yetkazib berish:</span>
+                    <strong>Bepul (O'zbekiston bo'ylab 1-3 kun)</strong>
+                  </div>
                   <button className="btn btn-full" type="submit">
-                    Buyurtma berish
+                    Buyurtmani tasdiqlash • {money(total)}
                     <ArrowRight size={16} />
                   </button>
                 </form>
