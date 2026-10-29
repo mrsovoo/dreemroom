@@ -1,6 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+try {
+  if (typeof process.loadEnvFile === "function") {
+    process.loadEnvFile();
+  }
+} catch {}
+
 import { createProduct } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,19 +23,33 @@ if (!fs.existsSync(IMAGES_DIR)) {
 }
 
 function loadConfig() {
+  let fileCfg = {};
   try {
     if (fs.existsSync(CONFIG_FILE)) {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+      fileCfg = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
     }
   } catch (err) {
     console.error("bot-config.json xatosi:", err);
   }
+
   return {
-    botToken: "8977841290:AAG4PpBjjq-sbHA_5NWiggjP0yqR6gMYF2A",
-    adminSecret: "dreemroom-adm",
-    adminIds: [],
-    targetChatId: "",
-    webAppUrl: "http://localhost:5173",
+    // 1. Admin Bot Token (@dreemroom_adm_bot)
+    botToken: process.env.ADMIN_BOT_TOKEN || process.env.BOT_TOKEN || fileCfg.botToken || "8977841290:AAG4PpBjjq-sbHA_5NWiggjP0yqR6gMYF2A",
+    adminBotUsername: process.env.ADMIN_BOT_USERNAME || fileCfg.adminBotUsername || "dreemroom_adm_bot",
+
+    // 2. Mijozlar uchun Buyurtma Boti (@dreemroom_bot)
+    orderBotToken: process.env.ORDER_BOT_TOKEN || fileCfg.orderBotToken || "",
+    orderBotUsername: process.env.ORDER_BOT_USERNAME || fileCfg.orderBotUsername || "dreemroom_bot",
+
+    // 3. Maqsadli Telegram Kanal yoki Guruh ID
+    targetChatId: process.env.TARGET_CHAT_ID ? Number(process.env.TARGET_CHAT_ID) : (fileCfg.targetChatId || ""),
+
+    // 4. Admin kalit so'zi
+    adminSecret: process.env.ADMIN_SECRET || fileCfg.adminSecret || "dreemroom-adm",
+    adminIds: fileCfg.adminIds || [],
+
+    // 5. Web App URL (Vercel yoki lokal URL)
+    webAppUrl: process.env.WEB_APP_URL || fileCfg.webAppUrl || "http://localhost:5173",
   };
 }
 
@@ -915,6 +936,83 @@ async function handleMyChatMember(memberUpdate) {
 
 // Long Polling Loop
 let lastUpdateId = 0;
+// ==========================================================================
+// H. Mijozlar uchun Buyurtma Boti (@dreemroom_bot)
+// ==========================================================================
+async function startOrderBotPolling() {
+  const token = config.orderBotToken;
+  if (!token) return;
+
+  console.log(`[ORDER BOT]: @${config.orderBotUsername} mijozlar boti ishga tushirildi!`);
+  let lastUpdateId = 0;
+
+  async function callOrderBot(method, payload = {}) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return res.json().catch(() => null);
+    } catch {
+      return null;
+    }
+  }
+
+  // Set chat menu button to Web App
+  if (config.webAppUrl) {
+    try {
+      await callOrderBot("setChatMenuButton", {
+        menu_button: {
+          type: "web_app",
+          text: "🛍 Do'kon",
+          web_app: { url: config.webAppUrl },
+        },
+      });
+    } catch {}
+  }
+
+  while (true) {
+    try {
+      const res = await callOrderBot("getUpdates", {
+        offset: lastUpdateId + 1,
+        timeout: 25,
+      });
+
+      if (res?.ok && Array.isArray(res.result)) {
+        for (const update of res.result) {
+          lastUpdateId = update.update_id;
+          const msg = update.message;
+          if (msg && msg.chat?.id) {
+            const chatId = msg.chat.id;
+            const webAppUrl = config.webAppUrl || "https://dreemroom.vercel.app";
+
+            await callOrderBot("sendMessage", {
+              chat_id: chatId,
+              text:
+                `🌸 <b>Assalomu alaykum, DREEM ROOM do'koniga xush kelibsiz!</b>\n\n` +
+                `Bizning barcha yangi to'plamlarimizni ko'rish, o'lchamlarni tanlash va tezkor xarid qilish uchun quyidagi tugmani bosing:`,
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: "🛍 Do'konni ochish (Katalog)",
+                      web_app: { url: webAppUrl },
+                    },
+                  ],
+                ],
+              },
+            });
+          }
+        }
+      }
+    } catch (e) {
+      await new Promise((r) => setTimeout(r, 4000));
+    }
+  }
+}
+
 async function startPolling() {
   config = loadConfig();
   const token = config.botToken?.trim();
@@ -935,6 +1033,10 @@ async function startPolling() {
 
     console.log(`\x1b[32m[TELEGRAM BOT]: @${me.result.username} faol ishga tushdi!\x1b[0m`);
     console.log(`\x1b[90m👉 Kanalni ulash uchun kanalga botni admin qilib qo'shing va kanalda 'dreemroom-adm' deb yozing.\x1b[0m\n`);
+
+    if (config.orderBotToken) {
+      startOrderBotPolling();
+    }
 
     while (true) {
       try {

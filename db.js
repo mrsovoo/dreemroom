@@ -3,6 +3,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { neon } from "@neondatabase/serverless";
 
+try {
+  if (typeof process.loadEnvFile === "function") {
+    process.loadEnvFile();
+  }
+} catch {}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -392,16 +398,21 @@ export async function getBotConfig() {
     } catch {}
   }
 
+  let fileCfg = {};
   try {
     if (fs.existsSync(CONFIG_FILE)) {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+      fileCfg = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
     }
   } catch {}
+
   return {
-    botToken: process.env.BOT_TOKEN || "",
-    targetChatId: process.env.TARGET_CHAT_ID ? Number(process.env.TARGET_CHAT_ID) : null,
-    orderBotUsername: process.env.ORDER_BOT_USERNAME || "dreemroom_bot",
-    webAppUrl: process.env.WEB_APP_URL || "",
+    botToken: process.env.ADMIN_BOT_TOKEN || process.env.BOT_TOKEN || fileCfg.botToken || "8977841290:AAG4PpBjjq-sbHA_5NWiggjP0yqR6gMYF2A",
+    adminBotUsername: process.env.ADMIN_BOT_USERNAME || fileCfg.adminBotUsername || "dreemroom_adm_bot",
+    orderBotToken: process.env.ORDER_BOT_TOKEN || fileCfg.orderBotToken || "",
+    orderBotUsername: process.env.ORDER_BOT_USERNAME || fileCfg.orderBotUsername || "dreemroom_bot",
+    targetChatId: process.env.TARGET_CHAT_ID ? Number(process.env.TARGET_CHAT_ID) : (fileCfg.targetChatId || ""),
+    adminSecret: process.env.ADMIN_SECRET || fileCfg.adminSecret || "dreemroom-adm",
+    webAppUrl: process.env.WEB_APP_URL || fileCfg.webAppUrl || "http://localhost:5173",
   };
 }
 
