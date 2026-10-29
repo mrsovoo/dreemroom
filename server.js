@@ -47,6 +47,9 @@ import {
   getTelegramGroups,
   deleteTelegramGroup,
   setTargetTelegramGroup,
+  getBanners,
+  createBanner,
+  deleteBanner,
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -415,13 +418,54 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 19. Serve static files from public/ (images, fonts, etc.)
+  // 19. API: Get all hero banners (GET /api/banners)
+  if (req.method === "GET" && pathname === "/api/banners") {
+    const banners = await getBanners();
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    });
+    res.end(JSON.stringify(banners));
+    return;
+  }
+
+  // 20. API: Create or update hero banner (POST /api/banners)
+  if (req.method === "POST" && pathname === "/api/banners") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      try {
+        const data = JSON.parse(body);
+        const saved = await createBanner(data);
+        res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(saved));
+      } catch (err) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // 21. API: Delete hero banner (DELETE /api/banners)
+  if (req.method === "DELETE" && pathname.startsWith("/api/banners")) {
+    const id = parsedUrl.searchParams.get("id") || decodeURIComponent(pathname.replace("/api/banners/", "").replace("/api/banners", ""));
+    await deleteBanner(id);
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ success: true, id }));
+    return;
+  }
+
+  // 22. Serve static files from public/ (images, fonts, etc.)
   if (pathname.startsWith("/images/") || pathname.startsWith("/image-landing/")) {
     const filePath = path.join(PUBLIC_DIR, pathname);
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       const ext = path.extname(filePath).toLowerCase();
       const mime = MIME_TYPES[ext] || "application/octet-stream";
-      res.writeHead(200, { "Content-Type": mime });
+      res.writeHead(200, {
+        "Content-Type": mime,
+        "Cache-Control": "public, max-age=0, must-revalidate",
+      });
       fs.createReadStream(filePath).pipe(res);
       return;
     }

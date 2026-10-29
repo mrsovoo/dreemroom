@@ -1,0 +1,38 @@
+[
+  {
+    "id": "banner-1",
+    "src": "/image-landing/banner-1.jpg",
+    "alt": "DREEM ROOM • Yangi mavsum",
+    "title": "DAILY WINDS FOR COLORS",
+    "subtitle": "Zamonaviy bichim va yuqori sifatli matolar. Har bir kun uchun nafislik va qulaylik uyg'unligi.",
+    "eyebrow": "DREEM ROOM • COLLECTION",
+    "buttonText": "TO'PLAMNI KO'RISH"
+  },
+  {
+    "id": "banner-2",
+    "src": "/image-landing/banner-2.jpg",
+    "alt": "DREEM ROOM • Eksklyuziv to'plam",
+    "title": "EXCLUSIVE WINTER EDITION",
+    "subtitle": "Har bir detalda nozik did va qulaylik. Cheklangan miqdordagi eksklyuziv modellar.",
+    "eyebrow": "DREEM ROOM • COLLECTION",
+    "buttonText": "TO'PLAMNI KO'RISH"
+  },
+  {
+    "id": "banner-3",
+    "src": "/image-landing/banner-3.jpg",
+    "alt": "DREEM ROOM • Premium uslub",
+    "title": "PREMIUM URBAN WEAR",
+    "subtitle": "Zamonaviy shahar ritmi uchun maxsus yaratilgan qulay va bejirim kiyimlar.",
+    "eyebrow": "DREEM ROOM • COLLECTION",
+    "buttonText": "TO'PLAMNI KO'RISH"
+  },
+  {
+    "id": "banner-4",
+    "src": "/image-landing/banner-4.jpg",
+    "alt": "DREEM ROOM • Nafis kolleksiya",
+    "title": "TIMELESS ELEGANCE",
+    "subtitle": "Har doim urfda bo'ladigan klassik va zamonaviy uslub uyg'unligi.",
+    "eyebrow": "DREEM ROOM • COLLECTION",
+    "buttonText": "TO'PLAMNI KO'RISH"
+  }
+]

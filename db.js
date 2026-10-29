@@ -119,6 +119,21 @@ export async function initDatabase() {
       );
     `;
 
+    // 4. Asosiy sahifa bannyerlari (Hero Banners)
+    await sql`
+      CREATE TABLE IF NOT EXISTS hero_banners (
+        id TEXT PRIMARY KEY,
+        src TEXT NOT NULL,
+        alt TEXT,
+        title TEXT,
+        subtitle TEXT,
+        eyebrow TEXT,
+        button_text TEXT,
+        position INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
     // Boshlang'ich default kalit so'zni kiritish
     const defaultKey = (process.env.ADMIN_SECRET || "dreemroom-adm").toLowerCase().trim();
     await sql`
@@ -1128,4 +1143,146 @@ export async function setTargetTelegramGroup(chatId) {
   } catch {}
   return true;
 }
+
+// --------------------------------------------------------------------------
+// 7. HERO BANNERS (Asosiy sahifa bannyerlari)
+// --------------------------------------------------------------------------
+const BANNERS_FILE = path.join(__dirname, "banners.json");
+
+export async function getBanners() {
+  let banners = [];
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`
+        SELECT 
+          id, 
+          src, 
+          alt, 
+          title, 
+          subtitle, 
+          eyebrow, 
+          button_text as "buttonText",
+          position,
+          created_at
+        FROM hero_banners
+        ORDER BY position ASC, created_at ASC;
+      `;
+      banners = rows || [];
+    } catch (err) {
+      console.error("[DB]: getBanners xatosi:", err.message);
+    }
+  }
+
+  if (!banners.length) {
+    try {
+      if (fs.existsSync(BANNERS_FILE)) {
+        banners = JSON.parse(fs.readFileSync(BANNERS_FILE, "utf-8"));
+      }
+    } catch {}
+  }
+
+  return banners;
+}
+
+export async function createBanner(bannerData) {
+  const id = bannerData.id || `banner-${Date.now()}`;
+  let src = bannerData.src || "";
+
+  // Agar rasm base64 bo'lsa, uni faylga va DB ga saqlash
+  if (bannerData.imageBase64) {
+    const ext = bannerData.imageType?.includes("png") ? ".png" : ".jpg";
+    const fileName = `banner-${Date.now()}${ext}`;
+    const cleanBase64 = bannerData.imageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(cleanBase64, "base64");
+
+    const landingDir = path.join(__dirname, "public", "image-landing");
+    if (!fs.existsSync(landingDir)) fs.mkdirSync(landingDir, { recursive: true });
+    fs.writeFileSync(path.join(landingDir, fileName), buffer);
+    src = `/image-landing/${fileName}`;
+
+    if (sql) {
+      await saveImage(fileName, cleanBase64, bannerData.imageType || "image/jpeg");
+    }
+  }
+
+  const newBanner = {
+    id,
+    src: src || "/image-landing/banner-1.jpg",
+    alt: bannerData.alt || "DREEM ROOM",
+    title: bannerData.title || "DAILY WINDS FOR COLORS",
+    subtitle: bannerData.subtitle || "Zamonaviy bichim va yuqori sifatli matolar.",
+    eyebrow: bannerData.eyebrow || "DREEM ROOM • COLLECTION",
+    buttonText: bannerData.buttonText || "TO'PLAMNI KO'RISH",
+    position: Number(bannerData.position) || 0,
+    created_at: new Date().toISOString(),
+  };
+
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        INSERT INTO hero_banners (id, src, alt, title, subtitle, eyebrow, button_text, position)
+        VALUES (
+          ${newBanner.id}, 
+          ${newBanner.src}, 
+          ${newBanner.alt}, 
+          ${newBanner.title}, 
+          ${newBanner.subtitle}, 
+          ${newBanner.eyebrow}, 
+          ${newBanner.buttonText},
+          ${newBanner.position}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          src = EXCLUDED.src,
+          alt = EXCLUDED.alt,
+          title = EXCLUDED.title,
+          subtitle = EXCLUDED.subtitle,
+          eyebrow = EXCLUDED.eyebrow,
+          button_text = EXCLUDED.button_text,
+          position = EXCLUDED.position;
+      `;
+    } catch (err) {
+      console.error("[DB]: createBanner SQL xatosi:", err.message);
+    }
+  }
+
+  try {
+    let list = [];
+    if (fs.existsSync(BANNERS_FILE)) {
+      list = JSON.parse(fs.readFileSync(BANNERS_FILE, "utf-8"));
+    }
+    const idx = list.findIndex((b) => b.id === id);
+    if (idx >= 0) {
+      list[idx] = newBanner;
+    } else {
+      list.push(newBanner);
+    }
+    fs.writeFileSync(BANNERS_FILE, JSON.stringify(list, null, 2), "utf-8");
+  } catch {}
+
+  return newBanner;
+}
+
+export async function deleteBanner(id) {
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`DELETE FROM hero_banners WHERE id = ${id};`;
+    } catch (err) {
+      console.error("[DB]: deleteBanner SQL xatosi:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(BANNERS_FILE)) {
+      let list = JSON.parse(fs.readFileSync(BANNERS_FILE, "utf-8"));
+      list = list.filter((b) => b.id !== id);
+      fs.writeFileSync(BANNERS_FILE, JSON.stringify(list, null, 2), "utf-8");
+    }
+  } catch {}
+
+  return true;
+}
+
 

@@ -821,6 +821,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span>Faollar</span>
         </button>
+
+        <button class="nav-btn" data-tab="banners" onclick="setTab('banners')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Bannyerlar</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -1116,8 +1121,79 @@
             </div>
           </div>
         </section>
+
+        <!-- TAB: BANNYERLAR -->
+        <section class="tab-view" id="view-banners">
+          <div class="panel">
+            <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <h2 class="panel-title">🖼️ Asosiy sahifa bannyerlari (Hero Banners)</h2>
+                <p style="font-size: 13px; color: var(--ink-muted); margin-top: 2px;">
+                  Saytning eng yuqori qismida avtomatik almashib turadigan katta banner suratlari va matnlarini boshqarish.
+                </p>
+              </div>
+              <button class="btn btn-primary" onclick="openBannerModal()">+ Yangi bannyer qo'shish</button>
+            </div>
+
+            <div id="bannersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding: 16px 0;">
+              <!-- Populated by JS -->
+            </div>
+            <div id="bannersEmpty" class="empty-text" style="display: none; padding: 40px; text-align: center;">
+              Hozircha qo'shimcha bannyerlar mavjud emas.
+            </div>
+          </div>
+        </section>
       </div>
     </main>
+  </div>
+
+  <!-- BANNER ADD / EDIT MODAL -->
+  <div class="modal-backdrop" id="bannerModal">
+    <div class="modal" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="bannerModalHeading">Yangi bannyer qo'shish</h3>
+        <button class="modal-close" onclick="closeBannerModal()">✕</button>
+      </div>
+
+      <form id="bannerForm" onsubmit="saveBannerSubmit(event)">
+        <input type="hidden" id="bannerId">
+        <div class="modal-body">
+          <div class="field-group" style="margin-bottom: 14px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px;">Bannyer surati (Fayl yoki URL)</label>
+            <input type="file" id="bannerFileInput" accept="image/*" onchange="previewBannerFile(event)" style="margin-bottom: 8px; width: 100%;">
+            <input type="text" id="bannerSrcInput" placeholder="Yoki rasm manzili: /image-landing/banner-1.jpg" style="font-size: 13px; width: 100%;">
+            <div id="bannerImgPreviewBox" style="margin-top: 10px; max-height: 180px; overflow: hidden; border-radius: 8px; border: 1px solid #e4e4e7; display: none; background: #000; text-align: center;">
+              <img id="bannerImgPreview" src="" alt="Ko'rinish" style="max-height: 180px; width: 100%; object-fit: cover;">
+            </div>
+          </div>
+
+          <div class="field-group" style="margin-bottom: 14px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px;">Ustun kichik matni (Eyebrow)</label>
+            <input type="text" id="bannerEyebrowInput" placeholder="DREEM ROOM • COLLECTION" style="width: 100%;">
+          </div>
+
+          <div class="field-group" style="margin-bottom: 14px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px;">Asosiy sarlavha (Title)</label>
+            <input type="text" id="bannerTitleInput" placeholder="Daily Winds For Colors" required style="width: 100%;">
+          </div>
+
+          <div class="field-group" style="margin-bottom: 14px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px;">Qisqacha tavsif (Subtitle)</label>
+            <textarea id="bannerSubtitleInput" rows="2" placeholder="Zamonaviy bichim va yuqori sifatli matolar..." style="width: 100%; font-family: inherit;"></textarea>
+          </div>
+
+          <div class="field-group" style="margin-bottom: 14px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px;">Tugma matni (Button)</label>
+            <input type="text" id="bannerButtonInput" placeholder="TO'PLAMNI KO'RISH" style="width: 100%;">
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid #e4e4e7;">
+          <button type="button" class="btn btn-secondary" onclick="closeBannerModal()">Bekor qilish</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveBanner">Saqlash</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- ADD / EDIT MODAL -->
@@ -1171,10 +1247,14 @@
               <label class="field-label">Rangi *</label>
               <input type="text" id="fieldColor" class="field-input" required placeholder="Masalan: Qora">
             </div>
-            <div class="field-group" style="justify-content: center;">
+            <div class="field-group" style="justify-content: center; flex-direction: row; gap: 16px;">
               <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 18px; font-size: 13px;">
                 <input type="checkbox" id="fieldIsNew" style="accent-color: var(--brand);">
-                <span>Yangi to'plam deb belgilash</span>
+                <span>Yangi mahsulot</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 18px; font-size: 13px;">
+                <input type="checkbox" id="fieldIsPopular" style="accent-color: var(--brand);">
+                <span>⭐ Ommabop model (Ko'p sotilgan)</span>
               </label>
             </div>
           </div>
@@ -1335,7 +1415,8 @@
       products: "Mahsulotlar",
       orders: "Buyurtmalar",
       reports: "Hisobot",
-      faollar: "Faollar va Guruhlar"
+      faollar: "Faollar va Guruhlar",
+      banners: "Asosiy sahifa bannyerlari"
     };
 
     function setTab(tab) {
@@ -1355,6 +1436,7 @@
       if (tab === "orders") renderOrders();
       if (tab === "reports") renderReports();
       if (tab === "faollar") renderFaollar();
+      if (tab === "banners") renderBanners();
     }
 
     function toggleSidebar() {
@@ -1465,7 +1547,11 @@
               <div class="product-row-info">
                 <img src="${img}" class="product-row-img" alt="">
                 <div>
-                  <div class="product-name">${p.name}</div>
+                  <div class="product-name">
+                    ${p.name}
+                    ${p.isPopular ? '<span style="background: #2b2836; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 999px; margin-left: 6px; font-weight: 600;">⭐ Ommabop</span>' : ''}
+                    ${(p.salesCount && p.salesCount > 0) ? `<span style="background: #d4f7dc; color: #15803d; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; margin-left: 4px; font-weight: 600;">${p.salesCount} ta sotilgan</span>` : ''}
+                  </div>
                   <div style="font-size: 11.5px; color: var(--ink-muted);">${p.color || ''}</div>
                 </div>
               </div>
@@ -1631,6 +1717,7 @@
       document.getElementById("fieldSeason").value = "Barchasi";
       document.getElementById("fieldColor").value = "";
       document.getElementById("fieldIsNew").checked = true;
+      document.getElementById("fieldIsPopular").checked = false;
       document.getElementById("fieldDescription").value = "";
 
       selectedSizes = ["XS", "S", "M", "L", "XL"];
@@ -1652,6 +1739,7 @@
       document.getElementById("fieldSeason").value = p.season || "Barchasi";
       document.getElementById("fieldColor").value = p.color || "";
       document.getElementById("fieldIsNew").checked = Boolean(p.isNew);
+      document.getElementById("fieldIsPopular").checked = Boolean(p.isPopular);
       document.getElementById("fieldDescription").value = p.description || "";
 
       selectedSizes = (p.sizes && p.sizes.length) ? [...p.sizes] : ["XS", "S", "M", "L", "XL"];
@@ -1687,6 +1775,7 @@
       const season = document.getElementById("fieldSeason").value;
       const color = document.getElementById("fieldColor").value.trim();
       const isNew = document.getElementById("fieldIsNew").checked;
+      const isPopular = document.getElementById("fieldIsPopular").checked;
       const description = document.getElementById("fieldDescription").value.trim();
 
       // Mavjud mahsulot rasmlarini o'zgarishsiz to'liq saqlab qolamiz
@@ -1702,6 +1791,7 @@
         season,
         color,
         isNew,
+        isPopular,
         description,
         sizes: selectedSizes,
         images: finalImages
@@ -2049,6 +2139,172 @@
         }
       } catch {
         showToast("Xatolik yuz berdi");
+      }
+    }
+
+    // =========================================================================
+    // BANNYERLAR (Hero Banners) BOSHQARUVI
+    // =========================================================================
+    let bannersList = [];
+    let tempBannerBase64 = null;
+    let tempBannerType = null;
+
+    async function renderBanners() {
+      const grid = document.getElementById("bannersGrid");
+      const empty = document.getElementById("bannersEmpty");
+      if (!grid) return;
+
+      try {
+        const res = await fetch("/api/banners");
+        if (res.ok) {
+          bannersList = await res.json();
+        }
+      } catch (err) {
+        console.error("Bannyerlarni yuklashda xatolik:", err);
+      }
+
+      if (!bannersList || !bannersList.length) {
+        grid.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+
+      empty.style.display = "none";
+      grid.innerHTML = bannersList.map((banner, idx) => `
+        <div style="background: #ffffff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <div style="position: relative; width: 100%; height: 180px; background: #111; overflow: hidden;">
+            <img src="${banner.src}" alt="${banner.alt || ''}" style="width: 100%; height: 100%; object-fit: cover;">
+            <span style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: #fff; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px;">
+              ${idx + 1}-slayd
+            </span>
+          </div>
+          <div style="padding: 14px 16px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--ink-muted); display: block; margin-bottom: 4px;">
+                ${banner.eyebrow || 'DREEM ROOM'}
+              </span>
+              <h3 style="font-size: 16px; font-weight: 600; color: var(--ink); margin: 0 0 6px 0; line-height: 1.3;">
+                ${banner.title || 'Sarlavhasiz'}
+              </h3>
+              <p style="font-size: 13px; color: var(--ink-muted); margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                ${banner.subtitle || 'Tavsif yo\'q'}
+              </p>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border);">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="editBanner('${banner.id}')">Tahrirlash</button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="deleteBannerAction('${banner.id}')">O'chirish</button>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function openBannerModal(banner = null) {
+      tempBannerBase64 = null;
+      tempBannerType = null;
+      document.getElementById("bannerId").value = banner?.id || "";
+      document.getElementById("bannerSrcInput").value = banner?.src || "";
+      document.getElementById("bannerFileInput").value = "";
+      document.getElementById("bannerEyebrowInput").value = banner?.eyebrow || "DREEM ROOM • COLLECTION";
+      document.getElementById("bannerTitleInput").value = banner?.title || "";
+      document.getElementById("bannerSubtitleInput").value = banner?.subtitle || "";
+      document.getElementById("bannerButtonInput").value = banner?.buttonText || "TO'PLAMNI KO'RISH";
+
+      const previewBox = document.getElementById("bannerImgPreviewBox");
+      const previewImg = document.getElementById("bannerImgPreview");
+      if (banner?.src) {
+        previewImg.src = banner.src;
+        previewBox.style.display = "block";
+      } else {
+        previewBox.style.display = "none";
+      }
+
+      document.getElementById("bannerModalHeading").textContent = banner ? "Bannyerni tahrirlash" : "Yangi bannyer qo'shish";
+      document.getElementById("bannerModal").classList.add("is-open");
+    }
+
+    function closeBannerModal() {
+      document.getElementById("bannerModal").classList.remove("is-open");
+    }
+
+    function previewBannerFile(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      tempBannerType = file.type || "image/jpeg";
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        tempBannerBase64 = event.target.result;
+        const previewBox = document.getElementById("bannerImgPreviewBox");
+        const previewImg = document.getElementById("bannerImgPreview");
+        previewImg.src = tempBannerBase64;
+        previewBox.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function editBanner(id) {
+      const b = bannersList.find(item => item.id === id);
+      if (b) openBannerModal(b);
+    }
+
+    async function deleteBannerAction(id) {
+      if (!confirm("Haqiqatan ham ushbu bannyerni o'chirmoqchimisiz?")) return;
+      try {
+        const res = await fetch(`/api/banners?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (res.ok) {
+          showToast("Bannyer o'chirildi ✓");
+          await renderBanners();
+        } else {
+          showToast("O'chirishda xatolik yuz berdi");
+        }
+      } catch (err) {
+        showToast("Server xatosi: " + err.message);
+      }
+    }
+
+    async function saveBannerSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btnSaveBanner");
+      btn.disabled = true;
+      btn.textContent = "Saqlanmoqda...";
+
+      const id = document.getElementById("bannerId").value;
+      const srcInput = document.getElementById("bannerSrcInput").value.trim();
+      const eyebrow = document.getElementById("bannerEyebrowInput").value.trim();
+      const title = document.getElementById("bannerTitleInput").value.trim();
+      const subtitle = document.getElementById("bannerSubtitleInput").value.trim();
+      const buttonText = document.getElementById("bannerButtonInput").value.trim();
+
+      const payload = {
+        id: id || undefined,
+        src: srcInput,
+        eyebrow,
+        title,
+        subtitle,
+        buttonText,
+        imageBase64: tempBannerBase64 || undefined,
+        imageType: tempBannerType || undefined
+      };
+
+      try {
+        const res = await fetch("/api/banners", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast("Bannyer muvaffaqiyatli saqlandi ✓");
+          closeBannerModal();
+          await renderBanners();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          showToast("Xatolik: " + (err.error || "Bannyer saqlanmadi"));
+        }
+      } catch (err) {
+        showToast("Tarmoq xatosi: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Saqlash";
       }
     }
 

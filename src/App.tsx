@@ -37,12 +37,54 @@ type View = "home" | "catalog";
 type CartItem = { id: string; size: string; quantity: number };
 type Profile = { name: string; phone: string };
 
-/** Hero fonidagi avtomatik almashadigan suratlar (public/image-landing/ ichidagi 4 ta banner). */
-const heroSlides = [
-  { src: "/image-landing/banner-1.jpg", alt: "DREEM ROOM • Yangi mavsum" },
-  { src: "/image-landing/banner-2.jpg", alt: "DREEM ROOM • Eksklyuziv to'plam" },
-  { src: "/image-landing/banner-3.jpg", alt: "DREEM ROOM • Premium uslub" },
-  { src: "/image-landing/banner-4.jpg", alt: "DREEM ROOM • Nafis kolleksiya" },
+export type HeroSlide = {
+  id?: string;
+  src: string;
+  alt?: string;
+  title?: string;
+  subtitle?: string;
+  eyebrow?: string;
+  buttonText?: string;
+};
+
+/** Hero fonidagi avtomatik almashadigan suratlar (public/image-landing/ ichidagi bannerlar). */
+const defaultHeroSlides: HeroSlide[] = [
+  {
+    id: "banner-1",
+    src: "/image-landing/banner-1.jpg?v=2",
+    alt: "DREEM ROOM • Yangi mavsum",
+    title: "Daily Winds\nFor Colors",
+    subtitle: "Zamonaviy bichim va yuqori sifatli matolar. Har bir kun uchun nafislik va qulaylik uyg'unligi.",
+    eyebrow: "DREEM ROOM • COLLECTION",
+    buttonText: "TO'PLAMNI KO'RISH",
+  },
+  {
+    id: "banner-2",
+    src: "/image-landing/banner-2.jpg?v=2",
+    alt: "DREEM ROOM • Eksklyuziv to'plam",
+    title: "Exclusive Winter\nEdition",
+    subtitle: "Har bir detalda nozik did va qulaylik. Cheklangan miqdordagi eksklyuziv modellar.",
+    eyebrow: "DREEM ROOM • COLLECTION",
+    buttonText: "TO'PLAMNI KO'RISH",
+  },
+  {
+    id: "banner-3",
+    src: "/image-landing/banner-3.jpg?v=2",
+    alt: "DREEM ROOM • Premium uslub",
+    title: "Premium Urban\nWear",
+    subtitle: "Zamonaviy shahar ritmi uchun maxsus yaratilgan qulay va bejirim kiyimlar.",
+    eyebrow: "DREEM ROOM • COLLECTION",
+    buttonText: "TO'PLAMNI KO'RISH",
+  },
+  {
+    id: "banner-4",
+    src: "/image-landing/banner-4.jpg?v=2",
+    alt: "DREEM ROOM • Nafis kolleksiya",
+    title: "Timeless\nElegance",
+    subtitle: "Har doim urfda bo'ladigan klassik va zamonaviy uslub uyg'unligi.",
+    eyebrow: "DREEM ROOM • COLLECTION",
+    buttonText: "TO'PLAMNI KO'RISH",
+  },
 ];
 
 /** O'lcham yo'riqnomasi parametrlari. */
@@ -126,6 +168,7 @@ export default function App() {
   const [wishlist, setWishlist] = useWishlist();
   const [profile, setProfile] = useProfile();
   const [productsList, setProductsList] = useState<Product[]>(products);
+  const [heroSlidesList, setHeroSlidesList] = useState<HeroSlide[]>(defaultHeroSlides);
   const [activeProduct, setActiveProduct] = useState<Product | null>(products[0] || null);
   const [selectedSize, setSelectedSize] = useState("");
   const [sizeError, setSizeError] = useState(false);
@@ -167,6 +210,31 @@ export default function App() {
 
     syncProducts();
     const interval = setInterval(syncProducts, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Backend / Admin panel bilan bannyerlarni sinxronlash
+  useEffect(() => {
+    let active = true;
+    async function syncBanners() {
+      try {
+        const res = await fetch("/api/banners");
+        if (res.ok && active) {
+          const data: HeroSlide[] = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setHeroSlidesList(data);
+          }
+        }
+      } catch {
+        /* Backend ulanmagan bo'lsa boshlang'ich bannyerlar qoladi */
+      }
+    }
+
+    syncBanners();
+    const interval = setInterval(syncBanners, 20000);
     return () => {
       active = false;
       clearInterval(interval);
@@ -320,11 +388,11 @@ export default function App() {
 
   // Barcha hero banner suratlarini xotiraga oldindan yuklab qo'yish (kechikish va qotish bo'lmasligi uchun)
   useEffect(() => {
-    heroSlides.forEach((item) => {
+    heroSlidesList.forEach((item) => {
       const img = new Image();
       img.src = item.src;
     });
-  }, []);
+  }, [heroSlidesList]);
 
   const touchStartXRef = useRef<number | null>(null);
 
@@ -335,11 +403,12 @@ export default function App() {
   function handleHeroTouchEnd(e: React.TouchEvent) {
     if (touchStartXRef.current === null) return;
     const diff = touchStartXRef.current - e.changedTouches[0].clientX;
+    const len = heroSlidesList.length || 1;
     if (Math.abs(diff) > 40) {
       if (diff > 0) {
-        setSlide((curr) => (curr + 1) % heroSlides.length);
+        setSlide((curr) => (curr + 1) % len);
       } else {
-        setSlide((curr) => (curr - 1 + heroSlides.length) % heroSlides.length);
+        setSlide((curr) => (curr - 1 + len) % len);
       }
     }
     touchStartXRef.current = null;
@@ -348,12 +417,13 @@ export default function App() {
   // Hero fonidagi suratlar bosh sahifada avtomatik almashib turadi.
   useEffect(() => {
     if (view !== "home") return;
+    const len = heroSlidesList.length || 1;
     const timer = setInterval(
-      () => setSlide((current) => (current + 1) % heroSlides.length),
+      () => setSlide((current) => (current + 1) % len),
       4500,
     );
     return () => clearInterval(timer);
-  }, [view, slide]);
+  }, [view, slide, heroSlidesList]);
 
   function goHome() {
     setView("home");
@@ -739,11 +809,11 @@ export default function App() {
               onTouchEnd={handleHeroTouchEnd}
             >
               <div className="velvorn-hero-container">
-                {heroSlides.map((item, idx) => (
+                {heroSlidesList.map((item, idx) => (
                   <img
-                    key={item.src}
+                    key={item.src + idx}
                     src={item.src}
-                    alt={item.alt}
+                    alt={item.alt || "DREEM ROOM"}
                     className={`velvorn-hero-bg ${idx === slide ? "is-active" : ""}`}
                     loading={idx === 0 ? "eager" : "lazy"}
                     decoding="async"
@@ -754,13 +824,16 @@ export default function App() {
                   <div className="velvorn-hero-editorial">
                     <div className="hero-eyebrow-row">
                       <span className="hero-eyebrow-symbol">◈</span>
-                      <span className="hero-eyebrow-text">DREEM ROOM • COLLECTION</span>
+                      <span className="hero-eyebrow-text">
+                        {heroSlidesList[slide]?.eyebrow || "DREEM ROOM • COLLECTION"}
+                      </span>
                     </div>
                     <h1 className="hero-editorial-title">
-                      Daily Winds<br />For Colors
+                      {heroSlidesList[slide]?.title || "Daily Winds\nFor Colors"}
                     </h1>
                     <p className="hero-editorial-desc">
-                      Zamonaviy bichim va yuqori sifatli matolar. Har bir kun uchun nafislik va qulaylik uyg'unligi.
+                      {heroSlidesList[slide]?.subtitle ||
+                        "Zamonaviy bichim va yuqori sifatli matolar. Har bir kun uchun nafislik va qulaylik uyg'unligi."}
                     </p>
                     <button
                       type="button"
@@ -771,14 +844,16 @@ export default function App() {
                       }}
                       aria-label="To'plamni ko'rish"
                     >
-                      <span>TO'PLAMNI KO'RISH</span>
+                      <span>
+                        {heroSlidesList[slide]?.buttonText || "TO'PLAMNI KO'RISH"}
+                      </span>
                       <ArrowRight size={14} className="velvorn-cta-arrow" />
                     </button>
                   </div>
 
                   {/* Kapsula shaklidagi pastki indikator nuqtalari */}
                   <div className="velvorn-hero-dots">
-                    {heroSlides.map((_, idx) => (
+                    {heroSlidesList.map((_, idx) => (
                       <button
                         key={"dot-" + idx}
                         type="button"
