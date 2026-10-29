@@ -13,6 +13,9 @@
     "build": "vite build",
     "preview": "vite preview"
   },
+  "allowScripts": {
+    "esbuild": true
+  },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
     "clsx": "2.1.1",

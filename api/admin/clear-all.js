@@ -32,3 +32,4 @@ export default async function handler(req, res) {
   res.writeHead(405);
   res.end();
 }
+
