@@ -778,17 +778,15 @@ async function askForSizes(chatId, userId, name, price) {
   const keyboard = {
     inline_keyboard: [
       [
-        { text: "Standart (Universal)", callback_data: `sz_Standart_${userId}` },
-      ],
-      [
-        { text: "XS, S, M, L, XL", callback_data: `sz_XS_S_M_L_XL_${userId}` },
+        { text: "✨ XS, S, M, L, XL", callback_data: `sz_XS_S_M_L_XL_${userId}` },
         { text: "S, M, L", callback_data: `sz_S_M_L_${userId}` },
       ],
       [
+        { text: "Standart (Universal)", callback_data: `sz_Standart_${userId}` },
         { text: "L, XL, XXL", callback_data: `sz_L_XL_XXL_${userId}` },
-        { text: "Barchasi (XS–XXL)", callback_data: `sz_ALL_${userId}` },
       ],
       [
+        { text: "Barchasi (XS–XXL)", callback_data: `sz_ALL_${userId}` },
         { text: "✍️ Boshqa razmer yozish", callback_data: `sz_custom_${userId}` },
       ],
     ],
@@ -1014,7 +1012,7 @@ async function autoDeployProduct(chatId, userId, state) {
     season: "Barchasi",
     isNew: true,
     color: "Asosiy",
-    sizes: state.sizes || ["Standart"],
+    sizes: state.sizes && state.sizes.length > 0 ? state.sizes : ["XS", "S", "M", "L", "XL"],
     description: `${state.name}. Yuqori sifatli mato va qulay bichim.`,
     telegram: telegramInfo,
   };

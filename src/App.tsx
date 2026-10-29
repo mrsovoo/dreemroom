@@ -480,8 +480,13 @@ export default function App() {
 
   function openProduct(product: Product) {
     setActiveProduct(product);
-    const prodSizes = product.sizes && product.sizes.length > 0 ? product.sizes : sizes;
-    setSelectedSize(prodSizes[0] || "XS");
+    const prodSizes =
+      product.sizes &&
+      product.sizes.length > 0 &&
+      !(product.sizes.length === 1 && product.sizes[0] === "Standart")
+        ? product.sizes
+        : ["XS", "S", "M", "L", "XL"];
+    setSelectedSize(prodSizes[0] || "S");
     setSizeError(false);
     setProductQuantity(1);
     setShowSizeGuide(false);
@@ -1268,17 +1273,7 @@ export default function App() {
               </div>
 
               <div className="modal-right-col">
-                {/* 1-qator: Badges */}
-                <div className="modal-badges-row">
-                  <span className="modal-badge-popular">
-                    <span className="star-icon">★</span> Ommabop model
-                  </span>
-                  <span className="modal-badge-shipping">
-                    Yetkazib berish bepul
-                  </span>
-                </div>
-
-                {/* 2-qator: Sarlavha va Wishlist */}
+                {/* 1-qator: Sarlavha va Wishlist */}
                 <div className="modal-title-row">
                   <h1 className="modal-product-title">{activeProduct.name}</h1>
                   <button
@@ -1298,65 +1293,75 @@ export default function App() {
 
                 {/* Subtitle */}
                 <p className="modal-subtitle">
-                  {activeProduct.category || "To'plam"} · {activeProduct.color || "Blue / White Check"}
+                  {activeProduct.category || "To'plam"} · {activeProduct.color || "Asosiy"}
                 </p>
 
                 {/* O'lcham tanlash */}
-                <div className="modal-size-section">
-                  <div className="modal-size-header">
-                    <span className="modal-size-label">O'lchamni tanlang</span>
-                    <button
-                      type="button"
-                      className="modal-size-guide-link"
-                      onClick={() => setShowSizeGuide(!showSizeGuide)}
-                    >
-                      O'lcham jadvali
-                    </button>
-                  </div>
-
-                  <div className="modal-sizes-pills">
-                    {(activeProduct.sizes && activeProduct.sizes.length > 0
+                {(() => {
+                  const productSizes =
+                    activeProduct.sizes &&
+                    activeProduct.sizes.length > 0 &&
+                    !(activeProduct.sizes.length === 1 && activeProduct.sizes[0] === "Standart")
                       ? activeProduct.sizes
-                      : sizes
-                    ).map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        className={`modal-size-pill ${selectedSize === size ? "is-active" : ""}`}
-                        onClick={() => {
-                          setSelectedSize(size);
-                          setSizeError(false);
-                          haptic(tgRef.current, "select");
-                        }}
-                        aria-pressed={selectedSize === size}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
+                      : ["XS", "S", "M", "L", "XL"];
 
-                  {sizeError && (
-                    <p className="modal-size-error" role="alert">
-                      Iltimos, o'lchamni tanlang.
-                    </p>
-                  )}
+                  return (
+                    <div className="modal-size-section">
+                      <div className="modal-size-header">
+                        <span className="modal-size-label">
+                          O'lcham: <strong>{selectedSize || productSizes[0]}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          className="modal-size-guide-link"
+                          onClick={() => setShowSizeGuide(!showSizeGuide)}
+                        >
+                          O'lcham jadvali
+                        </button>
+                      </div>
 
-                  {showSizeGuide && (
-                    <div className="modal-size-guide-popup">
-                      <p className="size-guide-title">
-                        <strong>{selectedSize || "XS"}</strong> o'lchami tavsiyasi:
-                      </p>
-                      <div className="size-guide-row">
-                        <span>Bo'y:</span>
-                        <strong>{sizeGuideData[selectedSize || "XS"]?.height || "Universal"}</strong>
+                      <div className="modal-sizes-pills">
+                        {productSizes.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            className={`modal-size-pill ${selectedSize === size ? "is-active" : ""}`}
+                            onClick={() => {
+                              setSelectedSize(size);
+                              setSizeError(false);
+                              haptic(tgRef.current, "select");
+                            }}
+                            aria-pressed={selectedSize === size}
+                          >
+                            {size}
+                          </button>
+                        ))}
                       </div>
-                      <div className="size-guide-row">
-                        <span>Vazn:</span>
-                        <strong>{sizeGuideData[selectedSize || "XS"]?.weight || "Universal"}</strong>
-                      </div>
+
+                      {sizeError && (
+                        <p className="modal-size-error" role="alert">
+                          Iltimos, o'lchamni tanlang.
+                        </p>
+                      )}
+
+                      {showSizeGuide && (
+                        <div className="modal-size-guide-popup">
+                          <p className="size-guide-title">
+                            <strong>{selectedSize || productSizes[0]}</strong> o'lchami tavsiyasi:
+                          </p>
+                          <div className="size-guide-row">
+                            <span>Bo'y:</span>
+                            <strong>{sizeGuideData[selectedSize || productSizes[0]]?.height || "160-170 sm"}</strong>
+                          </div>
+                          <div className="size-guide-row">
+                            <span>Vazn:</span>
+                            <strong>{sizeGuideData[selectedSize || productSizes[0]]?.weight || "50-60 kg"}</strong>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
 
                 {/* Miqdori va Jami Narx */}
                 <div className="modal-qty-price-row">

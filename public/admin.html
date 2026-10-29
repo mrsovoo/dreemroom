@@ -902,13 +902,15 @@
         <section class="tab-view" id="view-products">
           <div class="panel">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-              <h2 class="panel-title" style="margin: 0;">Do'kondagi mahsulotlar</h2>
+              <div>
+                <h2 class="panel-title" style="margin: 0;">Do'kondagi mahsulotlar</h2>
+                <div style="font-size: 12.5px; color: var(--ink-muted); margin-top: 4px;">
+                  🤖 Yangi mahsulotlar rasmlari va narxlari bilan <strong>@dreemroom_adm_bot</strong> orqali avtomatik joylanadi.
+                </div>
+              </div>
               <div style="display: flex; gap: 8px;">
                 <button type="button" class="btn btn-danger btn-sm" onclick="clearAllProductsAction()" style="background: #dc2626; color: white;">
                   🗑️ Barcha kartochkalarni tozalash (0 qilish)
-                </button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="openAddModal()">
-                  + Yangi mahsulot
                 </button>
               </div>
             </div>
