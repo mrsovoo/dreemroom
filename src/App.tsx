@@ -398,6 +398,22 @@ export default function App() {
     });
   }
 
+  function handleShareProduct(product: Product) {
+    haptic(tgRef.current, "light");
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator
+        .share({
+          title: product.name,
+          text: `${product.name} — DREEM ROOM`,
+          url: window.location.href,
+        })
+        .catch(() => {});
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setToast("Mahsulot havolasi nusxalandi!");
+    }
+  }
+
   function addToCartWithQuantity(qty = 1) {
     if (!activeProduct) return;
     if (!selectedSize) {
@@ -1095,60 +1111,74 @@ export default function App() {
             wide
             hideHeader={true}
           >
-            <div className="detail-screen-minimal">
+            <div className="modal-product-card">
               <button
                 type="button"
-                className="detail-close-btn"
+                className="modal-close-btn"
                 onClick={() => setPanel(null)}
                 aria-label="Yopish"
               >
-                <X size={20} strokeWidth={1.5} />
+                <X size={18} strokeWidth={2} />
               </button>
 
-              <div className="detail-left-col">
+              <div className="modal-left-col">
                 <ProductGallery
                   product={activeProduct}
+                  onShare={() => handleShareProduct(activeProduct)}
                   haptic={(kind: "light" | "success" | "select") =>
                     haptic(tgRef.current, kind)
                   }
                 />
               </div>
 
-              <div className="detail-right-col">
-                <div className="detail-brand-eyebrow">
-                  <span>DREEM ROOM • {(activeProduct.category || "Kolleksiya").toUpperCase()}</span>
+              <div className="modal-right-col">
+                {/* 1-qator: Badges */}
+                <div className="modal-badges-row">
+                  <span className="modal-badge-popular">
+                    <span className="star-icon">★</span> Ommabop model
+                  </span>
+                  <span className="modal-badge-shipping">
+                    Yetkazib berish bepul
+                  </span>
                 </div>
 
-                <div className="detail-header-block">
-                  <h1 className="detail-minimal-title">{activeProduct.name}</h1>
-                  <p className="detail-minimal-price">
-                    {money(activeProduct.price, activeProduct.displayPrice)}
-                  </p>
+                {/* 2-qator: Sarlavha va Wishlist */}
+                <div className="modal-title-row">
+                  <h1 className="modal-product-title">{activeProduct.name}</h1>
+                  <button
+                    type="button"
+                    className={`modal-wishlist-circle ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
+                    onClick={() => toggleWishlist(activeProduct.id)}
+                    aria-label="Sevimlilar"
+                  >
+                    <Heart
+                      size={18}
+                      strokeWidth={1.8}
+                      fill={wishlist.includes(activeProduct.id) ? "#ef4444" : "none"}
+                      color={wishlist.includes(activeProduct.id) ? "#ef4444" : "#18181b"}
+                    />
+                  </button>
                 </div>
 
-                {activeProduct.description && (
-                  <p className="detail-minimal-desc">{activeProduct.description}</p>
-                )}
-
-                <div className="detail-meta-row">
-                  <span className="detail-meta-label">Rang:</span>
-                  <span className="detail-meta-value">{activeProduct.color}</span>
-                </div>
+                {/* Subtitle */}
+                <p className="modal-subtitle">
+                  {activeProduct.category || "To'plam"} · {activeProduct.color || "Blue / White Check"}
+                </p>
 
                 {/* O'lcham tanlash */}
-                <div className="detail-size-section">
-                  <div className="detail-size-header">
-                    <span className="detail-size-label">O'LCHAM</span>
+                <div className="modal-size-section">
+                  <div className="modal-size-header">
+                    <span className="modal-size-label">O'lchamni tanlang</span>
                     <button
                       type="button"
-                      className="detail-size-guide-btn"
+                      className="modal-size-guide-link"
                       onClick={() => setShowSizeGuide(!showSizeGuide)}
                     >
                       O'lcham jadvali
                     </button>
                   </div>
 
-                  <div className="detail-sizes-grid">
+                  <div className="modal-sizes-pills">
                     {(activeProduct.sizes && activeProduct.sizes.length > 0
                       ? activeProduct.sizes
                       : sizes
@@ -1156,7 +1186,7 @@ export default function App() {
                       <button
                         key={size}
                         type="button"
-                        className={`size-square-btn ${selectedSize === size ? "is-active" : ""}`}
+                        className={`modal-size-pill ${selectedSize === size ? "is-active" : ""}`}
                         onClick={() => {
                           setSelectedSize(size);
                           setSizeError(false);
@@ -1168,95 +1198,81 @@ export default function App() {
                       </button>
                     ))}
                   </div>
+
                   {sizeError && (
-                    <p className="detail-size-error" role="alert">
+                    <p className="modal-size-error" role="alert">
                       Iltimos, o'lchamni tanlang.
                     </p>
                   )}
 
                   {showSizeGuide && (
-                    <div className="detail-size-guide-box">
+                    <div className="modal-size-guide-popup">
                       <p className="size-guide-title">
                         <strong>{selectedSize || "XS"}</strong> o'lchami tavsiyasi:
                       </p>
                       <div className="size-guide-row">
-                        <span>Bo'y</span>
+                        <span>Bo'y:</span>
                         <strong>{sizeGuideData[selectedSize || "XS"]?.height || "Universal"}</strong>
                       </div>
                       <div className="size-guide-row">
-                        <span>Vazn</span>
+                        <span>Vazn:</span>
                         <strong>{sizeGuideData[selectedSize || "XS"]?.weight || "Universal"}</strong>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Miqdor va Savatga qo'shish */}
-                <div className="detail-actions-row">
-                  <div className="detail-qty-stepper">
-                    <button
-                      type="button"
-                      className="qty-step-btn"
-                      onClick={() => {
-                        setProductQuantity((q) => Math.max(1, q - 1));
-                        haptic(tgRef.current, "light");
-                      }}
-                      aria-label="Kamaytirish"
-                    >
-                      <Minus size={14} strokeWidth={1.8} />
-                    </button>
-                    <span className="qty-step-val">{productQuantity}</span>
-                    <button
-                      type="button"
-                      className="qty-step-btn"
-                      onClick={() => {
-                        setProductQuantity((q) => Math.min(10, q + 1));
-                        haptic(tgRef.current, "light");
-                      }}
-                      aria-label="Ko'paytirish"
-                    >
-                      <Plus size={14} strokeWidth={1.8} />
-                    </button>
+                {/* Miqdori va Jami Narx */}
+                <div className="modal-qty-price-row">
+                  <div className="modal-qty-container">
+                    <span className="modal-field-title">Miqdori</span>
+                    <div className="modal-qty-stepper">
+                      <button
+                        type="button"
+                        className="modal-qty-btn"
+                        onClick={() => {
+                          setProductQuantity((q) => Math.max(1, q - 1));
+                          haptic(tgRef.current, "light");
+                        }}
+                        aria-label="Kamaytirish"
+                      >
+                        <Minus size={13} strokeWidth={2.5} />
+                      </button>
+                      <span className="modal-qty-num">{productQuantity}</span>
+                      <button
+                        type="button"
+                        className="modal-qty-btn"
+                        onClick={() => {
+                          setProductQuantity((q) => Math.min(10, q + 1));
+                          haptic(tgRef.current, "light");
+                        }}
+                        aria-label="Ko'paytirish"
+                      >
+                        <Plus size={13} strokeWidth={2.5} />
+                      </button>
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    className="detail-add-btn"
-                    onClick={() => addToCartWithQuantity(productQuantity)}
-                  >
-                    <span>SAVATGA QO'SHISH</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`detail-wish-btn ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
-                    onClick={() => toggleWishlist(activeProduct.id)}
-                    aria-label="Sevimlilar"
-                  >
-                    <Heart
-                      size={18}
-                      strokeWidth={1.8}
-                      fill={wishlist.includes(activeProduct.id) ? "#111116" : "none"}
-                      color="#111116"
-                    />
-                  </button>
+                  <div className="modal-price-container">
+                    <span className="modal-field-title text-right">Jami narx</span>
+                    <span className="modal-price-old">
+                      {money(Math.round(activeProduct.price * 1.25) * productQuantity)}
+                    </span>
+                    <span className="modal-price-val">
+                      {money(activeProduct.price * productQuantity)}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Minimalist ma'lumotlar */}
-                <div className="detail-perks">
-                  <div className="detail-perk-item">
-                    <span>◈</span>
-                    <span>100% original sifat va milliy dizayn</span>
-                  </div>
-                  <div className="detail-perk-item">
-                    <span>◈</span>
-                    <span>O'zbekiston bo'ylab tezkor yetkazib berish</span>
-                  </div>
-                  <div className="detail-perk-item">
-                    <span>◈</span>
-                    <span>Qulay to'lov: Payme, Click yoki kuryerga naqd</span>
-                  </div>
-                </div>
+                {/* Savatga qo'shish tugmasi */}
+                <button
+                  type="button"
+                  className="modal-add-cart-btn"
+                  onClick={() => addToCartWithQuantity(productQuantity)}
+                >
+                  <ShoppingBag size={18} strokeWidth={1.8} />
+                  <span>SAVATGA QO'SHISH</span>
+                </button>
               </div>
             </div>
           </Sheet>
