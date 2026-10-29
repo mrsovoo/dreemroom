@@ -362,11 +362,6 @@ export async function updateProduct(id, updates) {
           telegram = ${JSON.stringify(merged.telegram || null)}
         WHERE id = ${id};
       `;
-          sizes = ${JSON.stringify(merged.sizes || [])},
-          description = ${merged.description || ""},
-          telegram = ${JSON.stringify(merged.telegram || null)}
-        WHERE id = ${id};
-      `;
       return merged;
     } catch (err) {
       console.error("[DB]: Neon updateProduct xatosi:", err.message);
