@@ -163,6 +163,13 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
+        let pNum = Number(newProduct.price) || 0;
+        if (pNum > 0 && pNum < 1000) {
+          pNum = pNum * 1000;
+        }
+        newProduct.price = pNum;
+        newProduct.displayPrice = `${pNum.toLocaleString("ru-RU")} so'm`;
+
         const saved = await createProduct(newProduct);
         res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify(saved));
@@ -182,6 +189,14 @@ const server = http.createServer(async (req, res) => {
     req.on("end", async () => {
       try {
         const updatedData = JSON.parse(body);
+        if (updatedData.price !== undefined) {
+          let pNum = Number(updatedData.price) || 0;
+          if (pNum > 0 && pNum < 1000) {
+            pNum = pNum * 1000;
+          }
+          updatedData.price = pNum;
+          updatedData.displayPrice = `${pNum.toLocaleString("ru-RU")} so'm`;
+        }
         const updated = await updateProduct(id, updatedData);
         if (!updated) {
           res.writeHead(404, { "Content-Type": "application/json" });

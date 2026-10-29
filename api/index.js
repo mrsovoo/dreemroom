@@ -166,6 +166,12 @@ export default async function handler(req, res) {
       if (!newProduct.name || newProduct.price === undefined) {
         return sendJson(res, 400, { error: "Nomi va narxi majburiy" });
       }
+      let pNum = Number(newProduct.price) || 0;
+      if (pNum > 0 && pNum < 1000) {
+        pNum = pNum * 1000;
+      }
+      newProduct.price = pNum;
+      newProduct.displayPrice = `${pNum.toLocaleString("ru-RU")} so'm`;
       const saved = await createProduct(newProduct);
       return sendJson(res, 201, saved);
     }
@@ -173,6 +179,14 @@ export default async function handler(req, res) {
     if (pathname.startsWith("/api/products/") && req.method === "PUT") {
       const id = decodeURIComponent(pathname.replace("/api/products/", "").split("?")[0]);
       const updatedData = await parseBody(req);
+      if (updatedData.price !== undefined) {
+        let pNum = Number(updatedData.price) || 0;
+        if (pNum > 0 && pNum < 1000) {
+          pNum = pNum * 1000;
+        }
+        updatedData.price = pNum;
+        updatedData.displayPrice = `${pNum.toLocaleString("ru-RU")} so'm`;
+      }
       const updated = await updateProduct(id, updatedData);
       if (!updated) return sendJson(res, 404, { error: "Mahsulot topilmadi" });
       return sendJson(res, 200, updated);
@@ -277,3 +291,4 @@ export default async function handler(req, res) {
     return sendJson(res, 500, { error: err.message });
   }
 }
+

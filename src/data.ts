@@ -31,6 +31,13 @@ export const products: Product[] = [];
 export const sizes = ["XS", "S", "M", "L", "XL"];
 
 export function money(value: number, explicitDisplay?: string): string {
-  if (explicitDisplay) return explicitDisplay;
-  return `$${value.toFixed(2)}`;
+  if (explicitDisplay && !explicitDisplay.includes("$")) {
+    return explicitDisplay;
+  }
+  let num = Number(value) || 0;
+  // Agar narx 250, 180, 40 kabi kiritilgan bo'lsa (1000 dan kichik), avtomatik 000 qo'shiladi
+  if (num > 0 && num < 1000) {
+    num = num * 1000;
+  }
+  return `${num.toLocaleString("ru-RU")} so'm`;
 }

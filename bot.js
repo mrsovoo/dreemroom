@@ -999,10 +999,16 @@ async function autoDeployProduct(chatId, userId, state) {
   // 2. Save into products.json (Live immediately on Web Store & Admin Panel)
   const category = detectCategory(state.name);
 
+  let finalPrice = Number(state.price) || 0;
+  if (finalPrice > 0 && finalPrice < 1000) {
+    finalPrice = finalPrice * 1000;
+  }
+
   const newProduct = {
     id: productId,
     name: state.name,
-    price: state.price,
+    price: finalPrice,
+    displayPrice: `${finalPrice.toLocaleString("ru-RU")} so'm`,
     images: formattedImages,
     category: category,
     season: "Barchasi",
