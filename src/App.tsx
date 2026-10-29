@@ -293,15 +293,42 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Barcha hero banner suratlarini xotiraga oldindan yuklab qo'yish (kechikish va qotish bo'lmasligi uchun)
+  useEffect(() => {
+    heroSlides.forEach((item) => {
+      const img = new Image();
+      img.src = item.src;
+    });
+  }, []);
+
+  const touchStartXRef = useRef<number | null>(null);
+
+  function handleHeroTouchStart(e: React.TouchEvent) {
+    touchStartXRef.current = e.touches[0].clientX;
+  }
+
+  function handleHeroTouchEnd(e: React.TouchEvent) {
+    if (touchStartXRef.current === null) return;
+    const diff = touchStartXRef.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        setSlide((curr) => (curr + 1) % heroSlides.length);
+      } else {
+        setSlide((curr) => (curr - 1 + heroSlides.length) % heroSlides.length);
+      }
+    }
+    touchStartXRef.current = null;
+  }
+
   // Hero fonidagi suratlar bosh sahifada avtomatik almashib turadi.
   useEffect(() => {
     if (view !== "home") return;
     const timer = setInterval(
       () => setSlide((current) => (current + 1) % heroSlides.length),
-      5000,
+      4500,
     );
     return () => clearInterval(timer);
-  }, [view]);
+  }, [view, slide]);
 
   function goHome() {
     setView("home");
@@ -616,17 +643,23 @@ export default function App() {
       <main id="main">
         {view === "home" ? (
           <>
-            <section className="hero">
+            <section
+              className="hero"
+              onTouchStart={handleHeroTouchStart}
+              onTouchEnd={handleHeroTouchEnd}
+            >
               <div className="hero-slides" aria-hidden="true">
                 {heroSlides.map((item, index) => (
                   <img
                     key={item.src}
                     src={item.src}
                     alt=""
-                    className={`${index === slide ? "is-active" : ""} ${item.mirrored ? "is-mirrored" : ""}`.trim()}
+                    decoding="async"
+                    loading={index === 0 ? "eager" : "lazy"}
                     fetchPriority={index === 0 ? "high" : "low"}
-                    width="1600"
-                    height="1000"
+                    className={`${index === slide ? "is-active" : ""} ${item.mirrored ? "is-mirrored" : ""}`.trim()}
+                    width="1920"
+                    height="1080"
                   />
                 ))}
               </div>

@@ -442,6 +442,8 @@ p {
 .hero-slides {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  background-color: #2b2836;
 }
 .hero-slides img {
   position: absolute;
@@ -452,17 +454,20 @@ p {
   object-position: right center;
   filter: none;
   opacity: 0;
-  transform: scale(1.04);
-  transition:
-    opacity 1.2s ease,
-    transform 6s ease;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: opacity;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transition: opacity 0.75s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .hero-slides img.is-active {
   opacity: 1;
-  transform: scale(1);
+  visibility: visible;
 }
 .hero-slides img.is-mirrored {
-  scale: -1 1;
+  transform: translateZ(0) scaleX(-1);
 }
 .hero-dots {
   position: absolute;
