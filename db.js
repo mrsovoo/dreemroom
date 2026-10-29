@@ -61,11 +61,39 @@ export async function initDatabase() {
       );
     `;
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS product_images (
+        id TEXT PRIMARY KEY,
+        content_type TEXT NOT NULL DEFAULT 'image/jpeg',
+        data TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
     tablesInitialized = true;
     console.log("[DB]: Neon PostgreSQL jadvallari muvaffaqiyatli tekshirildi/yaratildi.");
   } catch (err) {
     console.error("[DB]: Neon jadvallarini yaratishda xatolik:", err.message);
   }
+}
+
+// Helper: Rasm manzillarini universal /api/images?id=... formatiga normallashtirish
+export function normalizeProduct(p) {
+  if (!p) return p;
+  let images = Array.isArray(p.images) ? [...p.images] : [];
+  images = images.map((img) => {
+    if (typeof img === "string") {
+      img = { src: img, alt: p.name || "" };
+    }
+    let src = img.src || "";
+    // Agar bot orqali /images/main-... yoki /images/side... bo'lib saqlangan bo'lsa
+    if (src.startsWith("/images/main-") || src.startsWith("/images/side") || src.startsWith("/images/img-")) {
+      const id = src.replace("/images/", "");
+      src = `/api/images?id=${encodeURIComponent(id)}`;
+    }
+    return { ...img, src };
+  });
+  return { ...p, images };
 }
 
 // --------------------------------------------------------------------------
@@ -92,7 +120,7 @@ export async function getProducts() {
         FROM products 
         ORDER BY created_at DESC;
       `;
-      return rows;
+      return (rows || []).map(normalizeProduct);
     } catch (err) {
       console.error("[DB]: Neon getProducts xatosi:", err.message);
     }
@@ -101,7 +129,8 @@ export async function getProducts() {
   // Fallback to local products.json
   try {
     if (fs.existsSync(PRODUCTS_FILE)) {
-      return JSON.parse(fs.readFileSync(PRODUCTS_FILE, "utf-8"));
+      const list = JSON.parse(fs.readFileSync(PRODUCTS_FILE, "utf-8"));
+      return Array.isArray(list) ? list.map(normalizeProduct) : [];
     }
   } catch {}
   return [];
@@ -129,7 +158,7 @@ export async function getProductById(id) {
         WHERE id = ${id}
         LIMIT 1;
       `;
-      return rows[0] || null;
+      return rows && rows.length > 0 ? normalizeProduct(rows[0]) : null;
     } catch (err) {
       console.error("[DB]: Neon getProductById xatosi:", err.message);
     }
@@ -432,5 +461,103 @@ export async function setBotConfig(cfg) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), "utf-8");
   } catch {}
   return cfg;
+}
+
+// --------------------------------------------------------------------------
+// 4. PRODUCT IMAGES (Neon PostgreSQL + Local Fallback + Auto Telegram Recovery)
+// --------------------------------------------------------------------------
+export async function saveImage(id, dataBase64, contentType = "image/jpeg") {
+  const cleanId = String(id).replace(/^\/images\//, "").replace(/^\/api\/images\?id=/, "");
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        INSERT INTO product_images (id, content_type, data)
+        VALUES (${cleanId}, ${contentType}, ${dataBase64})
+        ON CONFLICT (id) DO UPDATE SET
+          content_type = EXCLUDED.content_type,
+          data = EXCLUDED.data;
+      `;
+      return true;
+    } catch (err) {
+      console.error("[DB]: saveImage xatosi:", err.message);
+      return false;
+    }
+  }
+  return false;
+}
+
+export async function getImage(id) {
+  const cleanId = String(id).replace(/^\/images\//, "").replace(/^\/api\/images\?id=/, "");
+
+  // 1. Neon PostgreSQL dan olish
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`
+        SELECT id, content_type, data FROM product_images WHERE id = ${cleanId} LIMIT 1;
+      `;
+      if (rows && rows.length > 0) {
+        return rows[0];
+      }
+    } catch (err) {
+      console.error("[DB]: getImage DB xatosi:", err.message);
+    }
+  }
+
+  // 2. Lokal public/images/ papkadan tekshirish
+  try {
+    const localPath = path.join(__dirname, "public", "images", cleanId);
+    if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+      const buf = fs.readFileSync(localPath);
+      const b64 = buf.toString("base64");
+      if (sql) {
+        saveImage(cleanId, b64, "image/jpeg").catch(() => null);
+      }
+      return {
+        id: cleanId,
+        content_type: "image/jpeg",
+        data: b64,
+      };
+    }
+  } catch {}
+
+  // 3. Agar rasm DB da ham, faylda ham bo'lmasa, Telegram fileId orqali qayta yuklab olish
+  if (sql) {
+    try {
+      const cfg = await getBotConfig();
+      const token = cfg?.botToken?.trim();
+      if (token) {
+        const prodRows = await sql`
+          SELECT images FROM products WHERE images::text LIKE ${'%' + cleanId + '%'};
+        `;
+        if (prodRows && prodRows.length > 0) {
+          const imgs = prodRows[0].images || [];
+          const found = imgs.find((img) => img.src && (img.src.includes(cleanId) || img.fileId));
+          if (found && found.fileId) {
+            const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${found.fileId}`).then((r) => r.json()).catch(() => null);
+            if (fileRes?.ok && fileRes?.result?.file_path) {
+              const downUrl = `https://api.telegram.org/file/bot${token}/${fileRes.result.file_path}`;
+              const imgRes = await fetch(downUrl).catch(() => null);
+              if (imgRes && imgRes.ok) {
+                const arrBuf = await imgRes.arrayBuffer();
+                const b64 = Buffer.from(arrBuf).toString("base64");
+                await saveImage(cleanId, b64, "image/jpeg");
+                return {
+                  id: cleanId,
+                  content_type: "image/jpeg",
+                  data: b64,
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[DB]: Telegramdan avto-qayta tiklash xatosi:", err.message);
+    }
+  }
+
+  return null;
 }
 

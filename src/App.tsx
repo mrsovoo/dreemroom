@@ -1143,9 +1143,15 @@ export default function App() {
                     return (
                       <div className="wishlist-item" key={product.id}>
                         <img
-                          src={product.images[0].src}
+                          src={product.images?.[0]?.src || "/image-landing/banner-1.jpg"}
                           alt={product.name}
                           onClick={() => openProduct(product)}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.src.includes("banner-1.jpg")) {
+                              target.src = "/image-landing/banner-1.jpg";
+                            }
+                          }}
                         />
                         <div className="wishlist-info">
                           <strong onClick={() => openProduct(product)}>
@@ -1218,7 +1224,16 @@ export default function App() {
                     if (!product) return null;
                     return (
                       <div className="cart-row" key={`${item.id}-${item.size}`}>
-                        <img src={product.images[0].src} alt={product.name} />
+                        <img
+                          src={product.images?.[0]?.src || "/image-landing/banner-1.jpg"}
+                          alt={product.name}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.src.includes("banner-1.jpg")) {
+                              target.src = "/image-landing/banner-1.jpg";
+                            }
+                          }}
+                        />
                         <div className="cart-info">
                           <strong>{product.name}</strong>
                           <span>O'lcham {item.size}</span>

@@ -14,19 +14,32 @@ export default function ProductGallery({ product, haptic }: Props) {
     haptic?.("select");
   };
 
+  const galleryImages =
+    product.images && product.images.length > 0
+      ? product.images
+      : [{ src: "/image-landing/banner-1.jpg", alt: product.name }];
+
+  const currentImage = galleryImages[index] || galleryImages[0];
+
   return (
     <div className="detail-gallery">
       <img
         className="detail-image"
-        src={product.images[index].src}
-        alt={`${product.name}. ${product.images[index].alt}`}
+        src={currentImage.src}
+        alt={`${product.name}. ${currentImage.alt}`}
+        onError={(e) => {
+          const target = e.currentTarget;
+          if (!target.src.includes("banner-1.jpg")) {
+            target.src = "/image-landing/banner-1.jpg";
+          }
+        }}
       />
       <div
         className="gallery-points"
         role="tablist"
         aria-label="Mahsulot suratlari"
       >
-        {product.images.map((image, i) => (
+        {galleryImages.map((image, i) => (
           <button
             key={image.src + i}
             role="tab"
@@ -38,7 +51,7 @@ export default function ProductGallery({ product, haptic }: Props) {
         ))}
       </div>
       <div className="gallery-thumbs" aria-label="Boshqa rakurslar">
-        {product.images.map((image, i) => (
+        {galleryImages.map((image, i) => (
           <button
             key={image.src + "thumb" + i}
             className={i === index ? "is-active" : ""}
@@ -52,6 +65,12 @@ export default function ProductGallery({ product, haptic }: Props) {
               loading="lazy"
               width="104"
               height="128"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.src.includes("banner-1.jpg")) {
+                  target.src = "/image-landing/banner-1.jpg";
+                }
+              }}
             />
           </button>
         ))}

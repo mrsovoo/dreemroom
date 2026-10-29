@@ -19,16 +19,21 @@ export default function ProductCard({ product, onOpen }: Props) {
     [],
   );
 
+  const cardImages =
+    product.images && product.images.length > 0
+      ? product.images
+      : [{ src: "/image-landing/banner-1.jpg", alt: product.name }];
+
   function previewSide(direction: number) {
     setIndex(
       (current) =>
-        (current + direction + product.images.length) % product.images.length,
+        (current + direction + cardImages.length) % cardImages.length,
     );
   }
 
   function startAuto() {
     clearAuto();
-    timers.current = product.images
+    timers.current = cardImages
       .slice(1)
       .map((_, i) => window.setTimeout(() => setIndex(i + 1), 430 * (i + 1)));
   }
@@ -56,9 +61,9 @@ export default function ProductCard({ product, onOpen }: Props) {
           aria-label={`${product.name} — batafsil`}
           aria-describedby={`${product.id}-price`}
         >
-          {product.images.map((image, i) => (
+          {cardImages.map((image, i) => (
             <img
-              key={image.src + image.alt}
+              key={image.src + image.alt + i}
               src={image.src}
               alt=""
               loading="lazy"
@@ -67,12 +72,18 @@ export default function ProductCard({ product, onOpen }: Props) {
               className={i === index ? "is-active" : ""}
               aria-hidden={i !== index}
               title={image.alt}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.src.includes("banner-1.jpg")) {
+                  target.src = "/image-landing/banner-1.jpg";
+                }
+              }}
             />
           ))}
         </button>
         {product.isNew && <span className="card-flag">Yangi</span>}
         <span className="card-dots" aria-hidden="true">
-          {product.images.map((image, i) => (
+          {cardImages.map((image, i) => (
             <span
               key={image.src + i}
               className={i === index ? "is-active" : ""}

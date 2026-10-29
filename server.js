@@ -36,6 +36,8 @@ import {
   updateOrder,
   deleteOrder,
   getBotConfig,
+  saveImage,
+  getImage,
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,6 +45,24 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
+
+// Server start bo'lganda lokal rasmlarni Neon DB ga sinxronlab qo'yish
+async function syncLocalImagesToDb() {
+  const imgDir = path.join(PUBLIC_DIR, "images");
+  if (!fs.existsSync(imgDir)) return;
+  try {
+    const files = fs.readdirSync(imgDir).filter((f) => /^(main|side|img)-/i.test(f));
+    for (const file of files) {
+      const filePath = path.join(imgDir, file);
+      const buffer = fs.readFileSync(filePath);
+      await saveImage(file, buffer.toString("base64"), "image/jpeg");
+      console.log(`[SYNC]: '${file}' rasmi Neon DB ga saqlandi.`);
+    }
+  } catch (err) {
+    console.warn("[SYNC]: Rasmlarni sinxronlashda xatolik:", err.message);
+  }
+}
+syncLocalImagesToDb();
 
 function getAvailableImages() {
   const imgDir = path.join(PUBLIC_DIR, "images");
@@ -90,11 +110,30 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 2. API: Get available images list
+  // 2. API: Get image or available images list
   if (req.method === "GET" && pathname === "/api/images") {
-    const images = getAvailableImages();
-    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify(images));
+    const id = parsedUrl.searchParams.get("id");
+    if (!id) {
+      const images = getAvailableImages();
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify(images));
+      return;
+    }
+
+    const img = await getImage(id);
+    if (!img || !img.data) {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Rasm topilmadi");
+      return;
+    }
+
+    const buffer = Buffer.from(img.data, "base64");
+    res.writeHead(200, {
+      "Content-Type": img.content_type || "image/jpeg",
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "Content-Length": buffer.length,
+    });
+    res.end(buffer);
     return;
   }
 

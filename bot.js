@@ -8,7 +8,7 @@ try {
   }
 } catch {}
 
-import { createProduct } from "./db.js";
+import { createProduct, saveImage } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -123,7 +123,7 @@ async function callTelegram(method, payload = {}) {
   }
 }
 
-// Helper: Download a photo file from Telegram to public/images/
+// Helper: Download a photo file from Telegram to DB and public/images/
 async function downloadTelegramPhoto(fileId, prefix = "img") {
   const token = config.botToken?.trim();
   if (!token) return null;
@@ -142,10 +142,19 @@ async function downloadTelegramPhoto(fileId, prefix = "img") {
     const buffer = Buffer.from(arrayBuffer);
 
     const filename = `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}.jpg`;
-    const destPath = path.join(IMAGES_DIR, filename);
-    fs.writeFileSync(destPath, buffer);
+    
+    // 1. Lokal faylga kesh sifatida yozish
+    try {
+      const destPath = path.join(IMAGES_DIR, filename);
+      fs.writeFileSync(destPath, buffer);
+    } catch {}
 
-    return `/images/${filename}`;
+    // 2. Neon PostgreSQL ga bazaga doimiy saqlash (Vercel va Railway har doim ko'radi)
+    const base64Data = buffer.toString("base64");
+    await saveImage(filename, base64Data, "image/jpeg");
+
+    // Sayt uchun universal API endpoint
+    return `/api/images?id=${encodeURIComponent(filename)}`;
   } catch (err) {
     console.error("Rasmni saqlashda xatolik:", err.message);
     return null;
@@ -763,6 +772,7 @@ async function autoDeployProduct(chatId, userId, state) {
   // Product images: 1st is main, 2nd, 3rd, 4th are details
   const formattedImages = state.images.map((img, idx) => ({
     src: img.src,
+    fileId: img.fileId,
     alt: idx === 0 ? `${state.name} - asosiy ko'rinish` : `${state.name} - rakurs ${idx + 1}`,
   }));
 
