@@ -1143,13 +1143,13 @@ export default function App() {
                     return (
                       <div className="wishlist-item" key={product.id}>
                         <img
-                          src={product.images?.[0]?.src || "/image-landing/banner-1.jpg"}
+                          src={product.images?.[0]?.src || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>"}
                           alt={product.name}
                           onClick={() => openProduct(product)}
                           onError={(e) => {
                             const target = e.currentTarget;
-                            if (!target.src.includes("banner-1.jpg")) {
-                              target.src = "/image-landing/banner-1.jpg";
+                            if (!target.src.startsWith("data:image/svg+xml")) {
+                              target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>";
                             }
                           }}
                         />
@@ -1225,12 +1225,12 @@ export default function App() {
                     return (
                       <div className="cart-row" key={`${item.id}-${item.size}`}>
                         <img
-                          src={product.images?.[0]?.src || "/image-landing/banner-1.jpg"}
+                          src={product.images?.[0]?.src || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>"}
                           alt={product.name}
                           onError={(e) => {
                             const target = e.currentTarget;
-                            if (!target.src.includes("banner-1.jpg")) {
-                              target.src = "/image-landing/banner-1.jpg";
+                            if (!target.src.startsWith("data:image/svg+xml")) {
+                              target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>";
                             }
                           }}
                         />

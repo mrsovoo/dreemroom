@@ -14,10 +14,13 @@ export default function ProductGallery({ product, haptic }: Props) {
     haptic?.("select");
   };
 
+  const fallbackSvg =
+    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22' letter-spacing='2'>DREEM ROOM</text></svg>";
+
   const galleryImages =
     product.images && product.images.length > 0
       ? product.images
-      : [{ src: "/image-landing/banner-1.jpg", alt: product.name }];
+      : [{ src: fallbackSvg, alt: product.name }];
 
   const currentImage = galleryImages[index] || galleryImages[0];
 
@@ -29,8 +32,8 @@ export default function ProductGallery({ product, haptic }: Props) {
         alt={`${product.name}. ${currentImage.alt}`}
         onError={(e) => {
           const target = e.currentTarget;
-          if (!target.src.includes("banner-1.jpg")) {
-            target.src = "/image-landing/banner-1.jpg";
+          if (!target.src.startsWith("data:image/svg+xml")) {
+            target.src = fallbackSvg;
           }
         }}
       />
@@ -67,8 +70,8 @@ export default function ProductGallery({ product, haptic }: Props) {
               height="128"
               onError={(e) => {
                 const target = e.currentTarget;
-                if (!target.src.includes("banner-1.jpg")) {
-                  target.src = "/image-landing/banner-1.jpg";
+                if (!target.src.startsWith("data:image/svg+xml")) {
+                  target.src = fallbackSvg;
                 }
               }}
             />

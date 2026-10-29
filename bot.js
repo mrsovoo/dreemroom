@@ -8,7 +8,7 @@ try {
   }
 } catch {}
 
-import { createProduct, saveImage } from "./db.js";
+import { createProduct, getProducts, deleteProduct, saveImage } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,20 +141,26 @@ async function downloadTelegramPhoto(fileId, prefix = "img") {
     const arrayBuffer = await res.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // 1. Data URL - rasm to'g'ridan-to'g'ri saytda hech qanday 404 xatosiz,
+    // qo'shimcha tarmoq so'rovisiz va zaxira rasmga aylanib ketmasdan asl holida ochiladi!
+    const base64Data = buffer.toString("base64");
+    const dataUrl = `data:image/jpeg;base64,${base64Data}`;
+
     const filename = `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}.jpg`;
     
-    // 1. Lokal faylga kesh sifatida yozish
+    // 2. Lokal faylga kesh sifatida yozish
     try {
       const destPath = path.join(IMAGES_DIR, filename);
       fs.writeFileSync(destPath, buffer);
     } catch {}
 
-    // 2. Neon PostgreSQL ga bazaga doimiy saqlash (Vercel va Railway har doim ko'radi)
-    const base64Data = buffer.toString("base64");
-    await saveImage(filename, base64Data, "image/jpeg");
+    // 3. Neon PostgreSQL ga ham saqlab qo'yamiz
+    try {
+      await saveImage(filename, base64Data, "image/jpeg");
+    } catch {}
 
-    // Sayt uchun universal API endpoint
-    return `/api/images?id=${encodeURIComponent(filename)}`;
+    // Data URL qaytaramiz (saytda asl rasm o'tirishi kafolatlanadi)
+    return dataUrl;
   } catch (err) {
     console.error("Rasmni saqlashda xatolik:", err.message);
     return null;
@@ -264,10 +270,11 @@ function detectCategory(name) {
   return "Katalog";
 }
 
-// 2 main buttons keyboard
+// 3 main buttons keyboard
 const MAIN_KEYBOARD = {
   keyboard: [
     [{ text: "➕ Qo'shish" }, { text: "📊 Hisobot" }],
+    [{ text: "🗑 O'chirish" }],
   ],
   resize_keyboard: true,
 };
@@ -417,7 +424,7 @@ async function handleMessage(msg) {
   // 📊 Hisobot
   if (text === "📊 Hisobot") {
     userStates.delete(userId);
-    const prods = readProducts();
+    const prods = await getProducts();
     const orders = readOrders();
     const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
     const newOrders = orders.filter((o) => o.status === "Yangi").length;
@@ -433,6 +440,35 @@ async function handleMessage(msg) {
         `🌐 <i>Admin panel: http://localhost:3000</i>`,
       parse_mode: "HTML",
       reply_markup: MAIN_KEYBOARD,
+    });
+    return;
+  }
+
+  // 🗑 O'chirish
+  if (text === "🗑 O'chirish") {
+    userStates.delete(userId);
+    const prods = await getProducts();
+    if (!prods || prods.length === 0) {
+      await callTelegram("sendMessage", {
+        chat_id: chatId,
+        text: "ℹ️ Hozirda do'konda o'chirish uchun mahsulotlar yo'q.",
+        reply_markup: MAIN_KEYBOARD,
+      });
+      return;
+    }
+
+    const inlineKeyboard = prods.slice(0, 15).map((p) => [
+      {
+        text: `❌ ${p.name} (${formatPrice(p.price)})`,
+        callback_data: `del_prod_${p.id}`,
+      },
+    ]);
+
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: "🗑 <b>O'chirmoqchi bo'lgan mahsulotingizni tanlang:</b>\n<i>(Saytdan ham, ulangan kanaldan ham o'chiriladi)</i>",
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: inlineKeyboard },
     });
     return;
   }
@@ -678,6 +714,36 @@ async function handleCallbackQuery(cb) {
   const data = cb.data || "";
   const chatId = cb.message?.chat?.id;
   const userId = cb.from?.id;
+
+  // Mahsulotni o'chirish
+  if (data.startsWith("del_prod_")) {
+    const prodId = data.replace("del_prod_", "");
+    const prods = await getProducts();
+    const targetProd = prods.find((p) => p.id === prodId);
+
+    if (targetProd?.telegram?.chatId && Array.isArray(targetProd.telegram?.messageIds)) {
+      const token = config.botToken?.trim();
+      for (const msgId of targetProd.telegram.messageIds) {
+        try {
+          await fetch(`https://api.telegram.org/bot${token}/deleteMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: targetProd.telegram.chatId, message_id: msgId }),
+          });
+        } catch {}
+      }
+    }
+
+    await deleteProduct(prodId);
+    await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "O'chirildi!" });
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: `✅ <b>"${targetProd?.name || "Mahsulot"}" sayt va kanaldan muvaffaqiyatli o'chirildi!</b>\n\nEndi botga yangitdan toza rasm yuborishingiz mumkin.`,
+      parse_mode: "HTML",
+      reply_markup: MAIN_KEYBOARD,
+    });
+    return;
+  }
 
   const state = userStates.get(userId);
 
