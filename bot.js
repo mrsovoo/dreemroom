@@ -8,7 +8,17 @@ try {
   }
 } catch {}
 
-import { createProduct, getProducts, deleteProduct, saveImage } from "./db.js";
+import {
+  createProduct,
+  getProducts,
+  deleteProduct,
+  saveImage,
+  getAdminUsers,
+  getAdminUser,
+  saveAdminUser,
+  isValidAdminKey,
+  saveTelegramGroup,
+} from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -291,10 +301,21 @@ async function handleMessage(msg) {
   config = loadConfig();
 
   // ========================================================================
-  // A. Guruh/Kanalni avtomatik tanib olish ("dreemroom-adm")
+  // A. Guruh/Kanalni avtomatik tanib olish ("dreemroom-adm") va ro'yxatga olish
   // ========================================================================
   const secretKey = (config.adminSecret || "dreemroom-adm").toLowerCase().trim();
   const combinedText = `${text} ${caption}`.toLowerCase().trim();
+
+  // Guruh yoki kanaldan kelgan har qanday faollikni ro'yxatga olamiz
+  if (chatType === "channel" || chatType === "group" || chatType === "supergroup") {
+    await saveTelegramGroup({
+      chatId,
+      title: msg.chat?.title || msg.chat?.username || (chatType === "channel" ? "Kanal" : "Guruh"),
+      type: chatType,
+      username: msg.chat?.username || "",
+      isTarget: String(chatId) === String(config.targetChatId),
+    });
+  }
 
   // 1. Agar xabar kanal, superguruh yoki guruhdan kelsa va matnida kalit so'z bo'lsa:
   if ((chatType === "channel" || chatType === "group" || chatType === "supergroup") && combinedText.includes(secretKey)) {
@@ -306,6 +327,14 @@ async function handleMessage(msg) {
     const title = msg.chat?.title || msg.chat?.username || typeLabel;
 
     console.log(`[BOT]: ${typeLabel} muvaffaqiyatli ulandi: ${title} (${chatId})`);
+
+    await saveTelegramGroup({
+      chatId,
+      title,
+      type: chatType,
+      username: msg.chat?.username || "",
+      isTarget: true,
+    });
 
     // Kanal/Guruhga tasdiq xabari
     await callTelegram("sendMessage", {
@@ -343,6 +372,15 @@ async function handleMessage(msg) {
     saveConfig(config);
 
     const title = fChat.title || fChat.username || fChat.id;
+
+    await saveTelegramGroup({
+      chatId: fChat.id,
+      title,
+      type: fChat.type || "channel",
+      username: fChat.username || "",
+      isTarget: true,
+    });
+
     await callTelegram("sendMessage", {
       chat_id: chatId,
       text:
@@ -379,28 +417,87 @@ async function handleMessage(msg) {
   }
 
   // ========================================================================
-  // B. Shaxsiy chatda Admin Autentifikatsiyasi (Kalit so'z)
+  // B. Shaxsiy chatda Admin Autentifikatsiyasi (Kalit so'z so'rash)
   // ========================================================================
-  const isAuth = config.adminIds && config.adminIds.includes(userId);
+  const dbAdmin = await getAdminUser(userId);
+
+  // Agar admin panel orqali bloklangan bo'lsa
+  if (dbAdmin && dbAdmin.status === "blocked") {
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: "🚫 <b>Kechirasiz, sizning adminlik ruxsatingiz admin panel tomonidan bloklangan.</b>\nIltimos, do'kon boshqaruvchisi bilan bog'laning.",
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  const isAuth = Boolean(dbAdmin && dbAdmin.status === "active");
 
   if (!isAuth) {
-    if (text === "/start" || text.toLowerCase() === secretKey) {
+    if (text === "/start") {
+      userStates.set(userId, { step: "WAITING_SECRET_KEY" });
+      await callTelegram("sendMessage", {
+        chat_id: chatId,
+        text:
+          `🔐 <b>Xavfsizlik tekshiruvi!</b>\n\n` +
+          `DREEM ROOM Admin botiga xush kelibsiz.\n` +
+          `Botdan foydalanish va mahsulotlarni boshqarish uchun maxfiy <b>kalit so'zni</b> kiriting:`,
+        parse_mode: "HTML",
+      });
+      return;
+    }
+
+    // Kalit so'z tekshiruvi
+    const isKeyValid = await isValidAdminKey(text);
+    if (isKeyValid) {
+      await saveAdminUser({
+        userId,
+        username: msg.from?.username || "",
+        firstName: msg.from?.first_name || "",
+        lastName: msg.from?.last_name || "",
+        usedKey: text.trim(),
+      });
+
       if (!config.adminIds) config.adminIds = [];
-      if (!config.adminIds.includes(userId)) config.adminIds.push(userId);
-      saveConfig(config);
+      if (!config.adminIds.includes(userId)) {
+        config.adminIds.push(userId);
+        saveConfig(config);
+      }
+
+      userStates.delete(userId);
 
       await callTelegram("sendMessage", {
         chat_id: chatId,
         text:
-          `👋 <b>Assalomu alaykum, Admin! DREEM ROOM botiga xush kelibsiz.</b>\n\n` +
-          `📢 Ulangan kanal: <code>${config.targetChatId || "Belgilanmagan"}</code>\n\n` +
+          `✅ <b>Kalit so'z muvaffaqiyatli tasdiqlandi!</b>\n\n` +
+          `Assalomu alaykum, <b>${msg.from?.first_name || "Admin"}</b>! Siz admin sifatida tizimga kirdingiz.\n\n` +
+          `📢 Ulangan kanal: <code>${config.targetChatId || "Belgilanmagan (Kanalga dreemroom-adm deb yozing)"}</code>\n\n` +
           `Kerakli bo'limni tanlang yoki to'g'ridan-to'g'ri 4 ta rasm yuboring:`,
         parse_mode: "HTML",
         reply_markup: MAIN_KEYBOARD,
       });
       return;
+    } else {
+      userStates.set(userId, { step: "WAITING_SECRET_KEY" });
+      await callTelegram("sendMessage", {
+        chat_id: chatId,
+        text:
+          `❌ <b>Noto'g'ri kalit so'z!</b>\n\n` +
+          `Iltimos, qaytadan to'g'ri kalit so'zni kiriting yoki admin panel orqali tekshiring:`,
+        parse_mode: "HTML",
+      });
+      return;
     }
   }
+
+  // Tasdiqlangan adminning faollik vaqtini yangilab boramiz
+  await saveAdminUser({
+    userId,
+    username: msg.from?.username || "",
+    firstName: msg.from?.first_name || "",
+    lastName: msg.from?.last_name || "",
+    usedKey: dbAdmin?.usedKey || "",
+  });
 
   // ========================================================================
   // C. Tasdiqlangan Admin Buyruqlari
@@ -950,14 +1047,22 @@ async function handleMyChatMember(memberUpdate) {
   const newStatus = memberUpdate.new_chat_member?.status;
 
   if (chat && (chat.type === "channel" || chat.type === "supergroup" || chat.type === "group")) {
+    const isChan = chat.type === "channel";
+    const typeLabel = isChan ? "Kanal" : "Guruh";
+    const title = chat.title || chat.username || typeLabel;
+
+    await saveTelegramGroup({
+      chatId: chat.id,
+      title,
+      type: chat.type,
+      username: chat.username || "",
+      isTarget: newStatus === "administrator",
+    });
+
     if (newStatus === "administrator") {
       config = loadConfig();
       config.targetChatId = chat.id;
       saveConfig(config);
-
-      const isChan = chat.type === "channel";
-      const typeLabel = isChan ? "Kanal" : "Guruh";
-      const title = chat.title || chat.username || typeLabel;
 
       console.log(`[BOT]: Bot ${typeLabel.toLowerCase()}ga admin qilib qo'shildi: ${title} (${chat.id})`);
 

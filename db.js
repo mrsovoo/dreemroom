@@ -15,6 +15,9 @@ const __dirname = path.dirname(__filename);
 const PRODUCTS_FILE = path.join(__dirname, "products.json");
 const ORDERS_FILE = path.join(__dirname, "orders.json");
 const CONFIG_FILE = path.join(__dirname, "bot-config.json");
+const ADMIN_USERS_FILE = path.join(__dirname, "admin_users.json");
+const ADMIN_KEYS_FILE = path.join(__dirname, "admin_keys.json");
+const TELEGRAM_GROUPS_FILE = path.join(__dirname, "telegram_groups.json");
 
 const DATABASE_URL = process.env.DATABASE_URL?.trim();
 const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
@@ -68,6 +71,51 @@ export async function initDatabase() {
         data TEXT NOT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+    `;
+
+    // 1. Admin botdan foydalanuvchilar (Adminlar)
+    await sql`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        user_id TEXT PRIMARY KEY,
+        username TEXT,
+        first_name TEXT,
+        last_name TEXT,
+        full_name TEXT,
+        used_key TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        last_active_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
+    // 2. Maxfiy kalit so'zlar
+    await sql`
+      CREATE TABLE IF NOT EXISTS admin_keys (
+        key TEXT PRIMARY KEY,
+        label TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
+    // 3. Bot qo'shilgan guruhlar va kanallar
+    await sql`
+      CREATE TABLE IF NOT EXISTS telegram_groups (
+        chat_id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        type TEXT NOT NULL,
+        username TEXT,
+        is_target BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        last_active_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
+    // Boshlang'ich default kalit so'zni kiritish
+    const defaultKey = (process.env.ADMIN_SECRET || "dreemroom-adm").toLowerCase().trim();
+    await sql`
+      INSERT INTO admin_keys (key, label)
+      VALUES (${defaultKey}, 'Asosiy kalit so''z')
+      ON CONFLICT (key) DO NOTHING;
     `;
 
     tablesInitialized = true;
@@ -599,5 +647,431 @@ export async function getImage(id) {
   }
 
   return null;
+}
+
+// --------------------------------------------------------------------------
+// 4. ADMIN USERS (Admin botdan foydalanuvchilar)
+// --------------------------------------------------------------------------
+export async function getAdminUsers() {
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`
+        SELECT 
+          user_id as "userId",
+          username,
+          first_name as "firstName",
+          last_name as "lastName",
+          full_name as "fullName",
+          used_key as "usedKey",
+          status,
+          created_at as "createdAt",
+          last_active_at as "lastActiveAt"
+        FROM admin_users
+        ORDER BY last_active_at DESC;
+      `;
+      return rows;
+    } catch (err) {
+      console.error("[DB]: getAdminUsers DB xatosi:", err.message);
+    }
+  }
+
+  // Fallback JSON
+  try {
+    if (fs.existsSync(ADMIN_USERS_FILE)) {
+      return JSON.parse(fs.readFileSync(ADMIN_USERS_FILE, "utf-8"));
+    }
+  } catch {}
+  return [];
+}
+
+export async function getAdminUser(userId) {
+  const uId = String(userId);
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`
+        SELECT 
+          user_id as "userId",
+          username,
+          first_name as "firstName",
+          last_name as "lastName",
+          full_name as "fullName",
+          used_key as "usedKey",
+          status,
+          created_at as "createdAt",
+          last_active_at as "lastActiveAt"
+        FROM admin_users
+        WHERE user_id = ${uId}
+        LIMIT 1;
+      `;
+      if (rows && rows.length > 0) return rows[0];
+    } catch (err) {
+      console.error("[DB]: getAdminUser DB xatosi:", err.message);
+    }
+  }
+
+  const users = await getAdminUsers();
+  return users.find((u) => String(u.userId) === uId) || null;
+}
+
+export async function saveAdminUser({ userId, username, firstName, lastName, usedKey }) {
+  const uId = String(userId);
+  const uName = username ? `@${String(username).replace(/^@/, "")}` : "";
+  const fName = firstName || "";
+  const lName = lastName || "";
+  const fullName = `${fName} ${lName}`.trim() || uName || `ID: ${uId}`;
+  const now = new Date().toISOString();
+
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        INSERT INTO admin_users (
+          user_id, username, first_name, last_name, full_name, used_key, status, created_at, last_active_at
+        ) VALUES (
+          ${uId}, ${uName}, ${fName}, ${lName}, ${fullName}, ${usedKey || ""}, 'active', NOW(), NOW()
+        )
+        ON CONFLICT (user_id) DO UPDATE SET
+          username = EXCLUDED.username,
+          first_name = EXCLUDED.first_name,
+          last_name = EXCLUDED.last_name,
+          full_name = EXCLUDED.full_name,
+          used_key = COALESCE(NULLIF(EXCLUDED.used_key, ''), admin_users.used_key),
+          last_active_at = NOW();
+      `;
+    } catch (err) {
+      console.error("[DB]: saveAdminUser DB xatosi:", err.message);
+    }
+  }
+
+  // Fallback JSON
+  try {
+    let users = [];
+    if (fs.existsSync(ADMIN_USERS_FILE)) {
+      users = JSON.parse(fs.readFileSync(ADMIN_USERS_FILE, "utf-8"));
+    }
+    const idx = users.findIndex((u) => String(u.userId) === uId);
+    if (idx >= 0) {
+      users[idx] = {
+        ...users[idx],
+        username: uName,
+        firstName: fName,
+        lastName: lName,
+        fullName,
+        usedKey: usedKey || users[idx].usedKey,
+        lastActiveAt: now,
+      };
+    } else {
+      users.unshift({
+        userId: uId,
+        username: uName,
+        firstName: fName,
+        lastName: lName,
+        fullName,
+        usedKey: usedKey || "",
+        status: "active",
+        createdAt: now,
+        lastActiveAt: now,
+      });
+    }
+    fs.writeFileSync(ADMIN_USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[DB]: saveAdminUser fayl xatosi:", err.message);
+  }
+
+  return { userId: uId, username: uName, fullName, status: "active" };
+}
+
+export async function updateAdminUserStatus(userId, status) {
+  const uId = String(userId);
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        UPDATE admin_users
+        SET status = ${status}
+        WHERE user_id = ${uId};
+      `;
+    } catch (err) {
+      console.error("[DB]: updateAdminUserStatus DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(ADMIN_USERS_FILE)) {
+      const users = JSON.parse(fs.readFileSync(ADMIN_USERS_FILE, "utf-8"));
+      const target = users.find((u) => String(u.userId) === uId);
+      if (target) {
+        target.status = status;
+        fs.writeFileSync(ADMIN_USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
+      }
+    }
+  } catch {}
+  return true;
+}
+
+export async function deleteAdminUser(userId) {
+  const uId = String(userId);
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        DELETE FROM admin_users
+        WHERE user_id = ${uId};
+      `;
+    } catch (err) {
+      console.error("[DB]: deleteAdminUser DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(ADMIN_USERS_FILE)) {
+      let users = JSON.parse(fs.readFileSync(ADMIN_USERS_FILE, "utf-8"));
+      users = users.filter((u) => String(u.userId) !== uId);
+      fs.writeFileSync(ADMIN_USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
+    }
+  } catch {}
+  return true;
+}
+
+// --------------------------------------------------------------------------
+// 5. ADMIN KEYS (Maxfiy kalit so'zlar)
+// --------------------------------------------------------------------------
+export async function getAdminKeys() {
+  const defaultKey = (process.env.ADMIN_SECRET || "dreemroom-adm").toLowerCase().trim();
+
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`
+        SELECT key, label, created_at as "createdAt"
+        FROM admin_keys
+        ORDER BY created_at DESC;
+      `;
+      if (rows && rows.length > 0) return rows;
+    } catch (err) {
+      console.error("[DB]: getAdminKeys DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(ADMIN_KEYS_FILE)) {
+      const keys = JSON.parse(fs.readFileSync(ADMIN_KEYS_FILE, "utf-8"));
+      if (Array.isArray(keys) && keys.length > 0) return keys;
+    }
+  } catch {}
+
+  return [{ key: defaultKey, label: "Asosiy kalit so'z", createdAt: new Date().toISOString() }];
+}
+
+export async function addAdminKey(key, label = "") {
+  const cleanKey = String(key || "").toLowerCase().trim();
+  if (!cleanKey) return null;
+  const keyLabel = label?.trim() || "Admin kaliti";
+  const now = new Date().toISOString();
+
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        INSERT INTO admin_keys (key, label, created_at)
+        VALUES (${cleanKey}, ${keyLabel}, NOW())
+        ON CONFLICT (key) DO UPDATE SET label = EXCLUDED.label;
+      `;
+    } catch (err) {
+      console.error("[DB]: addAdminKey DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    let keys = [];
+    if (fs.existsSync(ADMIN_KEYS_FILE)) {
+      keys = JSON.parse(fs.readFileSync(ADMIN_KEYS_FILE, "utf-8"));
+    }
+    if (!keys.some((k) => k.key.toLowerCase() === cleanKey)) {
+      keys.unshift({ key: cleanKey, label: keyLabel, createdAt: now });
+      fs.writeFileSync(ADMIN_KEYS_FILE, JSON.stringify(keys, null, 2), "utf-8");
+    }
+  } catch {}
+
+  return { key: cleanKey, label: keyLabel, createdAt: now };
+}
+
+export async function deleteAdminKey(key) {
+  const cleanKey = String(key || "").toLowerCase().trim();
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        DELETE FROM admin_keys
+        WHERE LOWER(key) = ${cleanKey};
+      `;
+    } catch (err) {
+      console.error("[DB]: deleteAdminKey DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(ADMIN_KEYS_FILE)) {
+      let keys = JSON.parse(fs.readFileSync(ADMIN_KEYS_FILE, "utf-8"));
+      keys = keys.filter((k) => k.key.toLowerCase() !== cleanKey);
+      fs.writeFileSync(ADMIN_KEYS_FILE, JSON.stringify(keys, null, 2), "utf-8");
+    }
+  } catch {}
+  return true;
+}
+
+export async function isValidAdminKey(enteredKey) {
+  if (!enteredKey) return false;
+  const clean = String(enteredKey).toLowerCase().trim();
+  const keys = await getAdminKeys();
+  const defaultSecret = (process.env.ADMIN_SECRET || "dreemroom-adm").toLowerCase().trim();
+  return keys.some((k) => k.key.toLowerCase().trim() === clean) || clean === defaultSecret;
+}
+
+// --------------------------------------------------------------------------
+// 6. TELEGRAM GROUPS & CHANNELS (Bot qo'shilgan guruhlar va kanallar)
+// --------------------------------------------------------------------------
+export async function getTelegramGroups() {
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`
+        SELECT 
+          chat_id as "chatId",
+          title,
+          type,
+          username,
+          is_target as "isTarget",
+          created_at as "createdAt",
+          last_active_at as "lastActiveAt"
+        FROM telegram_groups
+        ORDER BY last_active_at DESC;
+      `;
+      return rows;
+    } catch (err) {
+      console.error("[DB]: getTelegramGroups DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(TELEGRAM_GROUPS_FILE)) {
+      return JSON.parse(fs.readFileSync(TELEGRAM_GROUPS_FILE, "utf-8"));
+    }
+  } catch {}
+  return [];
+}
+
+export async function saveTelegramGroup({ chatId, title, type, username, isTarget }) {
+  const cId = String(chatId);
+  const cTitle = title || (type === "channel" ? "Kanal" : "Guruh");
+  const cType = type || "group";
+  const uName = username ? `@${String(username).replace(/^@/, "")}` : "";
+  const now = new Date().toISOString();
+
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        INSERT INTO telegram_groups (
+          chat_id, title, type, username, is_target, created_at, last_active_at
+        ) VALUES (
+          ${cId}, ${cTitle}, ${cType}, ${uName}, ${Boolean(isTarget)}, NOW(), NOW()
+        )
+        ON CONFLICT (chat_id) DO UPDATE SET
+          title = EXCLUDED.title,
+          type = EXCLUDED.type,
+          username = EXCLUDED.username,
+          is_target = CASE WHEN ${isTarget !== undefined} THEN ${Boolean(isTarget)} ELSE telegram_groups.is_target END,
+          last_active_at = NOW();
+      `;
+    } catch (err) {
+      console.error("[DB]: saveTelegramGroup DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    let groups = [];
+    if (fs.existsSync(TELEGRAM_GROUPS_FILE)) {
+      groups = JSON.parse(fs.readFileSync(TELEGRAM_GROUPS_FILE, "utf-8"));
+    }
+    const idx = groups.findIndex((g) => String(g.chatId) === cId);
+    if (idx >= 0) {
+      groups[idx] = {
+        ...groups[idx],
+        title: cTitle,
+        type: cType,
+        username: uName,
+        isTarget: isTarget !== undefined ? Boolean(isTarget) : groups[idx].isTarget,
+        lastActiveAt: now,
+      };
+    } else {
+      groups.unshift({
+        chatId: cId,
+        title: cTitle,
+        type: cType,
+        username: uName,
+        isTarget: Boolean(isTarget),
+        createdAt: now,
+        lastActiveAt: now,
+      });
+    }
+    fs.writeFileSync(TELEGRAM_GROUPS_FILE, JSON.stringify(groups, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[DB]: saveTelegramGroup fayl xatosi:", err.message);
+  }
+
+  return { chatId: cId, title: cTitle, type: cType };
+}
+
+export async function deleteTelegramGroup(chatId) {
+  const cId = String(chatId);
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        DELETE FROM telegram_groups
+        WHERE chat_id = ${cId};
+      `;
+    } catch (err) {
+      console.error("[DB]: deleteTelegramGroup DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(TELEGRAM_GROUPS_FILE)) {
+      let groups = JSON.parse(fs.readFileSync(TELEGRAM_GROUPS_FILE, "utf-8"));
+      groups = groups.filter((g) => String(g.chatId) !== cId);
+      fs.writeFileSync(TELEGRAM_GROUPS_FILE, JSON.stringify(groups, null, 2), "utf-8");
+    }
+  } catch {}
+  return true;
+}
+
+export async function setTargetTelegramGroup(chatId) {
+  const cId = String(chatId);
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        UPDATE telegram_groups
+        SET is_target = (chat_id = ${cId});
+      `;
+    } catch (err) {
+      console.error("[DB]: setTargetTelegramGroup DB xatosi:", err.message);
+    }
+  }
+
+  try {
+    if (fs.existsSync(TELEGRAM_GROUPS_FILE)) {
+      const groups = JSON.parse(fs.readFileSync(TELEGRAM_GROUPS_FILE, "utf-8"));
+      groups.forEach((g) => {
+        g.isTarget = String(g.chatId) === cId;
+      });
+      fs.writeFileSync(TELEGRAM_GROUPS_FILE, JSON.stringify(groups, null, 2), "utf-8");
+    }
+  } catch {}
+  return true;
 }
 

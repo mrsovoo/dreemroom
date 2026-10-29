@@ -38,6 +38,15 @@ import {
   getBotConfig,
   saveImage,
   getImage,
+  getAdminUsers,
+  updateAdminUserStatus,
+  deleteAdminUser,
+  getAdminKeys,
+  addAdminKey,
+  deleteAdminKey,
+  getTelegramGroups,
+  deleteTelegramGroup,
+  setTargetTelegramGroup,
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -286,7 +295,127 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 10. Serve static files from public/ (images, fonts, etc.)
+  // 10. API: Admin Users (GET /api/admin/users)
+  if (req.method === "GET" && pathname === "/api/admin/users") {
+    const users = await getAdminUsers();
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify(users));
+    return;
+  }
+
+  // 11. API: Update Admin User Status (PUT /api/admin/users/:id/status)
+  if (req.method === "PUT" && pathname.startsWith("/api/admin/users/") && pathname.endsWith("/status")) {
+    const id = decodeURIComponent(pathname.replace("/api/admin/users/", "").replace("/status", ""));
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      try {
+        const { status } = JSON.parse(body);
+        await updateAdminUserStatus(id, status);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ success: true, id, status }));
+      } catch (err) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Xatolik yuz berdi" }));
+      }
+    });
+    return;
+  }
+
+  // 12. API: Delete Admin User (DELETE /api/admin/users/:id)
+  if (req.method === "DELETE" && pathname.startsWith("/api/admin/users/")) {
+    const id = decodeURIComponent(pathname.replace("/api/admin/users/", ""));
+    await deleteAdminUser(id);
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ success: true, id }));
+    return;
+  }
+
+  // 13. API: Admin Secret Keys (GET /api/admin/keys)
+  if (req.method === "GET" && pathname === "/api/admin/keys") {
+    const keys = await getAdminKeys();
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify(keys));
+    return;
+  }
+
+  // 14. API: Add Admin Secret Key (POST /api/admin/keys)
+  if (req.method === "POST" && pathname === "/api/admin/keys") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      try {
+        const { key, label } = JSON.parse(body);
+        if (!key) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Kalit so'z kiritilmadi" }));
+          return;
+        }
+        const created = await addAdminKey(key, label);
+        res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(created));
+      } catch (err) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Xatolik yuz berdi" }));
+      }
+    });
+    return;
+  }
+
+  // 15. API: Delete Admin Secret Key (DELETE /api/admin/keys/:key)
+  if (req.method === "DELETE" && pathname.startsWith("/api/admin/keys/")) {
+    const key = decodeURIComponent(pathname.replace("/api/admin/keys/", ""));
+    await deleteAdminKey(key);
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ success: true, key }));
+    return;
+  }
+
+  // 16. API: Telegram Groups & Channels (GET /api/admin/groups)
+  if (req.method === "GET" && pathname === "/api/admin/groups") {
+    const groups = await getTelegramGroups();
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify(groups));
+    return;
+  }
+
+  // 17. API: Set Target Telegram Group (POST /api/admin/groups/set-target)
+  if (req.method === "POST" && pathname === "/api/admin/groups/set-target") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      try {
+        const { chatId } = JSON.parse(body);
+        await setTargetTelegramGroup(chatId);
+        // bot-config.json ga ham saqlash
+        const cfgPath = path.join(__dirname, "bot-config.json");
+        if (fs.existsSync(cfgPath)) {
+          try {
+            const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8"));
+            cfg.targetChatId = chatId;
+            fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), "utf-8");
+          } catch {}
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ success: true, chatId }));
+      } catch (err) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Xatolik yuz berdi" }));
+      }
+    });
+    return;
+  }
+
+  // 18. API: Delete Telegram Group (DELETE /api/admin/groups/:id)
+  if (req.method === "DELETE" && pathname.startsWith("/api/admin/groups/")) {
+    const id = decodeURIComponent(pathname.replace("/api/admin/groups/", ""));
+    await deleteTelegramGroup(id);
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ success: true, id }));
+    return;
+  }
+
+  // 19. Serve static files from public/ (images, fonts, etc.)
   if (pathname.startsWith("/images/") || pathname.startsWith("/image-landing/")) {
     const filePath = path.join(PUBLIC_DIR, pathname);
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {

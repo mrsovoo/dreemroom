@@ -816,6 +816,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span>Hisobot</span>
         </button>
+
+        <button class="nav-btn" data-tab="faollar" onclick="setTab('faollar')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Faollar</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -1000,6 +1005,117 @@
             </table>
           </div>
         </section>
+
+        <!-- 5. FAOLLAR & GURUHLAR (FAOLLAR) -->
+        <section class="tab-view" id="view-faollar">
+          <div class="stats-row">
+            <div class="stat-box">
+              <span class="stat-box-label">Faol Adminlar</span>
+              <span class="stat-box-val" id="kpiFaolAdminlar">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-box-label">Maxfiy kalit so'zlar</span>
+              <span class="stat-box-val" id="kpiKeysCount">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-box-label">Ulangan guruhlar / kanallar</span>
+              <span class="stat-box-val" id="kpiGroupsCount">0</span>
+            </div>
+          </div>
+
+          <!-- BLOK 1: MAXFIY KALIT SO'ZLAR -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">🔑 Maxfiy kalit so'zlar</h2>
+                <p style="font-size: 12px; color: var(--ink-muted); margin-top: 2px;">
+                  Foydalanuvchi @dreemroom_adm_bot ga /start berganda ushbu kalit so'zlardan birini kiritishi shart
+                </p>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openKeyModal()">+ Yangi kalit so'z</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Kalit so'z</th>
+                  <th>Tavsifi</th>
+                  <th>Yaratilgan sana</th>
+                  <th style="text-align: right;">Amal</th>
+                </tr>
+              </thead>
+              <tbody id="keysTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+            <div id="keysEmpty" class="empty-text" style="display: none;">
+              Kalit so'zlar mavjud emas.
+            </div>
+          </div>
+
+          <!-- BLOK 2: ADMIN BOTDAN FOYDALANAYOTGANLAR -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">👥 Admin bot foydalanuvchilari</h2>
+                <p style="font-size: 12px; color: var(--ink-muted); margin-top: 2px;">
+                  Kalit so'zni to'g'ri kiritib @dreemroom_adm_bot dan foydalanayotgan adminlar
+                </p>
+              </div>
+              <input type="text" id="adminUserSearch" class="filter-search" style="max-width: 240px;" placeholder="Qidirish (ism, username)..." oninput="renderFaolAdminlar()">
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Foydalanuvchi</th>
+                  <th>Username</th>
+                  <th>Telegram ID</th>
+                  <th>Ishlatgan kaliti</th>
+                  <th>Kirgan vaqti</th>
+                  <th>Oxirgi faolligi</th>
+                  <th>Holati</th>
+                  <th style="text-align: right;">Amallar</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+            <div id="adminUsersEmpty" class="empty-text" style="display: none;">
+              Hozircha admin botdan foydalanuvchilar ro'yxatdan o'tmagan.
+            </div>
+          </div>
+
+          <!-- BLOK 3: BOT QO'SHILGAN GURUHLAR VA KANALLAR -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">📢 Bot qo'shilgan guruhlar va kanallar</h2>
+                <p style="font-size: 12px; color: var(--ink-muted); margin-top: 2px;">
+                  Bot a'zo bo'lgan Telegram kanallari va guruhlari ro'yxati
+                </p>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Nomi</th>
+                  <th>Turi</th>
+                  <th>Chat ID</th>
+                  <th>Havolasi</th>
+                  <th>Do'kon ulanishi</th>
+                  <th>Qo'shilgan / Faollik</th>
+                  <th style="text-align: right;">Amal</th>
+                </tr>
+              </thead>
+              <tbody id="groupsTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+            <div id="groupsEmpty" class="empty-text" style="display: none;">
+              Bot hali hech qanday kanal yoki guruhga qo'shilmagan.
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -1116,6 +1232,32 @@
     </div>
   </div>
 
+  <!-- ADD KEY MODAL -->
+  <div class="modal-backdrop" id="keyModal">
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Yangi maxfiy kalit so'z qo'shish</h3>
+        <button class="modal-close" onclick="closeKeyModal()">✕</button>
+      </div>
+      <form id="keyForm" onsubmit="saveKey(event)">
+        <div class="modal-body">
+          <div class="field-group">
+            <label class="field-label">Kalit so'z (parol) *</label>
+            <input type="text" id="newKeyVal" class="field-input" required placeholder="Masalan: dreem-menejer-2025" autocomplete="off">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Tavsifi / Kim uchun</label>
+            <input type="text" id="newKeyLabel" class="field-input" placeholder="Masalan: Bosh menejer uchun">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeKeyModal()">Bekor qilish</button>
+          <button type="submit" class="btn btn-primary">Qo'shish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- LOGIN MODAL OVERLAY -->
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card">
@@ -1180,6 +1322,9 @@
     }
     let products = [];
     let orders = [];
+    let adminUsers = [];
+    let adminKeys = [];
+    let telegramGroups = [];
     const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
     let selectedSizes = ["XS", "S", "M", "L", "XL"];
 
@@ -1189,7 +1334,8 @@
       dashboard: "Boshqaruv",
       products: "Mahsulotlar",
       orders: "Buyurtmalar",
-      reports: "Hisobot"
+      reports: "Hisobot",
+      faollar: "Faollar va Guruhlar"
     };
 
     function setTab(tab) {
@@ -1208,6 +1354,7 @@
       if (tab === "products") renderProducts();
       if (tab === "orders") renderOrders();
       if (tab === "reports") renderReports();
+      if (tab === "faollar") renderFaollar();
     }
 
     function toggleSidebar() {
@@ -1245,6 +1392,7 @@
       renderOrders();
       renderReports();
       renderSizeButtons();
+      loadFaollarData();
     }
 
     function formatMoney(amount) {
@@ -1637,6 +1785,271 @@
       t.textContent = msg;
       t.classList.add("is-show");
       setTimeout(() => t.classList.remove("is-show"), 2600);
+    }
+
+    /* 5. Faollar & Guruhlar */
+    async function loadFaollarData() {
+      try {
+        const [uRes, kRes, gRes] = await Promise.all([
+          fetch("/api/admin/users").catch(() => null),
+          fetch("/api/admin/keys").catch(() => null),
+          fetch("/api/admin/groups").catch(() => null)
+        ]);
+        if (uRes && uRes.ok) adminUsers = await uRes.json();
+        if (kRes && kRes.ok) adminKeys = await kRes.json();
+        if (gRes && gRes.ok) telegramGroups = await gRes.json();
+      } catch (err) {
+        console.warn("Faollar ma'lumotlarini yuklashda xatolik:", err);
+      }
+
+      renderFaollar();
+    }
+
+    function renderFaollar() {
+      const activeCount = adminUsers.filter(u => u.status === 'active').length;
+      const kpiUsers = document.getElementById("kpiFaolAdminlar");
+      const kpiKeys = document.getElementById("kpiKeysCount");
+      const kpiGroups = document.getElementById("kpiGroupsCount");
+      if (kpiUsers) kpiUsers.textContent = activeCount;
+      if (kpiKeys) kpiKeys.textContent = adminKeys.length;
+      if (kpiGroups) kpiGroups.textContent = telegramGroups.length;
+
+      renderKeys();
+      renderFaolAdminlar();
+      renderGroups();
+    }
+
+    function renderKeys() {
+      const tbody = document.getElementById("keysTableBody");
+      const empty = document.getElementById("keysEmpty");
+      if (!tbody) return;
+
+      if (!adminKeys || adminKeys.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+
+      empty.style.display = "none";
+      tbody.innerHTML = adminKeys.map(k => {
+        const dateStr = k.createdAt ? new Date(k.createdAt).toLocaleString("uz-UZ", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+        return `
+          <tr>
+            <td>
+              <code style="font-size: 13.5px; font-weight: 700; background: #f0f0f5; padding: 4px 8px; border-radius: 6px; color: var(--brand);">${k.key}</code>
+            </td>
+            <td>${k.label || '—'}</td>
+            <td><span style="font-size: 12.5px; color: var(--ink-muted);">${dateStr}</span></td>
+            <td style="text-align: right;">
+              <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${k.key}'); showToast('Kalit so\\'z nusxalandi ✓');">Nusxa</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteKey('${k.key}')" style="margin-left: 6px;">O'chirish</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderFaolAdminlar() {
+      const tbody = document.getElementById("adminUsersTableBody");
+      const empty = document.getElementById("adminUsersEmpty");
+      const q = (document.getElementById("adminUserSearch")?.value || "").toLowerCase().trim();
+      if (!tbody) return;
+
+      const filtered = adminUsers.filter(u => {
+        if (!q) return true;
+        const name = (u.fullName || "").toLowerCase();
+        const uname = (u.username || "").toLowerCase();
+        const uid = String(u.userId || "").toLowerCase();
+        return name.includes(q) || uname.includes(q) || uid.includes(q);
+      });
+
+      if (!filtered || filtered.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+
+      empty.style.display = "none";
+      tbody.innerHTML = filtered.map(u => {
+        const isAct = u.status === "active";
+        const createdDate = u.createdAt ? new Date(u.createdAt).toLocaleDateString("uz-UZ") : "—";
+        const activeDate = u.lastActiveAt ? new Date(u.lastActiveAt).toLocaleString("uz-UZ", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+        const unameLink = u.username ? `<a href="https://t.me/${u.username.replace('@', '')}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 600;">${u.username}</a>` : '<span style="color: var(--ink-muted);">Mavjud emas</span>';
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight: 600; color: var(--ink);">${u.fullName || u.firstName || 'Admin'}</div>
+            </td>
+            <td>${unameLink}</td>
+            <td><code style="font-size: 12px; background: #f4f4f6; padding: 2px 6px; border-radius: 4px;">${u.userId}</code></td>
+            <td><code style="font-size: 12px; color: var(--brand); font-weight: 600;">${u.usedKey || 'dreemroom-adm'}</code></td>
+            <td><span style="font-size: 12px; color: var(--ink-muted);">${createdDate}</span></td>
+            <td><span style="font-size: 12px; color: var(--ink-muted);">${activeDate}</span></td>
+            <td>
+              <span class="status-badge" style="${isAct ? 'background:#dcfce7; color:#15803d;' : 'background:#fee2e2; color:#dc2626;'}">
+                ${isAct ? 'Faol' : 'Bloklangan'}
+              </span>
+            </td>
+            <td style="text-align: right;">
+              <button class="btn btn-secondary btn-sm" onclick="toggleUserStatus('${u.userId}', '${u.status}')">
+                ${isAct ? 'Bloklash' : 'Faollashtirish'}
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.userId}')" style="margin-left: 6px;">
+                O'chirish
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderGroups() {
+      const tbody = document.getElementById("groupsTableBody");
+      const empty = document.getElementById("groupsEmpty");
+      if (!tbody) return;
+
+      if (!telegramGroups || telegramGroups.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+
+      empty.style.display = "none";
+      tbody.innerHTML = telegramGroups.map(g => {
+        const typeLabel = g.type === "channel" ? "📢 Kanal" : (g.type === "supergroup" ? "⚡ Superguruh" : "👥 Guruh");
+        const dateStr = g.lastActiveAt ? new Date(g.lastActiveAt).toLocaleString("uz-UZ", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+        const link = g.username ? `<a href="https://t.me/${g.username.replace('@','')}" target="_blank" style="color: #2563eb; font-weight: 600;">${g.username}</a>` : '<span style="color: var(--ink-muted);">Shaxsiy</span>';
+        const targetBadge = g.isTarget
+          ? `<span class="status-badge" style="background:#dcfce7; color:#15803d; font-weight:700;">✅ Asosiy post kanali</span>`
+          : `<span class="status-badge">Ulangan</span>`;
+
+        return `
+          <tr>
+            <td><strong>${g.title}</strong></td>
+            <td><span style="font-size: 12.5px; font-weight: 600;">${typeLabel}</span></td>
+            <td><code style="font-size: 12px; background: #f4f4f6; padding: 2px 6px; border-radius: 4px;">${g.chatId}</code></td>
+            <td>${link}</td>
+            <td>${targetBadge}</td>
+            <td><span style="font-size: 12px; color: var(--ink-muted);">${dateStr}</span></td>
+            <td style="text-align: right;">
+              ${!g.isTarget ? `<button class="btn btn-secondary btn-sm" onclick="setTargetGroup('${g.chatId}')">Asosiy qilish</button>` : '<span style="font-size: 12px; color: #15803d; font-weight: 600;">Asosiy ✓</span>'}
+              <button class="btn btn-danger btn-sm" onclick="deleteGroup('${g.chatId}')" style="margin-left: 6px;">O'chirish</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    /* Kalit so'z modal boshqaruvi */
+    function openKeyModal() {
+      document.getElementById("newKeyVal").value = "";
+      document.getElementById("newKeyLabel").value = "";
+      document.getElementById("keyModal").classList.add("is-open");
+    }
+
+    function closeKeyModal() {
+      document.getElementById("keyModal").classList.remove("is-open");
+    }
+
+    async function saveKey(e) {
+      e.preventDefault();
+      const key = document.getElementById("newKeyVal").value.trim();
+      const label = document.getElementById("newKeyLabel").value.trim();
+      if (!key) return;
+
+      try {
+        const res = await fetch("/api/admin/keys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, label })
+        });
+        if (res.ok) {
+          showToast("Yangi kalit so'z qo'shildi ✓");
+          closeKeyModal();
+          await loadFaollarData();
+        } else {
+          showToast("Kalit so'z qo'shishda xatolik");
+        }
+      } catch {
+        showToast("Server bilan aloqa xatosi");
+      }
+    }
+
+    async function deleteKey(key) {
+      if (!confirm(`"${key}" kalit so'zini o'chirishni tasdiqlaysizmi?`)) return;
+      try {
+        const res = await fetch(`/api/admin/keys/${encodeURIComponent(key)}`, { method: "DELETE" });
+        if (res.ok) {
+          showToast("Kalit so'z o'chirildi ✓");
+          await loadFaollarData();
+        }
+      } catch {
+        showToast("Xatolik yuz berdi");
+      }
+    }
+
+    async function toggleUserStatus(userId, currentStatus) {
+      const nextStatus = currentStatus === "active" ? "blocked" : "active";
+      const actionText = nextStatus === "blocked" ? "bloklashni" : "faollashtirishni";
+      if (!confirm(`Ushbu adminni ${actionText} tasdiqlaysizmi?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: nextStatus })
+        });
+        if (res.ok) {
+          showToast(nextStatus === "blocked" ? "Admin bloklandi" : "Admin faollashtirildi ✓");
+          await loadFaollarData();
+        }
+      } catch {
+        showToast("Xatolik yuz berdi");
+      }
+    }
+
+    async function deleteUser(userId) {
+      if (!confirm("Ushbu foydalanuvchini admin ro'yxatidan o'chirishni tasdiqlaysizmi?")) return;
+      try {
+        const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+        if (res.ok) {
+          showToast("Foydalanuvchi o'chirildi ✓");
+          await loadFaollarData();
+        }
+      } catch {
+        showToast("Xatolik yuz berdi");
+      }
+    }
+
+    async function setTargetGroup(chatId) {
+      if (!confirm("Ushbu kanal/guruhni botdagi asosiy e'lonlar joylanadigan manzil qilib belgilaysizmi?")) return;
+      try {
+        const res = await fetch("/api/admin/groups/set-target", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatId })
+        });
+        if (res.ok) {
+          showToast("Asosiy kanal o'rnatildi ✓");
+          await loadFaollarData();
+        }
+      } catch {
+        showToast("Xatolik yuz berdi");
+      }
+    }
+
+    async function deleteGroup(chatId) {
+      if (!confirm("Ushbu guruh/kanalni ro'yxatdan o'chirishni tasdiqlaysizmi?")) return;
+      try {
+        const res = await fetch(`/api/admin/groups/${encodeURIComponent(chatId)}`, { method: "DELETE" });
+        if (res.ok) {
+          showToast("Guruh/kanal ro'yxatdan o'chirildi ✓");
+          await loadFaollarData();
+        }
+      } catch {
+        showToast("Xatolik yuz berdi");
+      }
     }
 
     // Start
