@@ -27,7 +27,7 @@ export default function ProductCard({
           src={mainImage}
           alt={product.name}
           loading="lazy"
-          className="velvorn-card-img"
+          className="velvorn-card-img is-active"
           onError={(e) => {
             const target = e.currentTarget;
             if (!target.src.startsWith("data:image/svg+xml")) {
