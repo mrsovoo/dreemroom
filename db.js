@@ -414,6 +414,25 @@ export async function deleteProduct(id) {
   return existing;
 }
 
+export async function clearAllProducts() {
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`TRUNCATE TABLE products;`;
+      await sql`TRUNCATE TABLE orders;`;
+    } catch (err) {
+      console.error("[DB]: clearAllProducts SQL xatosi:", err.message);
+    }
+  }
+
+  try {
+    fs.writeFileSync(PRODUCTS_FILE, "[]", "utf-8");
+    fs.writeFileSync(ORDERS_FILE, "[]", "utf-8");
+  } catch {}
+
+  return true;
+}
+
 // --------------------------------------------------------------------------
 // 2. ORDERS
 // --------------------------------------------------------------------------

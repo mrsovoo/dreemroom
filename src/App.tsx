@@ -874,73 +874,88 @@ export default function App() {
               <div className="velvorn-section-header velvorn-center-header">
                 <h2 className="velvorn-heading-drops">Katalog</h2>
               </div>
-              <div className="velvorn-clean-grid grid-radiusless">
-                {productsList.slice(0, 6).map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onOpen={openProduct}
-                    onQuickAdd={handleQuickAdd}
-                  />
-                ))}
-              </div>
-              <div className="catalog-see-all-wrap">
-                <button
-                  type="button"
-                  className="btn-see-all"
-                  onClick={() => openCatalog()}
-                  aria-label="Barcha mahsulotlarni ko'rish"
-                >
-                  <span>BARCHASI</span>
-                  <ArrowRight size={15} />
-                </button>
-              </div>
+              {productsList.length > 0 ? (
+                <>
+                  <div className="velvorn-clean-grid grid-radiusless">
+                    {productsList.slice(0, 6).map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onOpen={openProduct}
+                        onQuickAdd={handleQuickAdd}
+                      />
+                    ))}
+                  </div>
+                  <div className="catalog-see-all-wrap">
+                    <button
+                      type="button"
+                      className="btn-see-all"
+                      onClick={() => openCatalog()}
+                      aria-label="Barcha mahsulotlarni ko'rish"
+                    >
+                      <span>BARCHASI</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: "center", padding: "48px 20px", color: "#71717a" }}>
+                  <p style={{ fontSize: "15px", fontWeight: 500, margin: "0 0 6px" }}>
+                    Hozircha mahsulotlar kiritilmagan.
+                  </p>
+                  <p style={{ fontSize: "13px", color: "#a1a1aa", margin: 0 }}>
+                    Admin panel orqali yangi mahsulotlarni kiritishingiz mumkin.
+                  </p>
+                </div>
+              )}
             </section>
 
             {/* =================================================================
                 3. OMMABOP TO'PLAMLAR (Eng ko'p xarid qilinganlar algoritmi)
                 ================================================================= */}
-            <section className="velvorn-cards-section hot-sale-section" id="ommabop-toplamlar">
-              <div className="velvorn-section-header hot-sale-center-head">
-                <h2 className="velvorn-heading-drops hot-sale-title">Ommabop to'plamlar</h2>
-              </div>
-              <div className="hot-sale-grid">
-                {popularTopProducts.map((prod, idx) => {
-                  const cardImg = ["/images/10.jpg", "/images/11.png", "/images/12.png"][idx] || prod.images?.[0]?.src;
-                  return (
-                    <div
-                      key={prod.id || `popular-${idx}`}
-                      className="hot-sale-card"
-                      onClick={() => openProduct(prod)}
-                    >
-                      <div className="hot-sale-media">
-                        <img
-                          src={cardImg}
-                          alt={prod.name}
-                          className="hot-sale-img"
-                          loading="lazy"
-                        />
+            {popularTopProducts.length > 0 && (
+              <section className="velvorn-cards-section hot-sale-section" id="ommabop-toplamlar">
+                <div className="velvorn-section-header hot-sale-center-head">
+                  <h2 className="velvorn-heading-drops hot-sale-title">Ommabop to'plamlar</h2>
+                </div>
+                <div className="hot-sale-grid">
+                  {popularTopProducts.map((prod, idx) => {
+                    const cardImg = ["/images/10.jpg", "/images/11.png", "/images/12.png"][idx] || prod.images?.[0]?.src;
+                    return (
+                      <div
+                        key={prod.id || `popular-${idx}`}
+                        className="hot-sale-card"
+                        onClick={() => openProduct(prod)}
+                      >
+                        <div className="hot-sale-media">
+                          <img
+                            src={cardImg}
+                            alt={prod.name}
+                            className="hot-sale-img"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div className="hot-sale-info">
+                          <h3 className="hot-sale-card-title">{prod.name}</h3>
+                          <p className="hot-sale-card-price">{money(prod.price, prod.displayPrice)}</p>
+                          <button
+                            type="button"
+                            className="btn-shop-now"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openProduct(prod);
+                            }}
+                          >
+                            <span>XARID QILISH</span>
+                            <span className="shop-arrow">→</span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="hot-sale-info">
-                        <h3 className="hot-sale-card-title">{prod.name}</h3>
-                        <p className="hot-sale-card-price">{money(prod.price, prod.displayPrice)}</p>
-                        <button
-                          type="button"
-                          className="btn-shop-now"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openProduct(prod);
-                          }}
-                        >
-                          <span>XARID QILISH</span>
-                          <span className="shop-arrow">→</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </>
         ) : (
           <section className="section catalog">

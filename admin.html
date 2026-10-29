@@ -901,6 +901,18 @@
         <!-- 2. MAHSULOTLAR (PRODUCTS) -->
         <section class="tab-view" id="view-products">
           <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+              <h2 class="panel-title" style="margin: 0;">Do'kondagi mahsulotlar</h2>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-danger btn-sm" onclick="clearAllProductsAction()" style="background: #dc2626; color: white;">
+                  🗑️ Barcha kartochkalarni tozalash (0 qilish)
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openAddModal()">
+                  + Yangi mahsulot
+                </button>
+              </div>
+            </div>
+
             <div class="filter-bar">
               <input type="text" id="prodSearch" class="filter-search" placeholder="Nomi bo'yicha qidirish..." oninput="renderProducts()">
               <select id="prodCat" class="filter-select" onchange="renderProducts()">
@@ -1278,6 +1290,19 @@
           <div class="field-group">
             <label class="field-label">Tavsifi</label>
             <textarea id="fieldDescription" class="field-textarea" placeholder="Mahsulot haqida qisqacha ma'lumot..."></textarea>
+          </div>
+
+          <!-- Mahsulot rasmlari (Bir nechta rasm) -->
+          <div class="field-group" style="margin-top: 14px;">
+            <label class="field-label">Mahsulot rasmlari (Bir yoki bir nechta rasm yuklang)</label>
+            <input type="file" id="fieldProdFiles" multiple accept="image/*" onchange="handleProdFilesUpload(event)" style="margin-bottom: 8px; width: 100%;">
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="text" id="fieldProdImageManual" class="field-input" placeholder="Yoki rasm URL manzili: /images/1.png" style="font-size: 13px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addManualProdImage()">+ Qo'shish</button>
+            </div>
+            <div id="prodImagesPreviewGrid" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 50px; padding: 8px; border: 1px dashed var(--border); border-radius: 8px; background: #fafafb;">
+              <!-- Populated by JS -->
+            </div>
           </div>
         </div>
 
@@ -1707,8 +1732,74 @@
     }
 
     /* Modal Form */
+    let currentProdImages = [];
+
+    function handleProdFilesUpload(e) {
+      const files = Array.from(e.target.files || []);
+      files.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentProdImages.push({
+            src: event.target.result,
+            alt: file.name
+          });
+          renderProdImagesPreview();
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = "";
+    }
+
+    function addManualProdImage() {
+      const input = document.getElementById("fieldProdImageManual");
+      const url = input.value.trim();
+      if (!url) return;
+      currentProdImages.push({ src: url, alt: "Mahsulot rasmi" });
+      input.value = "";
+      renderProdImagesPreview();
+    }
+
+    function removeProdImage(index) {
+      currentProdImages.splice(index, 1);
+      renderProdImagesPreview();
+    }
+
+    function renderProdImagesPreview() {
+      const grid = document.getElementById("prodImagesPreviewGrid");
+      if (!grid) return;
+      if (!currentProdImages.length) {
+        grid.innerHTML = `<span style="font-size: 12px; color: var(--ink-muted); margin: auto;">Hozircha rasmlar yuklanmagan</span>`;
+        return;
+      }
+      grid.innerHTML = currentProdImages.map((img, i) => `
+        <div style="position: relative; width: 64px; height: 72px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); background: #eee;">
+          <img src="${img.src}" style="width: 100%; height: 100%; object-fit: cover;">
+          <button type="button" onclick="removeProdImage(${i})" style="position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(220,38,38,0.9); color: white; border: none; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">✕</button>
+        </div>
+      `).join("");
+    }
+
+    async function clearAllProductsAction() {
+      if (!confirm("Diqqat! Barcha kartochkalarni o'chirish va barcha ma'lumotlarni 0 qilishni tasdiqlaysizmi?")) return;
+      try {
+        const res = await fetch("/api/admin/clear-all", { method: "POST" });
+        if (res.ok) {
+          showToast("Barcha kartochkalar tozalandi (0 qilindi) ✓");
+          products = [];
+          renderProducts();
+          renderDashboard();
+        } else {
+          showToast("Xatolik yuz berdi");
+        }
+      } catch (err) {
+        showToast("Server xatosi: " + err.message);
+      }
+    }
+
     function openCreateModal() {
       currentEditingProduct = null;
+      currentProdImages = [];
+      renderProdImagesPreview();
       document.getElementById("modalHeading").textContent = "Mahsulot qo'shish";
       document.getElementById("fieldId").value = "";
       document.getElementById("fieldName").value = "";
@@ -1730,6 +1821,8 @@
       const p = products.find(item => item.id === id);
       if (!p) return;
       currentEditingProduct = p;
+      currentProdImages = Array.isArray(p.images) ? [...p.images] : [];
+      renderProdImagesPreview();
 
       document.getElementById("modalHeading").textContent = "Mahsulotni tahrirlash";
       document.getElementById("fieldId").value = p.id;
@@ -1750,6 +1843,7 @@
 
     function closeModal() {
       currentEditingProduct = null;
+      currentProdImages = [];
       document.getElementById("productModal").classList.remove("is-open");
     }
 
@@ -1778,11 +1872,9 @@
       const isPopular = document.getElementById("fieldIsPopular").checked;
       const description = document.getElementById("fieldDescription").value.trim();
 
-      // Mavjud mahsulot rasmlarini o'zgarishsiz to'liq saqlab qolamiz
-      let finalImages = [];
-      if (currentEditingProduct && Array.isArray(currentEditingProduct.images)) {
-        finalImages = [...currentEditingProduct.images];
-      }
+      let finalImages = currentProdImages.length
+        ? [...currentProdImages]
+        : (currentEditingProduct && Array.isArray(currentEditingProduct.images) ? [...currentEditingProduct.images] : []);
 
       const payload = {
         name,

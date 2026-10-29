@@ -3595,6 +3595,80 @@ body.in-telegram .mobile-app-layout {
   transform: scale(1.03) !important;
 }
 
+/* Kartochka ichidagi o'ngga/chapga rasm o'tkazish tugmalari */
+.card-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #18181b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.15s ease, background 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  padding: 0;
+}
+.card-nav-arrow:hover {
+  background: #ffffff;
+  transform: translateY(-50%) scale(1.1);
+  color: #000000;
+}
+.card-nav-prev {
+  left: 8px;
+}
+.card-nav-next {
+  right: 8px;
+}
+.velvorn-clean-card:hover .card-nav-arrow {
+  opacity: 1;
+}
+@media (max-width: 800px) {
+  .card-nav-arrow {
+    opacity: 0.85;
+  }
+}
+
+/* Pastki rasm indikatori nuqtalari */
+.card-dots-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 10;
+  padding: 3px 6px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
+.card-dot-seg {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: block;
+}
+.card-dot-seg.is-active {
+  width: 14px;
+  height: 5px;
+  border-radius: 9999px;
+  background: #ffffff;
+}
+
 .velvorn-card-info {
   display: flex;
   align-items: center;

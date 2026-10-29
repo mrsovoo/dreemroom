@@ -31,6 +31,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  clearAllProducts,
   getOrders,
   createOrder,
   updateOrder,
@@ -236,6 +237,14 @@ const server = http.createServer(async (req, res) => {
     await deleteProduct(id);
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ success: true, id, message: "Barcha tarmoqlardan tozalandi" }));
+    return;
+  }
+
+  // 5.1 API: Clear all products and reset data to 0 (POST /api/admin/clear-all)
+  if (req.method === "POST" && (pathname === "/api/admin/clear-all" || pathname === "/api/products/clear-all")) {
+    await clearAllProducts();
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ success: true, message: "Barcha kartochkalar va buyurtmalar tozalandi (0 qilindi)" }));
     return;
   }
 
