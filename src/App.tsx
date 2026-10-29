@@ -1253,15 +1253,6 @@ export default function App() {
             hideHeader={true}
           >
             <div className="modal-product-card">
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={() => setPanel(null)}
-                aria-label="Yopish"
-              >
-                <X size={18} strokeWidth={2} />
-              </button>
-
               <div className="modal-left-col">
                 <ProductGallery
                   product={activeProduct}
@@ -1273,22 +1264,34 @@ export default function App() {
               </div>
 
               <div className="modal-right-col">
-                {/* 1-qator: Sarlavha va Wishlist */}
+                {/* 1-qator: Sarlavha va Harakatlar (Wishlist + Yopish) */}
                 <div className="modal-title-row">
                   <h1 className="modal-product-title">{activeProduct.name}</h1>
-                  <button
-                    type="button"
-                    className={`modal-wishlist-circle ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
-                    onClick={() => toggleWishlist(activeProduct.id)}
-                    aria-label="Sevimlilar"
-                  >
-                    <Heart
-                      size={18}
-                      strokeWidth={1.8}
-                      fill={wishlist.includes(activeProduct.id) ? "#ef4444" : "none"}
-                      color={wishlist.includes(activeProduct.id) ? "#ef4444" : "#18181b"}
-                    />
-                  </button>
+                  <div className="modal-actions-group">
+                    <button
+                      type="button"
+                      className={`modal-action-circle ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
+                      onClick={() => toggleWishlist(activeProduct.id)}
+                      aria-label="Sevimlilar"
+                      title="Sevimlilar"
+                    >
+                      <Heart
+                        size={17}
+                        strokeWidth={1.8}
+                        fill={wishlist.includes(activeProduct.id) ? "#ef4444" : "none"}
+                        color={wishlist.includes(activeProduct.id) ? "#ef4444" : "#18181b"}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      className="modal-action-circle modal-close-action"
+                      onClick={() => setPanel(null)}
+                      aria-label="Yopish"
+                      title="Yopish"
+                    >
+                      <X size={17} strokeWidth={2} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Subtitle */}
