@@ -65,7 +65,7 @@ export type HeroSlide = {
 
 function renderCategoryIcon(cat: string) {
   const c = cat.toLowerCase();
-  if (c === "barchasi" || c === "all") return <Sparkles size={14} strokeWidth={1.8} />;
+  if (c === "barchasi" || c === "all") return null;
   if (c.includes("kurtka") || c.includes("jacket") || c.includes("palto")) return <Layers size={14} strokeWidth={1.8} />;
   if (c.includes("sviter") || c.includes("sweater") || c.includes("kardigan") || c.includes("cardigan")) return <Shirt size={14} strokeWidth={1.8} />;
   if (c.includes("chopon")) return <Feather size={14} strokeWidth={1.8} />;
@@ -1463,18 +1463,22 @@ export default function App() {
               </div>
             </div>
 
-            <div className="chips catalog-chips-row" aria-label="Kategoriyalar">
-              {dynamicCategories.map((item) => (
-                <button
-                  key={item}
-                  className={category === item ? "chip is-active" : "chip"}
-                  onClick={() => setCategory(item)}
-                  aria-pressed={category === item}
-                >
-                  <span className="chip-icon">{renderCategoryIcon(item)}</span>
-                  <span>{item}</span>
-                </button>
-              ))}
+            <div className="catalog-chips-row" aria-label="Kategoriyalar">
+              {dynamicCategories.map((item) => {
+                const icon = renderCategoryIcon(item);
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    className={category === item ? "catalog-chip is-active" : "catalog-chip"}
+                    onClick={() => setCategory(item)}
+                    aria-pressed={category === item}
+                  >
+                    {icon && <span className="catalog-chip-icon">{icon}</span>}
+                    <span className="catalog-chip-label">{item}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {catalogProducts.length ? (

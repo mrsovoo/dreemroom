@@ -2064,14 +2064,16 @@ p {
     box-sizing: border-box !important;
   }
   .catalog-chips-row {
-    margin: 0 -16px 14px -16px !important;
-    padding: 2px 16px 6px 16px !important;
+    margin: 0 0 16px 0 !important;
+    padding: 2px 0 6px 0 !important;
     gap: 8px !important;
-    width: calc(100% + 32px) !important;
+    width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
+    align-items: center !important;
     overflow-x: auto !important;
     scrollbar-width: none !important;
     -webkit-overflow-scrolling: touch !important;
@@ -2079,17 +2081,49 @@ p {
   .catalog-chips-row::-webkit-scrollbar {
     display: none !important;
   }
+  .catalog-chip,
   .catalog-chips-row .chip {
     flex: 0 0 auto !important;
-    min-height: 36px !important;
-    height: 36px !important;
+    min-height: 38px !important;
+    height: 38px !important;
     padding: 0 16px !important;
-    border-radius: 999px !important;
-    font-size: 13px !important;
+    border-radius: 9999px !important;
+    font-size: 13.5px !important;
     font-weight: 500 !important;
     white-space: nowrap !important;
     box-sizing: border-box !important;
-    border: none !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    background: #f4f4f7 !important;
+    color: #3f3f46 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  .catalog-chip.is-active,
+  .catalog-chips-row .chip.is-active {
+    background: #18181b !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border-color: #18181b !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14) !important;
+  }
+  .catalog-chip-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    line-height: 1 !important;
+    opacity: 0.8 !important;
+  }
+  .catalog-chip.is-active .catalog-chip-icon {
+    opacity: 1 !important;
+    color: #ffffff !important;
+  }
+  .catalog-chip-label {
+    display: inline-block !important;
+    line-height: 1 !important;
   }
   .catalog .grid {
     display: grid !important;
@@ -2533,51 +2567,69 @@ p {
   cursor: pointer !important;
 }
 .catalog-chips-row {
-  display: flex !important;
-  gap: 8px !important;
-  overflow-x: auto !important;
-  scrollbar-width: none !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin-bottom: 24px !important;
-  padding: 2px 0 6px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 22px;
+  padding: 4px 0 6px 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .catalog-chips-row::-webkit-scrollbar {
-  display: none !important;
+  display: none;
 }
-.catalog-chips-row .chip {
-  border-radius: 999px !important;
-  min-height: 38px !important;
-  padding: 8px 18px !important;
-  font-size: 13.5px !important;
-  font-weight: 500 !important;
-  border: none !important;
-  background: #f4f4f7 !important;
-  color: #3f3f46 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  cursor: pointer !important;
-  transition: all 0.18s ease !important;
-  white-space: nowrap !important;
+.catalog-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: #f4f4f7;
+  color: #3f3f46;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  box-sizing: border-box;
 }
-.catalog-chips-row .chip:hover:not(.is-active) {
-  background: #eaecee !important;
-  color: #111116 !important;
+.catalog-chip:hover:not(.is-active) {
+  background: #eaecee;
+  color: #111116;
+  border-color: rgba(0, 0, 0, 0.1);
 }
-.catalog-chips-row .chip.is-active {
-  background: #18181b !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
+.catalog-chip.is-active {
+  background: #18181b;
+  color: #ffffff;
+  font-weight: 600;
+  border-color: #18181b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
 }
-.chip-icon {
+.catalog-chip-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0.78;
+  line-height: 1;
+  opacity: 0.8;
 }
-.catalog-chips-row .chip.is-active .chip-icon {
+.catalog-chip.is-active .catalog-chip-icon {
   opacity: 1;
+}
+.catalog-chip-label {
+  display: inline-block;
+  line-height: 1;
 }
 
 /* Yangi to'plam lendingi */
