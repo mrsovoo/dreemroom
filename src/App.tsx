@@ -851,7 +851,7 @@ export default function App() {
 
         <div className="header-zone header-actions">
           <button
-            className="action-btn"
+            className="action-btn header-search-btn"
             onClick={() => {
               haptic(tgRef.current, "light");
               openCatalog();
@@ -861,7 +861,7 @@ export default function App() {
             <Search size={20} strokeWidth={1.6} />
           </button>
           <button
-            className={`action-btn ${panel === "profile" ? "is-active" : ""}`}
+            className={`action-btn header-profile-btn ${panel === "profile" ? "is-active" : ""}`}
             onClick={openProfile}
             aria-label="Profil"
           >
@@ -873,7 +873,7 @@ export default function App() {
             )}
           </button>
           <button
-            className={`action-btn ${panel === "wishlist" ? "is-active" : ""}`}
+            className={`action-btn header-wishlist-btn ${panel === "wishlist" ? "is-active" : ""}`}
             onClick={() => {
               haptic(tgRef.current, "light");
               setPanel("wishlist");

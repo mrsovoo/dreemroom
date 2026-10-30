@@ -3503,6 +3503,93 @@ body.in-telegram .mobile-app-layout {
   background: #111116;
 }
 
+/* ----------------------------------------------------
+   1-BOSQICH: MOBIL TELEFON HEADER (max-width: 768px)
+   Faqat telefonlar uchun — desktop/tablet umuman o'zgarmaydi!
+   ---------------------------------------------------- */
+@media (max-width: 768px) {
+  .velvorn-header {
+    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-bottom: 0 !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  /* Desktop menyu havolalari telefonda butunlay yashiriladi */
+  .velvorn-nav {
+    display: none !important;
+  }
+
+  /* Logotip mobil o'lchami */
+  .header-brand .brand-svg-logo {
+    height: 19px !important;
+    max-width: 140px !important;
+  }
+
+  /* O'ng tarafdagi harakatlar guruhi */
+  .header-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  /* Profil va Sevimlilar pastki dok tabbarida borligi sababli tepada joy band qilmaydi */
+  .header-profile-btn,
+  .header-wishlist-btn {
+    display: none !important;
+  }
+
+  /* Qidiruv tugmasi mobil ilovadek ixcham doira */
+  .header-search-btn {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    background: #f4f4f6 !important;
+    color: #18181b !important;
+    border: none !important;
+  }
+
+  /* Savat tugmasi mobil ilovadek nafis doira (katta "SAVAT" yozuvi o'rniga) */
+  .action-cart-frame {
+    width: 38px !important;
+    height: 38px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background: #18181b !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16) !important;
+    position: relative !important;
+  }
+  .cart-frame-label {
+    display: none !important;
+  }
+  .action-cart-frame .action-badge {
+    position: absolute !important;
+    top: -3px !important;
+    right: -3px !important;
+    min-width: 17px !important;
+    height: 17px !important;
+    line-height: 17px !important;
+    padding: 0 4px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 999px !important;
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    border: 1.5px solid #ffffff !important;
+    margin-left: 0 !important;
+  }
+}
+
 /* Hero Section */
 .velvorn-hero-section {
   position: relative;
