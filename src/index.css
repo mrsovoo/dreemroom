@@ -2011,6 +2011,43 @@ p {
     justify-content: space-between;
   }
 
+  /* Mobilda Katalog bo'limi to'g'ridan-to'g'ri Search va Pill filtrlar bilan boshlanadi */
+  .catalog.section {
+    padding-top: 14px !important;
+    padding-bottom: 30px !important;
+    width: 100% !important;
+    padding-inline: 16px !important;
+  }
+  .catalog-title-wrap {
+    display: none !important;
+  }
+  .catalog-head-block {
+    margin-bottom: 12px !important;
+    width: 100% !important;
+    display: block !important;
+  }
+  .catalog-toolbar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  .catalog-search-pill {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+  .catalog-chips-row {
+    margin: 0 -16px 16px -16px !important;
+    padding: 2px 16px 6px 16px !important;
+    gap: 8px !important;
+  }
+  .catalog-chips-row .chip {
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    padding: 8px 18px !important;
+    font-size: 13.5px !important;
+  }
+
   .catalog-title {
     font-size: 28px;
     margin-bottom: 16px;
@@ -2301,6 +2338,128 @@ p {
   color: var(--ink);
   outline: none;
   cursor: pointer;
+}
+
+/* Zamonaviy Qidiruv Pill & Doiraviy Filtr tugmasi (Explore Fashion style) */
+.catalog-title-wrap {
+  display: block;
+}
+.catalog-search-pill {
+  height: 46px !important;
+  border-radius: 999px !important;
+  background: #f4f4f7 !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  padding: 0 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 260px;
+  transition: all 0.2s ease !important;
+}
+.catalog-search-pill:focus-within {
+  background: #ffffff !important;
+  border-color: #111116 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06) !important;
+}
+.catalog-search-pill input {
+  font-size: 14.5px !important;
+  color: #1e1e24 !important;
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  width: 100% !important;
+}
+.catalog-search-pill input::placeholder {
+  color: #8e8e93 !important;
+  font-weight: 400 !important;
+}
+.catalog-search-icon {
+  color: #71717a !important;
+  flex-shrink: 0;
+}
+.catalog-search-clear {
+  color: #a1a1aa !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 2px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.catalog-filter-circle {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  cursor: pointer !important;
+  color: #1e1e24 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0;
+}
+.catalog-filter-circle:hover {
+  background: #f8f8fa !important;
+  border-color: #111116 !important;
+}
+.catalog-filter-select {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0 !important;
+  cursor: pointer !important;
+}
+.catalog-chips-row {
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  margin-bottom: 24px !important;
+  padding: 2px 0 6px !important;
+}
+.catalog-chips-row::-webkit-scrollbar {
+  display: none !important;
+}
+.catalog-chips-row .chip {
+  border-radius: 999px !important;
+  min-height: 38px !important;
+  padding: 8px 18px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  border: none !important;
+  background: #f4f4f7 !important;
+  color: #3f3f46 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+  white-space: nowrap !important;
+}
+.catalog-chips-row .chip:hover:not(.is-active) {
+  background: #eaecee !important;
+  color: #111116 !important;
+}
+.catalog-chips-row .chip.is-active {
+  background: #18181b !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+.chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.78;
+}
+.catalog-chips-row .chip.is-active .chip-icon {
+  opacity: 1;
 }
 
 /* Yangi to'plam lendingi */

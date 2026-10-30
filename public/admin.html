@@ -1673,8 +1673,9 @@
             <td>${p.category || '—'}</td>
             <td>${p.season || '—'}</td>
             <td style="text-align: right;">
-              <button class="btn btn-secondary btn-sm" onclick="openEditModal('${p.id}')">Tahrirlash</button>
-              <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')" style="margin-left: 6px;">O'chirish</button>
+              <button class="btn btn-sm ${p.isPopular ? 'btn-primary' : 'btn-secondary'}" onclick="togglePopular('${p.id}')" title="Ommabop to'plamlarga qo'shish yoki chiqarish">${p.isPopular ? '★ Ommabop' : '☆ Ommabop'}</button>
+              <button class="btn btn-secondary btn-sm" onclick="openEditModal('${p.id}')" style="margin-left: 4px;">Tahrirlash</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')" style="margin-left: 4px;">O'chirish</button>
             </td>
           </tr>
         `;
@@ -2047,6 +2048,25 @@
         btn.disabled = false;
         btn.textContent = "Ha, tozalansin";
         closeDeleteModal();
+      }
+    }
+
+    async function togglePopular(id) {
+      const p = products.find(prod => String(prod.id) === String(id));
+      if (!p) return;
+      const newStatus = !p.isPopular;
+      try {
+        const res = await fetch(`/api/products/${encodeURIComponent(id)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isPopular: newStatus })
+        });
+        if (!res.ok) throw new Error("Yangilab bo'lmadi");
+        p.isPopular = newStatus;
+        renderProducts();
+        showToast(newStatus ? `"${p.name}" Ommabop to'plamlarga qo'shildi ⭐` : `"${p.name}" Ommabop to'plamlardan olindi`);
+      } catch (err) {
+        showToast("Xatolik: " + err.message);
       }
     }
 

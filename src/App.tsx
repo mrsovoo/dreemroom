@@ -7,11 +7,15 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Crown,
   Eye,
   EyeOff,
+  Feather,
+  Flame,
   Grid2X2,
   Heart,
   Home,
+  Layers,
   Lock,
   Mail,
   MapPin,
@@ -21,9 +25,11 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Shirt,
   ShoppingBag,
   SlidersHorizontal,
   Sparkles,
+  Tag,
   Trash2,
   UserRound,
   X,
@@ -56,6 +62,19 @@ export type HeroSlide = {
   eyebrow?: string;
   buttonText?: string;
 };
+
+function renderCategoryIcon(cat: string) {
+  const c = cat.toLowerCase();
+  if (c === "barchasi" || c === "all") return <Sparkles size={14} strokeWidth={1.8} />;
+  if (c.includes("kurtka") || c.includes("jacket") || c.includes("palto")) return <Layers size={14} strokeWidth={1.8} />;
+  if (c.includes("sviter") || c.includes("sweater") || c.includes("kardigan") || c.includes("cardigan")) return <Shirt size={14} strokeWidth={1.8} />;
+  if (c.includes("chopon")) return <Feather size={14} strokeWidth={1.8} />;
+  if (c.includes("ko'ylak") || c.includes("dress")) return <Crown size={14} strokeWidth={1.8} />;
+  if (c.includes("sport")) return <Flame size={14} strokeWidth={1.8} />;
+  if (c.includes("kostyum") || c.includes("suit")) return <Shirt size={14} strokeWidth={1.8} />;
+  if (c.includes("shim") || c.includes("jean") || c.includes("pants")) return <Tag size={14} strokeWidth={1.8} />;
+  return <Tag size={14} strokeWidth={1.8} />;
+}
 
 /** Hero fonidagi avtomatik almashadigan suratlar (public/image-landing/ ichidagi bannerlar). */
 const defaultHeroSlides: HeroSlide[] = [
@@ -543,20 +562,36 @@ export default function App() {
     0,
   );
 
-  // Dinamik toifalar: Eng ko'p mahsulot qo'shilgan toifalar birinchi bo'lib chiqadi
+  // Dinamik toifalar: Bazadagi mahsulotlardan avtomatik aniqlanadi (masalan, 10 ta kardigan qo'shilsa darhol "Kardigan" chiqadi)
   const dynamicCategories = useMemo(() => {
+    const catMap = new Map<string, string>();
     const counts: Record<string, number> = {};
     for (const p of productsList) {
-      const cat = (p.category || "").trim();
-      if (cat) {
-        counts[cat] = (counts[cat] || 0) + 1;
+      const rawCat = (p.category || "").trim();
+      if (rawCat) {
+        const key = rawCat.toLowerCase();
+        if (!catMap.has(key)) {
+          catMap.set(key, rawCat.charAt(0).toUpperCase() + rawCat.slice(1));
+        }
+        counts[key] = (counts[key] || 0) + 1;
       }
     }
-    const sorted = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([cat]) => cat);
+    const sorted = Array.from(catMap.entries())
+      .sort((a, b) => (counts[b[0]] || 0) - (counts[a[0]] || 0))
+      .map(([, formatted]) => formatted);
 
     return [allCategory, ...sorted];
+  }, [productsList]);
+
+  // "Barchasi" uchun mahsulotlarni qiziqarli aralash (random) qilib ko'rsatish
+  const randomizedProductsList = useMemo(() => {
+    if (!productsList || productsList.length === 0) return [];
+    const list = [...productsList];
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
   }, [productsList]);
 
   const filterAndSort = (items: Product[]) => {
@@ -586,33 +621,34 @@ export default function App() {
     return result;
   };
 
-  const catalogProducts = filterAndSort(
-    productsList.filter((p) => {
-      if (category === allCategory) return true;
-      const q = category.toLowerCase();
-      return (
-        (p.category && p.category.toLowerCase() === q) ||
-        (p.name && p.name.toLowerCase().includes(q))
-      );
-    }),
-  );
+  const catalogProducts = useMemo(() => {
+    if (category === allCategory) {
+      // Barchasida: agar qidiruv/narx bo'lmasa aralash (random) ro'yxat chiqadi
+      return filterAndSort(randomizedProductsList);
+    }
+    // Muayyan bo'lim tanlansa: FAQAT shu toifadagi 1 xil mahsulotlar chiqadi
+    const targetCat = category.toLowerCase().trim();
+    const filtered = productsList.filter((p) => {
+      const pCat = (p.category || "").toLowerCase().trim();
+      return pCat === targetCat;
+    });
+    return filterAndSort(filtered);
+  }, [category, productsList, randomizedProductsList, searchQuery, sortBy]);
 
-  // Eng ko'p xarid qilingan ommabop mahsulotlar (Best Sellers dinamik algoritmi)
+  // Eng ko'p xarid qilingan va eng ko'p sotilayotgan 3 ta mahsulot (Best Sellers barqaror algoritmi)
   const popularTopProducts = useMemo(() => {
+    if (!productsList || productsList.length === 0) return [];
     const sorted = [...productsList].sort((a, b) => {
-      const aSales = (a.salesCount || 0) * 10 + (a.ordersCount || 0) * 5 + (a.isPopular ? 100 : 0);
-      const bSales = (b.salesCount || 0) * 10 + (b.ordersCount || 0) * 5 + (b.isPopular ? 100 : 0);
-      if (bSales !== aSales) return bScoreDiff(bSales, aSales);
-      return 0;
+      const aScore = (a.salesCount || 0) * 20 + (a.ordersCount || 0) * 10 + (a.isPopular ? 100 : 0) + (a.isNew ? 5 : 0);
+      const bScore = (b.salesCount || 0) * 20 + (b.ordersCount || 0) * 10 + (b.isPopular ? 100 : 0) + (b.isNew ? 5 : 0);
+      return bScore - aScore;
     });
 
-    function bScoreDiff(bScore: number, aScore: number) {
-      return bScore - aScore;
-    }
-
     const top3 = sorted.slice(0, 3);
-    while (top3.length < 3 && productsList[top3.length]) {
-      top3.push(productsList[top3.length]);
+    for (let i = 0; i < productsList.length && top3.length < 3; i++) {
+      if (!top3.some((p) => p.id === productsList[i].id)) {
+        top3.push(productsList[i]);
+      }
     }
     return top3;
   }, [productsList]);
@@ -977,13 +1013,6 @@ export default function App() {
     if (panel === "product" || view === "product") {
       text = "Savatga qo'shish";
       onClick = () => actionsRef.current.addToCart();
-    } else if (panel === "profile" || view === "profile") {
-      text = "Profilni saqlash";
-      onClick = () => {
-        const form = profileFormRef.current;
-        if (form && !form.reportValidity()) return;
-        actionsRef.current.saveProfile();
-      };
     } else if ((panel === "cart" || view === "cart") && ordered) {
       text = "Xaridni davom ettirish";
       onClick = () => actionsRef.current.openCatalog();
@@ -995,7 +1024,16 @@ export default function App() {
         actionsRef.current.submitOrder();
       };
     }
-    if (!onClick) return;
+
+    if (!onClick) {
+      try {
+        button.hide();
+      } catch {
+        /* Telegram tugmasini yashirish xatosi */
+      }
+      document.documentElement.classList.remove("tg-mainbutton-on");
+      return;
+    }
 
     const handler = onClick;
     try {
@@ -1333,7 +1371,7 @@ export default function App() {
                 </div>
                 <div className="hot-sale-grid">
                   {popularTopProducts.map((prod, idx) => {
-                    const cardImg = ["/images/10.jpg", "/images/11.png", "/images/12.png"][idx] || prod.images?.[0]?.src;
+                    const cardImg = prod.images?.[0]?.src || prod.image || "/images/core-top.jpg";
                     return (
                       <div
                         key={prod.id || `popular-${idx}`}
@@ -1346,6 +1384,9 @@ export default function App() {
                             alt={prod.name}
                             className="hot-sale-img"
                             loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = "/images/core-top.jpg";
+                            }}
                           />
                         </div>
                         <div className="hot-sale-info">
@@ -1375,18 +1416,18 @@ export default function App() {
         {view === "catalog" && (
           <section className="section catalog">
             <div className="catalog-head-block">
-              <div>
+              <div className="catalog-title-wrap">
                 <h1 className="catalog-title">
                   {category === allCategory ? "Katalog" : category}
                 </h1>
                 <p className="catalog-count">{catalogProducts.length} ta model</p>
               </div>
               <div className="catalog-toolbar">
-                <div className="search-field">
-                  <Search size={16} />
+                <div className="search-field catalog-search-pill">
+                  <Search size={18} className="catalog-search-icon" />
                   <input
                     type="text"
-                    placeholder="Katalogdan qidirish..."
+                    placeholder="Explore Fashion"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -1395,13 +1436,14 @@ export default function App() {
                       type="button"
                       onClick={() => setSearchQuery("")}
                       aria-label="Tozalash"
+                      className="catalog-search-clear"
                     >
-                      <X size={14} />
+                      <X size={15} />
                     </button>
                   )}
                 </div>
-                <div className="sort-field">
-                  <SlidersHorizontal size={15} />
+                <div className="catalog-filter-circle" title="Saralash va filtr">
+                  <SlidersHorizontal size={18} />
                   <select
                     value={sortBy}
                     onChange={(e) =>
@@ -1410,6 +1452,7 @@ export default function App() {
                       )
                     }
                     aria-label="Saralash"
+                    className="catalog-filter-select"
                   >
                     <option value="default">Standart saralash</option>
                     <option value="popular">Ommabop (Eng ko'p sotilganlar)</option>
@@ -1420,7 +1463,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="chips" aria-label="Kategoriyalar">
+            <div className="chips catalog-chips-row" aria-label="Kategoriyalar">
               {dynamicCategories.map((item) => (
                 <button
                   key={item}
@@ -1428,7 +1471,8 @@ export default function App() {
                   onClick={() => setCategory(item)}
                   aria-pressed={category === item}
                 >
-                  {item}
+                  <span className="chip-icon">{renderCategoryIcon(item)}</span>
+                  <span>{item}</span>
                 </button>
               ))}
             </div>
