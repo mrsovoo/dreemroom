@@ -11,14 +11,14 @@ type Props = {
 };
 
 /**
- * Minimalist moda kartochkasi:
- * - Kartochkani bosmasdan o'ngga/chapga surib (swipe) yoki tugmalar bilan keyingi rasmga o'tish
- * - Nechta rasm berilgan bo'lsa, barchasini ko'rsatish va indikator nuqtalarini aks ettirish
+ * Minimalist moda kartochkasi (Zen Tank uslubi):
+ * - Toza to'g'ri burchakli (radiussiz) rasm
+ * - O'ngga/chapga surish (swipe) va indikator nuqtalari
+ * - Mahsulot nomi, narxi va kvadrat plus tugmasi
  */
 export default function ProductCard({
   product,
   onOpen,
-  onQuickAdd,
 }: Props) {
   const [imgIndex, setImgIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);

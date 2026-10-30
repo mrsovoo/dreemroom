@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import {
   ArrowRight,
+  BadgeCheck,
   Bell,
   Check,
+  ChevronLeft,
   ChevronRight,
   Grid2X2,
   Heart,
@@ -33,9 +35,10 @@ import {
   sizes,
   type Product,
 } from "./data";
+import { getLocalDemoProducts } from "./demoData";
 
 type Panel = "product" | "cart" | "profile" | "contact" | "wishlist" | null;
-type View = "home" | "catalog" | "cart" | "profile";
+type View = "home" | "catalog" | "cart" | "profile" | "product";
 type CartItem = { id: string; size: string; quantity: number };
 type Profile = { name: string; phone: string };
 
@@ -201,6 +204,11 @@ export default function App() {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
+    // Faqat local development (localhost) muhitida do'konni sinash uchun demo mahsulotlar ishlatiladi
+    // Production (deploy) da bu qism avtomatik 0 ta demo (bo'sh) holatda bo'ladi.
+    if (import.meta.env.DEV) {
+      return getLocalDemoProducts();
+    }
     return products;
   });
   const [heroSlidesList, setHeroSlidesList] = useState<HeroSlide[]>(() => {
@@ -231,7 +239,14 @@ export default function App() {
       return true;
     }
   });
-  const [activeProduct, setActiveProduct] = useState<Product | null>(products[0] || null);
+  const [activeProduct, setActiveProduct] = useState<Product | null>(() => {
+    if (products[0]) return products[0];
+    if (import.meta.env.DEV) {
+      const devProds = getLocalDemoProducts();
+      return devProds[0] || null;
+    }
+    return null;
+  });
   const [selectedSize, setSelectedSize] = useState("");
   const [sizeError, setSizeError] = useState(false);
   const [productQuantity, setProductQuantity] = useState(1);
@@ -243,6 +258,9 @@ export default function App() {
   const [sortBy, setSortBy] = useState<"default" | "popular" | "price-asc" | "price-desc">("default");
   const [profileName, setProfileName] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
+  const [returnView, setReturnView] = useState<View>("home");
+  const [productImgIndex, setProductImgIndex] = useState(0);
+  const productTouchStartXRef = useRef<number | null>(null);
   const tgRef = useRef<TgWebApp | null>(null);
   const orderFormRef = useRef<HTMLFormElement>(null);
   const profileFormRef = useRef<HTMLFormElement>(null);
@@ -262,14 +280,27 @@ export default function App() {
         if (res.ok && active) {
           const data: Product[] = await res.json();
           if (Array.isArray(data)) {
-            setProductsList(data);
-            try {
-              localStorage.setItem("dreemroom_cached_prods", JSON.stringify(data));
-            } catch {}
+            if (data.length > 0) {
+              setProductsList(data);
+              try {
+                localStorage.setItem("dreemroom_cached_prods", JSON.stringify(data));
+              } catch {}
+            } else if (import.meta.env.DEV) {
+              // Local development muhitida DB bo'sh bo'lsa demo ko'rsatiladi
+              setProductsList((curr) => (curr.length > 0 ? curr : getLocalDemoProducts()));
+            } else {
+              setProductsList([]);
+            }
           }
+        } else if (import.meta.env.DEV && active) {
+          // Local muhitda server javob bermasa demo ishlatiladi
+          setProductsList((curr) => (curr.length > 0 ? curr : getLocalDemoProducts()));
         }
       } catch {
         /* Backend uzilgan bo'lsa ham keshdagi mahsulotlar ishlayveradi */
+        if (import.meta.env.DEV && active) {
+          setProductsList((curr) => (curr.length > 0 ? curr : getLocalDemoProducts()));
+        }
       } finally {
         if (active) setIsLoadingProducts(false);
       }
@@ -491,9 +522,11 @@ export default function App() {
   }, [heroSlidesList]);
 
   const touchStartXRef = useRef<number | null>(null);
+  const isHeroSwipingRef = useRef(false);
 
   function handleHeroTouchStart(e: React.TouchEvent) {
     touchStartXRef.current = e.touches[0].clientX;
+    isHeroSwipingRef.current = false;
   }
 
   function handleHeroTouchEnd(e: React.TouchEvent) {
@@ -501,6 +534,7 @@ export default function App() {
     const diff = touchStartXRef.current - e.changedTouches[0].clientX;
     const len = heroSlidesList.length || 1;
     if (Math.abs(diff) > 40) {
+      isHeroSwipingRef.current = true;
       if (diff > 0) {
         setSlide((curr) => (curr + 1) % len);
       } else {
@@ -508,6 +542,18 @@ export default function App() {
       }
     }
     touchStartXRef.current = null;
+  }
+
+  function handleMobileHeroClick() {
+    // Faqat mobilda (<= 768px) va swipe qilinmagan holatda bosilsa katalog sahifasiga o'tadi
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      if (isHeroSwipingRef.current) {
+        isHeroSwipingRef.current = false;
+        return;
+      }
+      haptic(tgRef.current, "light");
+      openCatalog();
+    }
   }
 
   // Hero fonidagi suratlar bosh sahifada avtomatik almashib turadi.
@@ -551,8 +597,31 @@ export default function App() {
     setSelectedSize(prodSizes[0] || "S");
     setSizeError(false);
     setProductQuantity(1);
+    setProductImgIndex(0);
     setShowSizeGuide(false);
-    setPanel("product");
+    setReturnView(view === "product" ? "home" : view);
+    setView("product");
+    setPanel(null);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function handleProductTouchStart(e: React.TouchEvent) {
+    productTouchStartXRef.current = e.touches[0].clientX;
+  }
+
+  function handleProductTouchEnd(e: React.TouchEvent, totalImagesCount?: number) {
+    if (productTouchStartXRef.current === null || !activeProduct) return;
+    const diff = productTouchStartXRef.current - e.changedTouches[0].clientX;
+    const len = totalImagesCount ?? (activeProduct.images && activeProduct.images.length > 0 ? activeProduct.images.length : 3);
+    if (len > 1 && Math.abs(diff) > 35) {
+      if (diff > 0) {
+        setProductImgIndex((curr) => (curr + 1) % len);
+      } else {
+        setProductImgIndex((curr) => (curr - 1 + len) % len);
+      }
+      haptic(tgRef.current, "light");
+    }
+    productTouchStartXRef.current = null;
   }
 
   function toggleWishlist(productId: string) {
@@ -750,6 +819,7 @@ export default function App() {
     const shouldShow = panel !== null || view !== "home";
     const handler = () => {
       if (panel) setPanel(null);
+      else if (view === "product") setView(returnView || "home");
       else goHome();
     };
     try {
@@ -778,7 +848,7 @@ export default function App() {
 
     let text = "";
     let onClick: (() => void) | null = null;
-    if (panel === "product") {
+    if (panel === "product" || view === "product") {
       text = "Savatga qo'shish";
       onClick = () => actionsRef.current.addToCart();
     } else if (panel === "profile" || view === "profile") {
@@ -846,7 +916,7 @@ export default function App() {
         Tarkibga o'tish
       </a>
 
-      <header className="header velvorn-header">
+      <header className={`header velvorn-header ${view === "product" ? "hide-on-mobile-product" : ""}`}>
         <div className="header-zone header-brand" aria-label="Bosh sahifa">
           <button
             className="brand brand-velvorn"
@@ -908,9 +978,27 @@ export default function App() {
               setPanel("wishlist");
             }}
             aria-label={`Sevimlilar, ${wishlist.length} ta mahsulot`}
+            title="Sevimlilar"
           >
-            <Heart size={20} strokeWidth={1.6} />
+            <Heart
+              size={19}
+              strokeWidth={1.8}
+              fill={wishlist.length > 0 ? "#ef4444" : "none"}
+              color={wishlist.length > 0 ? "#ef4444" : "currentColor"}
+            />
             {wishlist.length > 0 && <span className="action-badge">{wishlist.length}</span>}
+          </button>
+          <button
+            className="action-btn header-notif-btn"
+            onClick={() => {
+              haptic(tgRef.current, "light");
+              setToast("Sizda hozircha yangi bildirishnomalar yo'q");
+            }}
+            aria-label="Bildirishnomalar"
+            title="Bildirishnomalar"
+          >
+            <Bell size={19} strokeWidth={1.8} />
+            <span className="notif-dot" />
           </button>
           <button
             className={`action-btn action-cart-frame ${panel === "cart" ? "is-active" : ""}`}
@@ -920,17 +1008,6 @@ export default function App() {
             <ShoppingBag size={18} strokeWidth={1.8} />
             <span className="cart-frame-label">Savat</span>
             {cartCount > 0 && <span className="action-badge">{cartCount}</span>}
-          </button>
-          <button
-            className="action-btn header-notif-btn"
-            onClick={() => {
-              haptic(tgRef.current, "light");
-              setToast("Sizda hozircha yangi bildirishnomalar yo'q");
-            }}
-            aria-label="Bildirishnomalar"
-          >
-            <Bell size={19} strokeWidth={1.8} />
-            <span className="notif-dot" />
           </button>
         </div>
       </header>
@@ -990,6 +1067,7 @@ export default function App() {
               aria-label="Asosiy banner"
               onTouchStart={handleHeroTouchStart}
               onTouchEnd={handleHeroTouchEnd}
+              onClick={handleMobileHeroClick}
             >
               <div className="velvorn-hero-container">
                 {heroSlidesList.map((item, idx) => (
@@ -1021,7 +1099,8 @@ export default function App() {
                     <button
                       type="button"
                       className="velvorn-cta-btn"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         haptic(tgRef.current, "light");
                         openCatalog();
                       }}
@@ -1035,13 +1114,19 @@ export default function App() {
                   </div>
 
                   {/* Kapsula shaklidagi pastki indikator nuqtalari */}
-                  <div className="velvorn-hero-dots">
+                  <div
+                    className="velvorn-hero-dots"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {heroSlidesList.map((_, idx) => (
                       <button
                         key={"dot-" + idx}
                         type="button"
                         className={`velvorn-hero-dot ${idx === slide ? "is-active" : ""}`}
-                        onClick={() => setSlide(idx)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSlide(idx);
+                        }}
                         aria-label={`${idx + 1}-banner`}
                       />
                     ))}
@@ -1077,6 +1162,8 @@ export default function App() {
                         key={product.id}
                         product={product}
                         onOpen={openProduct}
+                        isLiked={wishlist.includes(product.id)}
+                        onToggleWishlist={toggleWishlist}
                       />
                     ))}
                   </div>
@@ -1221,6 +1308,8 @@ export default function App() {
                     key={product.id}
                     product={product}
                     onOpen={openProduct}
+                    isLiked={wishlist.includes(product.id)}
+                    onToggleWishlist={toggleWishlist}
                   />
                 ))}
               </div>
@@ -1302,7 +1391,18 @@ export default function App() {
                     const product = productsList.find((p) => p.id === item.id);
                     if (!product) return null;
                     return (
-                      <div className="page-cart-item-row" key={`${item.id}-${item.size}`}>
+                      <div
+                        className="page-cart-item-row"
+                        key={`${item.id}-${item.size}`}
+                        onClick={() => openProduct(product)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            openProduct(product);
+                          }
+                        }}
+                      >
                         <img
                           src={product.images?.[0]?.src || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>"}
                           alt={product.name}
@@ -1316,10 +1416,14 @@ export default function App() {
                           </div>
                           <div className="page-cart-item-bottom">
                             <span className="page-cart-item-price">{money(product.price * item.quantity)}</span>
-                            <div className="page-cart-qty-stepper">
+                            <div
+                              className="page-cart-qty-stepper"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   haptic(tgRef.current, "light");
                                   changeQuantity(item.id, item.size, -1);
                                 }}
@@ -1331,7 +1435,8 @@ export default function App() {
                               <button
                                 type="button"
                                 disabled={item.quantity >= 10}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   haptic(tgRef.current, "light");
                                   changeQuantity(item.id, item.size, 1);
                                 }}
@@ -1345,7 +1450,8 @@ export default function App() {
                         <button
                           type="button"
                           className="page-cart-item-del"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             haptic(tgRef.current, "light");
                             setCart((curr) => curr.filter((r) => !(r.id === item.id && r.size === item.size)));
                           }}
@@ -1605,9 +1711,265 @@ export default function App() {
             )}
           </div>
         )}
+
+        {/* =================================================================
+            MAXSUS MAHSULOT OYNOLARI (PRODUCT DETAILS PAGE)
+            Foydalanuvchi mahsulot ustiga bosganda ochiladigan to'liq sahifa
+            ================================================================= */}
+        {view === "product" && activeProduct && (
+          <div className="product-details-page">
+            {/* Top Bar: Back | Details | Cart Bag */}
+            <header className="pdetails-header">
+              <button
+                type="button"
+                className="pdetails-circle-btn"
+                onClick={() => {
+                  setView(returnView || "home");
+                  haptic(tgRef.current, "light");
+                }}
+                aria-label="Orqaga"
+              >
+                <ChevronLeft size={22} strokeWidth={2.2} />
+              </button>
+
+              <h1 className="pdetails-header-title">Details</h1>
+
+              <button
+                type="button"
+                className="pdetails-circle-btn pdetails-cart-btn"
+                onClick={goCart}
+                aria-label="Savat"
+              >
+                <ShoppingBag size={20} strokeWidth={2} />
+                {cartCount > 0 && <span className="pdetails-cart-badge">{cartCount}</span>}
+              </button>
+            </header>
+
+            <div className="pdetails-body-layout">
+              {/* Hero Image Card with swipe & pill indicator */}
+              {(() => {
+              const gallery =
+                activeProduct.images && activeProduct.images.length > 0
+                  ? activeProduct.images.map((img) => img.src)
+                  : [
+                      "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%23f3f4f6'><rect width='600' height='800' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='20'>DREEM ROOM</text></svg>",
+                      "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%23f3f4f6'><rect width='600' height='800' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='20'>DREEM ROOM</text></svg>",
+                      "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%23f3f4f6'><rect width='600' height='800' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='20'>DREEM ROOM</text></svg>",
+                    ];
+              const safeIndex = productImgIndex % gallery.length;
+              const currentSrc = gallery[safeIndex];
+
+              return (
+                <div className="pdetails-media-section">
+                  <div
+                    className="pdetails-image-card"
+                    onTouchStart={handleProductTouchStart}
+                    onTouchEnd={(e) => handleProductTouchEnd(e, gallery.length)}
+                  >
+                    <img
+                      src={currentSrc}
+                      alt={activeProduct.name}
+                      className="pdetails-hero-img"
+                    />
+                  </div>
+
+                  {/* Swipe / Dots Indicator */}
+                  <div className="pdetails-dots-row">
+                    {gallery.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`pdetails-dot ${safeIndex === idx ? "is-active" : ""}`}
+                        onClick={() => {
+                          setProductImgIndex(idx);
+                          haptic(tgRef.current, "light");
+                        }}
+                        aria-label={`Rasm ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Gallery Thumbnails (Desktop & Tablet) */}
+                  {gallery.length > 1 && (
+                    <div className="pdetails-thumbnails-row">
+                      {gallery.map((thumbSrc, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className={`pdetails-thumb-btn ${safeIndex === idx ? "is-active" : ""}`}
+                          onClick={() => {
+                            setProductImgIndex(idx);
+                            haptic(tgRef.current, "light");
+                          }}
+                          aria-label={`Rasm ${idx + 1}`}
+                        >
+                          <img src={thumbSrc} alt="" className="pdetails-thumb-img" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Information & Details Block */}
+            <div className="pdetails-content">
+              {/* Category, Title & Floating Heart Button */}
+              <div className="pdetails-title-row">
+                <div className="pdetails-title-col">
+                  <span className="pdetails-category-tag">
+                    {activeProduct.category || "Erkaklar kiyimi"}
+                  </span>
+                  <h2 className="pdetails-name">{activeProduct.name}</h2>
+                </div>
+                <button
+                  type="button"
+                  className={`pdetails-heart-btn ${wishlist.includes(activeProduct.id) ? "is-liked" : ""}`}
+                  onClick={() => toggleWishlist(activeProduct.id)}
+                  aria-label="Sevimlilar"
+                >
+                  <Heart
+                    size={22}
+                    strokeWidth={1.8}
+                    fill={wishlist.includes(activeProduct.id) ? "#ef4444" : "none"}
+                    color={wishlist.includes(activeProduct.id) ? "#ef4444" : "#9ca3af"}
+                  />
+                </button>
+              </div>
+
+              {/* Options Header: Select size & QTY */}
+              <div className="pdetails-options-header">
+                <span className="pdetails-options-label">Select size</span>
+                <span className="pdetails-options-label">QTY</span>
+              </div>
+
+              {/* Options Row: Size buttons & Stepper */}
+              <div className="pdetails-options-row">
+                <div className="pdetails-sizes-list">
+                  {(() => {
+                    const productSizes =
+                      activeProduct.sizes &&
+                      activeProduct.sizes.length > 0 &&
+                      !(activeProduct.sizes.length === 1 && activeProduct.sizes[0] === "Standart")
+                        ? activeProduct.sizes
+                        : ["S", "M", "L", "XL"];
+                    return productSizes.map((sz) => (
+                      <button
+                        key={sz}
+                        type="button"
+                        className={`pdetails-size-box ${selectedSize === sz ? "is-selected" : ""}`}
+                        onClick={() => {
+                          setSelectedSize(sz);
+                          setSizeError(false);
+                          haptic(tgRef.current, "select");
+                        }}
+                      >
+                        {sz}
+                      </button>
+                    ));
+                  })()}
+                </div>
+
+                <div className="pdetails-qty-stepper">
+                  <button
+                    type="button"
+                    className="pdetails-qty-btn"
+                    onClick={() => {
+                      setProductQuantity((q) => Math.max(1, q - 1));
+                      haptic(tgRef.current, "light");
+                    }}
+                    aria-label="Kamaytirish"
+                  >
+                    <Minus size={14} strokeWidth={2.5} />
+                  </button>
+                  <span className="pdetails-qty-value">{productQuantity}</span>
+                  <button
+                    type="button"
+                    className="pdetails-qty-btn"
+                    onClick={() => {
+                      setProductQuantity((q) => Math.min(99, q + 1));
+                      haptic(tgRef.current, "light");
+                    }}
+                    aria-label="Ko'paytirish"
+                  >
+                    <Plus size={14} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Size Error if applicable */}
+              {sizeError && (
+                <p className="pdetails-size-error">Iltimos, o'lchamni tanlang</p>
+              )}
+
+              {/* Description */}
+              <div className="pdetails-desc-box">
+                <p>
+                  {activeProduct.description ||
+                    "Yuqori sifatli va qulay materialdan tayyorlangan premium to'plam. Kundalik kiyish uchun ideal tanlov."}
+                </p>
+              </div>
+
+              {/* Desktop & Tablet Action Card (hidden on mobile <= 768px) */}
+              <div className="pdetails-desktop-action-card">
+                <div className="pdetails-desktop-price-block">
+                  <span className="pdetails-desktop-price-label">Jami narx</span>
+                  <strong className="pdetails-desktop-price-value">
+                    {money((activeProduct.price || 0) * productQuantity)}
+                  </strong>
+                </div>
+                <button
+                  type="button"
+                  className="pdetails-desktop-buy-btn"
+                  onClick={() => {
+                    addToCart();
+                    haptic(tgRef.current, "success");
+                  }}
+                >
+                  <ShoppingBag size={19} strokeWidth={2.2} />
+                  <span>Savatga qo'shish</span>
+                </button>
+              </div>
+
+              {/* Desktop qo'shimcha qulayliklar */}
+              <div className="pdetails-desktop-perks">
+                <div className="pdetails-perk-item">
+                  <span className="perk-bullet">◈</span>
+                  <span>O'zbekiston bo'ylab tezkor yetkazib berish (1-3 kun)</span>
+                </div>
+                <div className="pdetails-perk-item">
+                  <span className="perk-bullet">◈</span>
+                  <span>100% original va kafolatlangan sifat</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+            {/* Sticky Bottom Bar */}
+            <div className="pdetails-bottom-bar">
+              <div className="pdetails-price-meta">
+                <span className="pdetails-price-meta-label">Jami narx</span>
+                <strong className="pdetails-price-meta-value">
+                  {money((activeProduct.price || 0) * productQuantity)}
+                </strong>
+              </div>
+              <button
+                type="button"
+                className="pdetails-buy-btn"
+                onClick={() => {
+                  addToCart();
+                  haptic(tgRef.current, "success");
+                }}
+              >
+                <ShoppingBag size={18} strokeWidth={2.2} />
+                <span>Savatga qo'shish</span>
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
-      <footer className="velvorn-footer" id="contact">
+      <footer className={`velvorn-footer ${view === "product" ? "hide-on-mobile-product" : ""}`} id="contact">
         <div className="velvorn-footer-inner">
           <div className="footer-col col-brand">
             <button
@@ -1689,52 +2051,54 @@ export default function App() {
       </footer>
 
       {/* Mobil telefonlar uchun pastki navigatsiya paneli (Tabbar: Asosiy, Katalog, Savat, Profil) */}
-      <nav className="tabbar" aria-label="Mobil navigatsiya">
-        <button
-          className={view === "home" && !panel ? "tab is-active" : "tab"}
-          onClick={goHome}
-          aria-label="Asosiy"
-        >
-          <span className="tab-icon">
-            <Home size={21} strokeWidth={1.8} />
-          </span>
-          <span className="tab-label">Asosiy</span>
-        </button>
+      {view !== "product" && (
+        <nav className="tabbar" aria-label="Mobil navigatsiya">
+          <button
+            className={view === "home" && !panel ? "tab is-active" : "tab"}
+            onClick={goHome}
+            aria-label="Asosiy"
+          >
+            <span className="tab-icon">
+              <Home size={21} strokeWidth={1.8} />
+            </span>
+            <span className="tab-label">Asosiy</span>
+          </button>
 
-        <button
-          className={view === "catalog" && !panel ? "tab is-active" : "tab"}
-          onClick={() => openCatalog()}
-          aria-label="Katalog"
-        >
-          <span className="tab-icon">
-            <Grid2X2 size={21} strokeWidth={1.8} />
-          </span>
-          <span className="tab-label">Katalog</span>
-        </button>
+          <button
+            className={view === "catalog" && !panel ? "tab is-active" : "tab"}
+            onClick={() => openCatalog()}
+            aria-label="Katalog"
+          >
+            <span className="tab-icon">
+              <Grid2X2 size={21} strokeWidth={1.8} />
+            </span>
+            <span className="tab-label">Katalog</span>
+          </button>
 
-        <button
-          className={(view === "cart" || panel === "cart") ? "tab is-active" : "tab"}
-          onClick={goCart}
-          aria-label="Savat"
-        >
-          <span className="tab-icon">
-            <ShoppingBag size={21} strokeWidth={1.8} />
-            {cartCount > 0 && <span className="tab-badge">{cartCount}</span>}
-          </span>
-          <span className="tab-label">Savat</span>
-        </button>
+          <button
+            className={(view === "cart" || panel === "cart") ? "tab is-active" : "tab"}
+            onClick={goCart}
+            aria-label="Savat"
+          >
+            <span className="tab-icon">
+              <ShoppingBag size={21} strokeWidth={1.8} />
+              {cartCount > 0 && <span className="tab-badge">{cartCount}</span>}
+            </span>
+            <span className="tab-label">Savat</span>
+          </button>
 
-        <button
-          className={(view === "profile" || panel === "profile") ? "tab is-active" : "tab"}
-          onClick={goProfile}
-          aria-label="Profil"
-        >
-          <span className="tab-icon">
-            <UserRound size={21} strokeWidth={1.8} />
-          </span>
-          <span className="tab-label">Profil</span>
-        </button>
-      </nav>
+          <button
+            className={(view === "profile" || panel === "profile") ? "tab is-active" : "tab"}
+            onClick={goProfile}
+            aria-label="Profil"
+          >
+            <span className="tab-icon">
+              <UserRound size={21} strokeWidth={1.8} />
+            </span>
+            <span className="tab-label">Profil</span>
+          </button>
+        </nav>
+      )}
 
       <AnimatePresence mode="wait">
         {panel === "product" && activeProduct && (
@@ -2136,7 +2500,14 @@ export default function App() {
                     const product = productsList.find((p) => p.id === item.id);
                     if (!product) return null;
                     return (
-                      <div className="cart-row" key={`${item.id}-${item.size}`}>
+                      <div
+                        className="cart-row"
+                        key={`${item.id}-${item.size}`}
+                        onClick={() => openProduct(product)}
+                        role="button"
+                        tabIndex={0}
+                        style={{ cursor: "pointer" }}
+                      >
                         <img
                           src={product.images?.[0]?.src || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>"}
                           alt={product.name}
@@ -2151,12 +2522,13 @@ export default function App() {
                           <strong>{product.name}</strong>
                           <span>O'lcham {item.size}</span>
                           <b>{money(product.price)}</b>
-                          <div className="qty">
+                          <div className="qty" onClick={(e) => e.stopPropagation()}>
                             <button
                               aria-label={`${product.name} sonini kamaytirish`}
-                              onClick={() =>
-                                changeQuantity(item.id, item.size, -1)
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                changeQuantity(item.id, item.size, -1);
+                              }}
                             >
                               <Minus size={13} />
                             </button>
@@ -2164,9 +2536,10 @@ export default function App() {
                             <button
                               aria-label={`${product.name} sonini oshirish`}
                               disabled={item.quantity >= 10}
-                              onClick={() =>
-                                changeQuantity(item.id, item.size, 1)
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                changeQuantity(item.id, item.size, 1);
+                              }}
                             >
                               <Plus size={13} />
                             </button>
@@ -2175,7 +2548,8 @@ export default function App() {
                         <button
                           className="cart-remove"
                           aria-label={`${product.name} ni savatdan olib tashlash`}
-                          onClick={() =>
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setCart((current) =>
                               current.filter(
                                 (row) =>
@@ -2183,8 +2557,8 @@ export default function App() {
                                     row.id === item.id && row.size === item.size
                                   ),
                               ),
-                            )
-                          }
+                            );
+                          }}
                         >
                           <Trash2 size={15} strokeWidth={1.5} />
                         </button>
