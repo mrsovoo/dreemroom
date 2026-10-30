@@ -7,9 +7,12 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
   Grid2X2,
   Heart,
   Home,
+  Lock,
   Mail,
   MapPin,
   MessageCircle,
@@ -17,8 +20,10 @@ import {
   Phone,
   Plus,
   Search,
+  ShieldCheck,
   ShoppingBag,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
   UserRound,
   X,
@@ -40,7 +45,7 @@ import { getLocalDemoProducts } from "./demoData";
 type Panel = "product" | "cart" | "profile" | "contact" | "wishlist" | null;
 type View = "home" | "catalog" | "cart" | "profile" | "product";
 type CartItem = { id: string; size: string; quantity: number };
-type Profile = { name: string; phone: string };
+type Profile = { name: string; phone: string; password?: string };
 
 export type HeroSlide = {
   id?: string;
@@ -186,8 +191,47 @@ const defaultSiteContacts: SiteContacts = {
   address: "Toshkent shahri, O'zbekiston",
   workHours: "Har kuni 09:00 — 21:00",
   email: "info@dreemroom.uz",
-  brandDesc: "Zamonaviy va premium sifatdagi kiyimlar to'plami. O'zbekiston bo'ylab tezkor va qulay yetkazib berish xizmati.",
+  brandDesc: "Zamonaviy va premium sifatdagi kiyimlar to'plami. Sifatli va bejirim uslub kafolati.",
 };
+
+/**
+ * O'zbekiston telefon raqamlari formati:
+ * Doim "+998 " bilan avto boshlanadi va qolgan raqamlar "00 000 0000" shaklida formatlanadi.
+ * Masalan: "+998 90 123 4567"
+ */
+export function formatUzbekPhone(value: string): string {
+  let digits = (value || "").replace(/\D/g, "");
+  if (digits.startsWith("998")) {
+    digits = digits.slice(3);
+  }
+  digits = digits.slice(0, 9);
+
+  if (digits.length === 0) {
+    return "+998 ";
+  }
+  let res = "+998 " + digits.slice(0, 2);
+  if (digits.length > 2) {
+    res += " " + digits.slice(2, 5);
+  }
+  if (digits.length > 5) {
+    res += " " + digits.slice(5, 9);
+  }
+  return res;
+}
+
+function handlePhoneKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  const input = e.currentTarget;
+  // "+998 " ning o'chirilishiga yo'l qo'ymaslik
+  if ((e.key === "Backspace" || e.key === "Delete") && (input.selectionStart ?? 0) <= 5) {
+    e.preventDefault();
+  }
+}
+
+function handlePhoneFocus(e: React.FocusEvent<HTMLInputElement>) {
+  if (!e.target.value || e.target.value.trim() === "" || e.target.value.trim() === "+998") {
+    e.target.value = "+998 ";
+  }
+}
 
 export default function App() {
   const [view, setView] = useState<View>("home");
@@ -256,8 +300,79 @@ export default function App() {
   const [slide, setSlide] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"default" | "popular" | "price-asc" | "price-desc">("default");
-  const [profileName, setProfileName] = useState("");
-  const [profilePhone, setProfilePhone] = useState("");
+  const [profileName, setProfileName] = useState(() => profile?.name || "");
+  const [profilePhone, setProfilePhone] = useState(() => {
+    if (profile?.phone) return formatUzbekPhone(profile.phone);
+    return "+998 ";
+  });
+  const [orderName, setOrderName] = useState(() => profile?.name || "");
+  const [orderPhone, setOrderPhone] = useState(() => {
+    if (profile?.phone) return formatUzbekPhone(profile.phone);
+    return "+998 ";
+  });
+  const [profilePassword, setProfilePassword] = useState(() => profile?.password || "");
+  const [showPassword, setShowPassword] = useState(false);
+  const [notifications, setNotifications] = useState<string[]>([]);
+
+  // Bo'sh savat tavsiyalari uchun slayd-swiper holati
+  const emptyCartSliderRef = useRef<HTMLDivElement | null>(null);
+  const isSliderDraggingRef = useRef(false);
+  const sliderStartXRef = useRef(0);
+  const sliderScrollLeftRef = useRef(0);
+  const sliderHasMovedRef = useRef(false);
+
+  function scrollRecommendations(direction: "left" | "right") {
+    if (!emptyCartSliderRef.current) return;
+    const scrollAmount = 260;
+    emptyCartSliderRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  }
+
+  function handleSliderMouseDown(e: React.MouseEvent) {
+    if (!emptyCartSliderRef.current) return;
+    isSliderDraggingRef.current = true;
+    sliderHasMovedRef.current = false;
+    sliderStartXRef.current = e.pageX - emptyCartSliderRef.current.offsetLeft;
+    sliderScrollLeftRef.current = emptyCartSliderRef.current.scrollLeft;
+  }
+
+  function handleSliderMouseLeave() {
+    isSliderDraggingRef.current = false;
+  }
+
+  function handleSliderMouseUp() {
+    setTimeout(() => {
+      isSliderDraggingRef.current = false;
+    }, 50);
+  }
+
+  function handleSliderMouseMove(e: React.MouseEvent) {
+    if (!isSliderDraggingRef.current || !emptyCartSliderRef.current) return;
+    const x = e.pageX - emptyCartSliderRef.current.offsetLeft;
+    const walk = (x - sliderStartXRef.current) * 1.5;
+    if (Math.abs(walk) > 6) {
+      sliderHasMovedRef.current = true;
+    }
+    emptyCartSliderRef.current.scrollLeft = sliderScrollLeftRef.current - walk;
+  }
+
+  // Profil o'zgarganda telefon, ism va parolni avtomatik sinxronlash
+  useEffect(() => {
+    if (profile?.name) {
+      setProfileName(profile.name);
+      setOrderName(profile.name);
+    }
+    if (profile?.phone) {
+      const formatted = formatUzbekPhone(profile.phone);
+      setProfilePhone(formatted);
+      setOrderPhone(formatted);
+    }
+    if (profile?.password) {
+      setProfilePassword(profile.password);
+    }
+  }, [profile]);
   const [returnView, setReturnView] = useState<View>("home");
   const [productImgIndex, setProductImgIndex] = useState(0);
   const productTouchStartXRef = useRef<number | null>(null);
@@ -717,18 +832,26 @@ export default function App() {
 
   function submitOrder() {
     const form = orderFormRef.current;
-    const customerName = (form?.elements.namedItem("name") as HTMLInputElement)?.value || profile?.name || "Mijoz";
-    const customerPhone = (form?.elements.namedItem("phone") as HTMLInputElement)?.value || profile?.phone || "+998 90 000 00 00";
-    const customerAddress = (form?.elements.namedItem("address") as HTMLInputElement)?.value || "Yetkazib berish (Telegram)";
-    const paymentMethod = (form?.elements.namedItem("paymentMethod") as HTMLSelectElement)?.value || "Naqd pul / Karta (kuryerga)";
+    const customerName = (form?.elements.namedItem("name") as HTMLInputElement)?.value || orderName || profile?.name || "Mijoz";
+    const customerPhone = (form?.elements.namedItem("phone") as HTMLInputElement)?.value || orderPhone || profile?.phone || "+998 ";
+    const paymentMethod = (form?.elements.namedItem("paymentMethod") as HTMLSelectElement)?.value || "Naqd pul / Karta";
+
+    if (!customerName || customerName.trim() === "") {
+      setToast("Iltimos, ismingizni kiriting");
+      return;
+    }
+    if (customerPhone.replace(/\D/g, "").length < 12) {
+      setToast("Iltimos, telefon raqamingizni to'liq kiriting (+998 00 000 0000)");
+      return;
+    }
 
     const orderPayload = {
       id: "ORD-" + Math.floor(100000 + Math.random() * 900000),
       createdAt: new Date().toISOString(),
       customer: {
-        name: customerName,
-        phone: customerPhone,
-        address: customerAddress,
+        name: customerName.trim(),
+        phone: customerPhone.trim(),
+        address: "Do'kondan olib ketish",
       },
       items: cart.map((item) => {
         const prod = productsList.find((p) => p.id === item.id);
@@ -754,11 +877,12 @@ export default function App() {
 
     // Profilga ism va telefonni eslab qolish
     if (customerName && customerPhone) {
-      setProfile({ name: customerName, phone: customerPhone });
+      setProfile({ name: customerName.trim(), phone: customerPhone.trim() });
     }
 
     setCart([]);
     setOrdered(true);
+    setNotifications((prev) => [...prev, "Buyurtmangiz muvaffaqiyatli qabul qilindi!"]);
     haptic(tgRef.current, "success");
   }
 
@@ -780,8 +904,10 @@ export default function App() {
     const telegramName = [telegramUser?.first_name, telegramUser?.last_name]
       .filter(Boolean)
       .join(" ");
-    setProfileName(profile?.name || telegramName);
-    setProfilePhone(profile?.phone || "");
+    setProfileName(profile?.name || telegramName || "");
+    setProfilePhone(profile?.phone ? formatUzbekPhone(profile.phone) : "+998 ");
+    setProfilePassword(profile?.password || "");
+    setShowPassword(false);
     setView("profile");
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -791,8 +917,10 @@ export default function App() {
     const telegramName = [telegramUser?.first_name, telegramUser?.last_name]
       .filter(Boolean)
       .join(" ");
-    setProfileName(profile?.name || telegramName);
-    setProfilePhone(profile?.phone || "");
+    setProfileName(profile?.name || telegramName || "");
+    setProfilePhone(profile?.phone ? formatUzbekPhone(profile.phone) : "+998 ");
+    setProfilePassword(profile?.password || "");
+    setShowPassword(false);
     if (typeof window !== "undefined" && window.innerWidth <= 768) {
       goProfile();
     } else {
@@ -803,10 +931,26 @@ export default function App() {
   function saveProfile() {
     const name = profileName.trim();
     const phone = profilePhone.trim();
-    if (!name || !phone) return;
-    setProfile({ name, phone });
+    const password = profilePassword.trim();
+    if (!name) {
+      setToast("Iltimos, ismingizni kiriting");
+      return;
+    }
+    if (phone.replace(/\D/g, "").length < 12) {
+      setToast("Iltimos, telefon raqamingizni to'liq kiriting (+998 00 000 0000)");
+      return;
+    }
+    if (!profile && (!password || password.length < 4)) {
+      setToast("Iltimos, kamida 4 xonali parol kiriting");
+      return;
+    }
+    setProfile({
+      name,
+      phone,
+      password: password || profile?.password || "",
+    });
     setPanel(null);
-    setToast("Profil saqlandi");
+    setToast(profile ? "O'zgarishlar saqlandi" : "Muvaffaqiyatli ro'yxatdan o'tdingiz");
     haptic(tgRef.current, "success");
   }
 
@@ -960,15 +1104,16 @@ export default function App() {
             <Search size={20} strokeWidth={1.6} />
           </button>
           <button
-            className={`action-btn header-profile-btn ${panel === "profile" ? "is-active" : ""}`}
+            className={`action-btn header-profile-btn ${profile?.name ? "has-profile" : ""} ${panel === "profile" ? "is-active" : ""}`}
             onClick={openProfile}
             aria-label="Profil"
           >
-            <UserRound size={20} strokeWidth={1.6} />
-            {profile && (
-              <span className="profile-initial">
-                {profile.name.charAt(0).toUpperCase()}
+            {profile && profile.name.trim() ? (
+              <span className="profile-initial-badge">
+                {profile.name.trim().charAt(0).toUpperCase()}
               </span>
+            ) : (
+              <UserRound size={20} strokeWidth={1.6} />
             )}
           </button>
           <button
@@ -992,13 +1137,18 @@ export default function App() {
             className="action-btn header-notif-btn"
             onClick={() => {
               haptic(tgRef.current, "light");
-              setToast("Sizda hozircha yangi bildirishnomalar yo'q");
+              if (notifications.length > 0) {
+                setToast(notifications[notifications.length - 1]);
+                setNotifications([]);
+              } else {
+                setToast("Sizda hozircha yangi bildirishnomalar yo'q");
+              }
             }}
             aria-label="Bildirishnomalar"
             title="Bildirishnomalar"
           >
             <Bell size={19} strokeWidth={1.8} />
-            <span className="notif-dot" />
+            {notifications.length > 0 && <span className="notif-dot" />}
           </button>
           <button
             className={`action-btn action-cart-frame ${panel === "cart" ? "is-active" : ""}`}
@@ -1370,12 +1520,8 @@ export default function App() {
                 </p>
                 <div className="done-details-box">
                   <div className="done-row">
-                    <span>Yetkazib berish:</span>
-                    <strong>Bepul (1-3 kun)</strong>
-                  </div>
-                  <div className="done-row">
-                    <span>Holati:</span>
-                    <strong className="status-badge">Kutilmoqda</strong>
+                    <span>Buyurtma holati:</span>
+                    <strong className="status-badge">Qabul qilindi</strong>
                   </div>
                 </div>
                 <button className="btn btn-full done-back-btn" onClick={() => openCatalog()}>
@@ -1471,10 +1617,6 @@ export default function App() {
                     <span>Mahsulotlar ({cartCount} ta):</span>
                     <strong>{money(total)}</strong>
                   </div>
-                  <div className="summary-row">
-                    <span>Yetkazib berish:</span>
-                    <strong className="text-free">Bepul</strong>
-                  </div>
                   <div className="summary-divider" />
                   <div className="summary-row total-row">
                     <span>Jami to'lov:</span>
@@ -1484,7 +1626,7 @@ export default function App() {
 
                 {/* Buyurtma formasi */}
                 <div className="page-cart-checkout-card">
-                  <h3 className="checkout-title">Yetkazib berish ma'lumotlari</h3>
+                  <h3 className="checkout-title">Buyurtmachi ma'lumotlari</h3>
                   <form
                     ref={orderFormRef}
                     className="page-cart-form"
@@ -1495,7 +1637,8 @@ export default function App() {
                       <input
                         name="name"
                         autoComplete="name"
-                        defaultValue={profile?.name ?? ""}
+                        value={orderName}
+                        onChange={(e) => setOrderName(e.target.value)}
                         placeholder="Masalan: Aziz Rahimov"
                         required
                       />
@@ -1506,35 +1649,21 @@ export default function App() {
                         name="phone"
                         type="tel"
                         autoComplete="tel"
-                        placeholder="+998 90 123 45 67"
-                        defaultValue={profile?.phone ?? ""}
-                        required
-                      />
-                    </label>
-                    <label className="page-form-label">
-                      <span>Yetkazib berish manzili *</span>
-                      <input
-                        name="address"
-                        autoComplete="street-address"
-                        placeholder="Shahar, tuman, ko'cha, uy / xonadon"
+                        placeholder="+998 00 000 0000"
+                        value={orderPhone}
+                        onChange={(e) => setOrderPhone(formatUzbekPhone(e.target.value))}
+                        onKeyDown={handlePhoneKeyDown}
+                        onFocus={handlePhoneFocus}
                         required
                       />
                     </label>
                     <label className="page-form-label">
                       <span>To'lov usuli</span>
-                      <select name="paymentMethod" defaultValue="Naqd pul / Karta (kuryerga)">
-                        <option value="Naqd pul / Karta (kuryerga)">Naqd pul / Karta (kuryerga)</option>
+                      <select name="paymentMethod" defaultValue="Naqd pul / Karta">
+                        <option value="Naqd pul / Karta">Naqd pul / Karta</option>
                         <option value="Payme / Click (oldindan to'lov)">Payme / Click (oldindan to'lov)</option>
                       </select>
                     </label>
-
-                    <div className="page-cart-hint">
-                      <span className="hint-icon">🚚</span>
-                      <div>
-                        <strong>Yetkazib berish butunlay bepul</strong>
-                        <p>O'zbekiston bo'ylab 1-3 ish kunida xavfsiz yetkaziladi</p>
-                      </div>
-                    </div>
 
                     <button type="submit" className="page-cart-submit-btn">
                       <span>Buyurtmani tasdiqlash • {money(total)}</span>
@@ -1544,21 +1673,108 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div className="page-cart-empty-card">
-                <div className="empty-cart-icon-wrap">
-                  <ShoppingBag size={44} strokeWidth={1.4} />
+              <>
+                <div className="page-cart-empty-card">
+                  <div className="empty-cart-icon-wrap">
+                    <ShoppingBag size={44} strokeWidth={1.4} />
+                  </div>
+                  <h2>Savatingiz bo'sh</h2>
+                  <p>Hozircha hech qanday mahsulot tanlanmadi. Yangi to'plamdan o'zingizga ma'qul kiyimlarni tanlang!</p>
+                  <button
+                    type="button"
+                    className="btn btn-full empty-shop-btn"
+                    onClick={() => openCatalog()}
+                  >
+                    <span>Katalogga o'tish</span>
+                    <ArrowRight size={16} />
+                  </button>
                 </div>
-                <h2>Savatingiz bo'sh</h2>
-                <p>Hozircha hech qanday mahsulot tanlanmadi. Yangi to'plamdan o'zingizga ma'qul kiyimlarni tanlang!</p>
-                <button
-                  type="button"
-                  className="btn btn-full empty-shop-btn"
-                  onClick={() => openCatalog()}
-                >
-                  <span>Katalogga o'tish</span>
-                  <ArrowRight size={16} />
-                </button>
-              </div>
+
+                {/* Tavsiya etilgan mahsulotlar (Swipe qilinadigan kartochkalar) */}
+                {productsList.length > 0 && (
+                  <section className="empty-cart-recommendations">
+                    <div className="empty-cart-rec-header">
+                      <div>
+                        <h3 className="empty-cart-rec-title">Sizga yoqishi mumkin</h3>
+                        <p className="empty-cart-rec-subtitle">Yangi to'plamdan eng sara liboslar</p>
+                      </div>
+                      <div className="empty-cart-rec-arrows">
+                        <button
+                          type="button"
+                          className="empty-cart-arrow-btn"
+                          onClick={() => scrollRecommendations("left")}
+                          aria-label="Oldingi mahsulotlar"
+                        >
+                          <ChevronLeft size={18} strokeWidth={2.2} />
+                        </button>
+                        <button
+                          type="button"
+                          className="empty-cart-arrow-btn"
+                          onClick={() => scrollRecommendations("right")}
+                          aria-label="Keyingi mahsulotlar"
+                        >
+                          <ChevronRight size={18} strokeWidth={2.2} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div
+                      ref={emptyCartSliderRef}
+                      className="empty-cart-slider"
+                      onMouseDown={handleSliderMouseDown}
+                      onMouseLeave={handleSliderMouseLeave}
+                      onMouseUp={handleSliderMouseUp}
+                      onMouseMove={handleSliderMouseMove}
+                    >
+                      {productsList.map((product) => {
+                        const isLiked = wishlist.includes(product.id);
+                        const imgUrl = product.images?.[0]?.src || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>";
+                        return (
+                          <div
+                            key={product.id}
+                            className="empty-cart-rec-card"
+                            onClick={() => {
+                              if (sliderHasMovedRef.current) return;
+                              openProduct(product);
+                            }}
+                          >
+                            <div className="empty-cart-card-media">
+                              <img
+                                src={imgUrl}
+                                alt={product.name}
+                                loading="lazy"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  if (!target.src.startsWith("data:image/svg+xml")) {
+                                    target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>";
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="empty-cart-card-info">
+                              <h4 className="empty-cart-card-name" title={product.name}>{product.name}</h4>
+                              <div className="empty-cart-card-bottom">
+                                <span className="empty-cart-card-price">{money(product.price, product.displayPrice)}</span>
+                                <button
+                                  type="button"
+                                  className="empty-cart-card-quick-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openProduct(product);
+                                  }}
+                                  aria-label="Mahsulotni ko'rish"
+                                >
+                                  <Plus size={16} strokeWidth={2.2} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+              </>
             )}
           </div>
         )}
@@ -1568,145 +1784,289 @@ export default function App() {
             ================================================================= */}
         {view === "profile" && (
           <div className="page-profile-container">
-            <div className="page-profile-header">
-              <div>
-                <h1 className="page-profile-title">Profil</h1>
-                <span className="page-profile-subtitle">Shaxsiy kabinet va sozlamalar</span>
-              </div>
-            </div>
-
-            {/* Foydalanuvchi qisqa kartochkasi */}
-            <div className="profile-identity-card">
-              <div className="profile-identity-avatar">
-                {profileName ? (
-                  profileName.charAt(0).toUpperCase()
-                ) : (
-                  <UserRound size={30} strokeWidth={1.7} />
-                )}
-              </div>
-              <div className="profile-identity-meta">
-                <h2 className="profile-identity-name">{profileName || "Hurmatli mijoz"}</h2>
-                <span className="profile-identity-phone">{profilePhone || "+998 -- --- -- --"}</span>
-                <span className="profile-identity-badge">DREEM ROOM a'zosi</span>
-              </div>
-            </div>
-
-            {/* Ma'lumotlarni tahrirlash kartasi */}
-            <div className="profile-edit-card">
-              <h3 className="profile-section-title">Shaxsiy ma'lumotlar</h3>
-              <p className="profile-section-desc">
-                Buyurtma berishda ushbu ma'lumotlar avtomatik to'ldiriladi.
-              </p>
-              <form
-                ref={profileFormRef}
-                className="profile-page-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  saveProfile();
-                }}
-              >
-                <label className="page-form-label">
-                  <span>Ism va familiyangiz</span>
-                  <input
-                    name="profile-name"
-                    autoComplete="name"
-                    value={profileName}
-                    onChange={(event) => setProfileName(event.target.value)}
-                    placeholder="Ismingizni kiriting"
-                    required
-                  />
-                </label>
-                <label className="page-form-label">
-                  <span>Telefon raqamingiz</span>
-                  <input
-                    name="profile-phone"
-                    type="tel"
-                    autoComplete="tel"
-                    value={profilePhone}
-                    onChange={(event) => setProfilePhone(event.target.value)}
-                    placeholder="+998 90 123 45 67"
-                    required
-                  />
-                </label>
-                <button className="btn btn-full profile-save-btn" type="submit">
-                  <span>Ma'lumotlarni saqlash</span>
-                  <Check size={16} strokeWidth={2} />
-                </button>
-              </form>
-            </div>
-
-            {/* Ilova bo'limlari va qulayliklar */}
-            <div className="profile-menu-card">
-              <h3 className="profile-section-title">Foydali bo'limlar</h3>
-              <div className="profile-menu-list">
-                <button
-                  type="button"
-                  className="profile-menu-item"
-                  onClick={goCart}
-                >
-                  <div className="menu-item-left">
-                    <span className="menu-item-icon"><ShoppingBag size={18} /></span>
-                    <div className="menu-item-text">
-                      <strong>Mening savatim</strong>
-                      <span>{cartCount > 0 ? `${cartCount} ta mahsulot bor` : "Hozircha bo'sh"}</span>
-                    </div>
+            {!profile || !profile.name ? (
+              /* =================================================================
+                 RO'YXATDAN O'TISh EKRANI (Hali ro'yxatdan o'tmagan holat)
+                 Faqat ro'yxatdan o'tish formasi ko'rinadi
+                 ================================================================= */
+              <div className="profile-register-view">
+                {/* Form Card */}
+                <div className="auth-form-card">
+                  <div className="auth-form-header">
+                    <h2 className="auth-form-title">Ro'yxatdan o'tish</h2>
+                    <p className="auth-form-subtitle">Buyurtma berish uchun ma'lumotlaringizni kiriting</p>
                   </div>
-                  <ChevronRight size={17} className="menu-arrow" />
-                </button>
-
-                <button
-                  type="button"
-                  className="profile-menu-item"
-                  onClick={openContact}
-                >
-                  <div className="menu-item-left">
-                    <span className="menu-item-icon"><Phone size={18} /></span>
-                    <div className="menu-item-text">
-                      <strong>Biz bilan bog'lanish</strong>
-                      <span>Qo'llab-quvvatlash xizmati</span>
+                  <form
+                    ref={profileFormRef}
+                    className="auth-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      saveProfile();
+                    }}
+                  >
+                    <div className="auth-input-group">
+                      <label className="auth-field-label" htmlFor="register-name">
+                        <span>Ism va familiyangiz</span>
+                        <span className="auth-required-star">*</span>
+                      </label>
+                      <div className="auth-input-wrapper">
+                        <span className="auth-input-icon">
+                          <UserRound size={18} strokeWidth={1.8} />
+                        </span>
+                        <input
+                          id="register-name"
+                          name="profile-name"
+                          autoComplete="name"
+                          value={profileName}
+                          onChange={(event) => setProfileName(event.target.value)}
+                          placeholder="Ismingizni kiriting"
+                          className="auth-input"
+                          required
+                          autoFocus
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <ChevronRight size={17} className="menu-arrow" />
-                </button>
 
-                <button
-                  type="button"
-                  className="profile-menu-item"
-                  onClick={() => {
-                    if (productsList[0]) openProduct(productsList[0]);
-                    setShowSizeGuide(true);
-                  }}
-                >
-                  <div className="menu-item-left">
-                    <span className="menu-item-icon"><SlidersHorizontal size={18} /></span>
-                    <div className="menu-item-text">
-                      <strong>O'lchamlar jadvali</strong>
-                      <span>XS, S, M, L, XL o'lchamlari</span>
+                    <div className="auth-input-group">
+                      <label className="auth-field-label" htmlFor="register-phone">
+                        <span>Telefon raqamingiz</span>
+                        <span className="auth-required-star">*</span>
+                      </label>
+                      <div className="auth-input-wrapper">
+                        <span className="auth-input-icon auth-flag-icon">
+                          🇺🇿
+                        </span>
+                        <input
+                          id="register-phone"
+                          name="profile-phone"
+                          type="tel"
+                          autoComplete="tel"
+                          value={profilePhone}
+                          onChange={(event) => setProfilePhone(formatUzbekPhone(event.target.value))}
+                          onKeyDown={handlePhoneKeyDown}
+                          onFocus={handlePhoneFocus}
+                          placeholder="+998 00 000 0000"
+                          className="auth-input"
+                          required
+                        />
+                      </div>
                     </div>
+
+                    <div className="auth-input-group">
+                      <label className="auth-field-label" htmlFor="register-password">
+                        <span>Maxfiy parol</span>
+                        <span className="auth-required-star">*</span>
+                      </label>
+                      <div className="auth-input-wrapper">
+                        <span className="auth-input-icon">
+                          <Lock size={18} strokeWidth={1.8} />
+                        </span>
+                        <input
+                          id="register-password"
+                          name="profile-password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                          value={profilePassword}
+                          onChange={(event) => setProfilePassword(event.target.value)}
+                          placeholder="Kamida 4 ta belgi"
+                          className="auth-input auth-input-password"
+                          required
+                          minLength={4}
+                        />
+                        <button
+                          type="button"
+                          className="auth-password-toggle-btn"
+                          onClick={() => setShowPassword((v) => !v)}
+                          tabIndex={-1}
+                          aria-label={showPassword ? "Parolni berkitish" : "Parolni ko'rsatish"}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                      <span className="auth-input-hint">
+                        Shaxsiy profilingiz xavfsizligi uchun maxfiy parol kiriting
+                      </span>
+                    </div>
+
+                    <button className="auth-submit-btn" type="submit">
+                      <span>Ro'yxatdan o'tish</span>
+                      <ArrowRight size={18} strokeWidth={2.2} />
+                    </button>
+                  </form>
+
+                  <div className="auth-trust-footer">
+                    <ShieldCheck size={15} />
+                    <span>Ma'lumotlaringiz maxfiy saqlanadi va begonalarga berilmaydi</span>
                   </div>
-                  <ChevronRight size={17} className="menu-arrow" />
-                </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* =================================================================
+                 PROFIL SAHIFASI (Ro'yxatdan o'tgandan keyin)
+                 Foydalanuvchi kartochkasi, Foydali bo'limlar va sozlamalar
+                 ================================================================= */
+              <div className="profile-registered-view">
+                <div className="page-profile-header">
+                  <div>
+                    <h1 className="page-profile-title">Profil</h1>
+                    <span className="page-profile-subtitle">Shaxsiy kabinet va sozlamalar</span>
+                  </div>
+                </div>
 
-            {/* Saqlangan profilni o'chirish */}
-            {profile && (
-              <div className="profile-logout-wrap">
-                <button
-                  type="button"
-                  className="profile-logout-btn"
-                  onClick={() => {
-                    if (confirm("Saqlangan profil ma'lumotlarini o'chirishni xohlaysizmi?")) {
-                      setProfile(null);
-                      setProfileName("");
-                      setProfilePhone("");
-                      setToast("Profil o'chirildi");
-                    }
-                  }}
-                >
-                  <Trash2 size={16} />
-                  <span>Saqlangan profilni o'chirish</span>
-                </button>
+                {/* Foydalanuvchi qisqa kartochkasi */}
+                <div className="profile-identity-card">
+                  <div className="profile-identity-avatar">
+                    {profile.name.trim().charAt(0).toUpperCase()}
+                  </div>
+                  <div className="profile-identity-meta">
+                    <h2 className="profile-identity-name">{profile.name}</h2>
+                    <span className="profile-identity-phone">{profile.phone}</span>
+                    <span className="profile-identity-badge">DREEM ROOM a'zosi</span>
+                  </div>
+                </div>
+
+                {/* Ilova bo'limlari va qulayliklar (Faqat ro'yxatdan o'tgandan keyin ochiladi) */}
+                <div className="profile-menu-card">
+                  <h3 className="profile-section-title">Foydali bo'limlar</h3>
+                  <div className="profile-menu-list">
+                    <button
+                      type="button"
+                      className="profile-menu-item"
+                      onClick={goCart}
+                    >
+                      <div className="menu-item-left">
+                        <span className="menu-item-icon"><ShoppingBag size={18} /></span>
+                        <div className="menu-item-text">
+                          <strong>Mening savatim</strong>
+                          <span>{cartCount > 0 ? `${cartCount} ta mahsulot bor` : "Hozircha bo'sh"}</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={17} className="menu-arrow" />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="profile-menu-item"
+                      onClick={openContact}
+                    >
+                      <div className="menu-item-left">
+                        <span className="menu-item-icon"><Phone size={18} /></span>
+                        <div className="menu-item-text">
+                          <strong>Biz bilan bog'lanish</strong>
+                          <span>Qo'llab-quvvatlash xizmati</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={17} className="menu-arrow" />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="profile-menu-item"
+                      onClick={() => {
+                        if (productsList[0]) openProduct(productsList[0]);
+                        setShowSizeGuide(true);
+                      }}
+                    >
+                      <div className="menu-item-left">
+                        <span className="menu-item-icon"><SlidersHorizontal size={18} /></span>
+                        <div className="menu-item-text">
+                          <strong>O'lchamlar jadvali</strong>
+                          <span>XS, S, M, L, XL o'lchamlari</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={17} className="menu-arrow" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ma'lumotlarni tahrirlash kartasi */}
+                <div className="profile-edit-card">
+                  <h3 className="profile-section-title">Ma'lumotlarni tahrirlash</h3>
+                  <p className="profile-section-desc">
+                    Ism yoki telefon raqamingizni o'zgartirishingiz mumkin.
+                  </p>
+                  <form
+                    ref={profileFormRef}
+                    className="profile-page-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      saveProfile();
+                    }}
+                  >
+                    <label className="page-form-label">
+                      <span>Ism va familiyangiz</span>
+                      <input
+                        name="profile-name"
+                        autoComplete="name"
+                        value={profileName}
+                        onChange={(event) => setProfileName(event.target.value)}
+                        placeholder="Ismingizni kiriting"
+                        required
+                      />
+                    </label>
+                    <label className="page-form-label">
+                      <span>Telefon raqamingiz</span>
+                      <input
+                        name="profile-phone"
+                        type="tel"
+                        autoComplete="tel"
+                        value={profilePhone}
+                        onChange={(event) => setProfilePhone(formatUzbekPhone(event.target.value))}
+                        onKeyDown={handlePhoneKeyDown}
+                        onFocus={handlePhoneFocus}
+                        placeholder="+998 00 000 0000"
+                        required
+                      />
+                    </label>
+                    <label className="page-form-label">
+                      <span>Parol</span>
+                      <div className="page-password-wrap">
+                        <input
+                          name="profile-password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
+                          value={profilePassword}
+                          onChange={(event) => setProfilePassword(event.target.value)}
+                          placeholder="Parolni kiriting"
+                          minLength={4}
+                        />
+                        <button
+                          type="button"
+                          className="page-password-toggle-btn"
+                          onClick={() => setShowPassword((v) => !v)}
+                          tabIndex={-1}
+                          aria-label={showPassword ? "Parolni berkitish" : "Parolni ko'rsatish"}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </label>
+                    <button className="btn btn-full profile-save-btn" type="submit">
+                      <span>O'zgarishlarni saqlash</span>
+                      <Check size={16} strokeWidth={2} />
+                    </button>
+                  </form>
+                </div>
+
+                {/* Saqlangan profilni o'chirish */}
+                <div className="profile-logout-wrap">
+                  <button
+                    type="button"
+                    className="profile-logout-btn"
+                    onClick={() => {
+                      if (confirm("Saqlangan profil ma'lumotlarini o'chirishni xohlaysizmi?")) {
+                        setProfile(null);
+                        setProfileName("");
+                        setProfilePhone("+998 ");
+                        setProfilePassword("");
+                        setToast("Profil o'chirildi");
+                      }
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    <span>Profildan chiqish / O'chirish</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1935,11 +2295,11 @@ export default function App() {
               <div className="pdetails-desktop-perks">
                 <div className="pdetails-perk-item">
                   <span className="perk-bullet">◈</span>
-                  <span>O'zbekiston bo'ylab tezkor yetkazib berish (1-3 kun)</span>
+                  <span>100% original va kafolatlangan sifat</span>
                 </div>
                 <div className="pdetails-perk-item">
                   <span className="perk-bullet">◈</span>
-                  <span>100% original va kafolatlangan sifat</span>
+                  <span>Do'kondan qulay va tez olib ketish</span>
                 </div>
               </div>
             </div>
@@ -2017,7 +2377,7 @@ export default function App() {
             <ul className="footer-links">
               <li><button onClick={openContact}>Biz bilan bog'lanish</button></li>
               <li><button onClick={openProfile}>Mening profilim</button></li>
-              <li><button onClick={openContact}>Yetkazib berish va to'lov</button></li>
+              <li><button onClick={openContact}>To'lov va xarid shartlari</button></li>
               <li><button onClick={() => {
                 if (productsList[0]) openProduct(productsList[0]);
                 setShowSizeGuide(true);
@@ -2093,7 +2453,13 @@ export default function App() {
             aria-label="Profil"
           >
             <span className="tab-icon">
-              <UserRound size={21} strokeWidth={1.8} />
+              {profile && profile.name.trim() ? (
+                <span className="tab-initial-badge">
+                  {profile.name.trim().charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <UserRound size={21} strokeWidth={1.8} />
+              )}
             </span>
             <span className="tab-label">Profil</span>
           </button>
@@ -2329,10 +2695,35 @@ export default function App() {
                     type="tel"
                     autoComplete="tel"
                     value={profilePhone}
-                    onChange={(event) => setProfilePhone(event.target.value)}
-                    placeholder="+998 90 123 45 67"
+                    onChange={(event) => setProfilePhone(formatUzbekPhone(event.target.value))}
+                    onKeyDown={handlePhoneKeyDown}
+                    onFocus={handlePhoneFocus}
+                    placeholder="+998 00 000 0000"
                     required
                   />
+                </label>
+                <label>
+                  Parol
+                  <div className="page-password-wrap">
+                    <input
+                      name="profile-password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={profilePassword}
+                      onChange={(event) => setProfilePassword(event.target.value)}
+                      placeholder="Kamida 4 ta belgi"
+                      minLength={4}
+                    />
+                    <button
+                      type="button"
+                      className="page-password-toggle-btn"
+                      onClick={() => setShowPassword((v) => !v)}
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Parolni berkitish" : "Parolni ko'rsatish"}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </label>
                 <button className="btn btn-full" type="submit">
                   Profilni saqlash
@@ -2345,7 +2736,8 @@ export default function App() {
                   onClick={() => {
                     setProfile(null);
                     setProfileName("");
-                    setProfilePhone("");
+                    setProfilePhone("+998 ");
+                    setProfilePassword("");
                     setToast("Profil o'chirildi");
                   }}
                 >
@@ -2580,7 +2972,8 @@ export default function App() {
                     <input
                       name="name"
                       autoComplete="name"
-                      defaultValue={profile?.name ?? ""}
+                      value={orderName}
+                      onChange={(e) => setOrderName(e.target.value)}
                       placeholder="Ismingizni kiriting"
                       required
                     />
@@ -2591,17 +2984,11 @@ export default function App() {
                       name="phone"
                       type="tel"
                       autoComplete="tel"
-                      placeholder="+998 90 123 45 67"
-                      defaultValue={profile?.phone ?? ""}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Yetkazib berish manzili
-                    <input
-                      name="address"
-                      autoComplete="street-address"
-                      placeholder="Shahar, tuman, ko'cha, xonadon raqami"
+                      placeholder="+998 00 000 0000"
+                      value={orderPhone}
+                      onChange={(e) => setOrderPhone(formatUzbekPhone(e.target.value))}
+                      onKeyDown={handlePhoneKeyDown}
+                      onFocus={handlePhoneFocus}
                       required
                     />
                   </label>
@@ -2609,16 +2996,12 @@ export default function App() {
                     To'lov turi
                     <select
                       name="paymentMethod"
-                      defaultValue="Naqd pul / Karta (kuryerga)"
+                      defaultValue="Naqd pul / Karta"
                     >
-                      <option value="Naqd pul / Karta (kuryerga)">Naqd pul / Karta (kuryerga)</option>
+                      <option value="Naqd pul / Karta">Naqd pul / Karta</option>
                       <option value="Payme / Click (oldindan to'lov)">Payme / Click (oldindan to'lov)</option>
                     </select>
                   </label>
-                  <div className="cart-delivery-hint">
-                    <span>🚚 Yetkazib berish:</span>
-                    <strong>Bepul (O'zbekiston bo'ylab 1-3 kun)</strong>
-                  </div>
                   <button className="btn btn-full" type="submit">
                     Buyurtmani tasdiqlash • {money(total)}
                     <ArrowRight size={16} />

@@ -23,10 +23,25 @@ Platforma **Vercel Hobby** tarifining Serverless cheklovlariga to'liq moslashtir
 ### 🛍 Xaridorlar uchun (Storefront & UX)
 - **0-sekundli Tezkor Yuklanish**: Brauzer `localStorage` keshidan foydalanib ma'lumotlar zudlik bilan ochiladi, fonda backend API bilan yangilanadi (in-memory 6 soniyali kesh va Edge Cache s-maxage).
 - **Avtomatik Narx Tizimi**: Barcha narxlar o'zbek so'mida aks etadi (`250 000 so'm`). Telegram bot yoki admin orqali kiritilgan ixcham qiymatlar (masalan `250` yoki `180`) avtomatik ravishda `1000` ga ko'paytirilib, to'g'ri so'm formatida ko'rsatiladi.
+- **O'zbekiston Telefon Raqamlari Avtomatik Formati (`+998 00 000 0000`)**:
+  - Barcha maydonlarda doimiy `+998 ` prefiksi avtomatik chiqadi va xaridor raqam terishi bilan bo'shliqlar bilan `+998 90 123 4567` shaklida formatlanadi.
+- **Shaxsiy Profil va Xavfsiz Ro'yxatdan O'tish**:
+  - Hali ro'yxatdan o'tmagan xaridorlar uchun markazlashtirilgan, qulay ro'yxatdan o'tish interfeysi (Ism, telefon raqam va maxfiy parol).
+  - Parolni ko'rish va berkitish (`Eye` / `EyeOff`) funksiyasi.
+  - Ro'yxatdan o'tgach, to'liq shaxsiy kabinet ochiladi: foydalanuvchi bosh harfi bilan avatar, ism, telefon, o'lchamlar jadvali va ma'lumotlarni tahrirlash imkoniyati.
+  - Headerdagi profil tugmasi: ro'yxatdan o'tmaganida oddiy nishoncha, ro'yxatdan o'tganda foydalanuvchi ismining bosh harfi aks etadi.
 - **Moslashuvchan Mahsulot Modali**:
   - Kompyuterda nafis markaziy ikki ustunli dialog (chapda galereya, o'ngda xarid parametrlari).
   - Mobil qurilmalarda silliq pastdan chiquvchi Bottom Sheet.
   - Har doim pastda qadalib turuvchi (*bottom sticky*) qulay **"SAVATGA QO'SHISH"** tugmasi.
+- **Bo'sh Savat va Swipe Tavsiyalar Karuseli**:
+  - Savat bo'sh bo'lgan holatda foydalanuvchiga mos tavsiya etilgan eng sara liboslar karuseli ochiladi.
+  - **Mobilda:** Silliq sensorli swipe (touch swipe + snap scroll).
+  - **Desktop va planshetda:** Sichqoncha bilan ushlab tortish (drag-to-scroll), trekpad yoki chapga/o'ngga navigatsiya tugmalari.
+  - **Zen Tank minimalist moda uslubi:** Barcha kartochkalar va rasmlar radiussiz (to'g'ri burchakli, sharp), rasmlar toza va ortiqcha yozuvlarsiz.
+- **Aqlli Bildirishnomalar (Notification Bell)**:
+  - Qo'ng'iroqcha tugmasidagi qizil nuqta behuda ko'rinmaydi.
+  - Faqat yangi bildirishnoma (masalan, buyurtma muvaffaqiyatli qabul qilinganda) paydo bo'lgandagina qizil nuqta yonadi va ko'rilgach avtomatik o'chadi.
 - **O'lcham Tanlash (XS, S, M, L, XL)**:
   - Har bir kiyim uchun o'lcham tugmalari.
   - **"O'lcham jadvali"** interaktiv tavsiya bloki (bo'y va vaznga mos tavsiyalar: *masalan, XS — 150–158 sm, 40–48 kg*).
@@ -45,12 +60,12 @@ Platforma **Vercel Hobby** tarifining Serverless cheklovlariga to'liq moslashtir
   - **Boshqaruv (Dashboard)**: Buyurtmalar statistikasi, umumiy tushum, faol tovarlar monitoringi.
   - **Mahsulotlar Katalogi**: Barcha tovarlar ro'yxati, narxlarni ko'rish, qidirish va bazani tozalash (*Reset*).
   - **Bannerlar Slayderi**: Bosh sahifadagi promo slayderlarni boshqarish (yangi rasm, sarlavha, havola qo'shish yoki o'chirish).
-  - **Aloqa & Manzil Sozlamalari**: Telefon raqam, Telegram kanal, Instagram sahifa, do'kon manzili, ish vaqti va brend tavsifini to'g'ridan-to'g'ri o'zgartirish (sayt footerida darhol yangilanadi).
+  - **Aloqa & Manzil Sozlamalari**: Telefon raqam, Telegram kanal, Instagram sahifa, do'kon manzili, ish vaqti va brend tavsifini to'g'ridan-to'g'ri o'zgartirish.
   - **Foydalanuvchilar & Xavfsizlik**: Admin huquqlari va maxfiy ruxsat kalitlarini boshqarish.
 - **Telegram Admin Bot (`@dreemroom_adm_bot`)**:
   - Do'kon egasi uchun to'g'ridan-to'g'ri Telegram orqali yangi tovarlar va fotosuratlarni yuklash.
 - **Buyurtma Xabarnomalari Boti**:
-  - Yangi buyurtma kelib tushganda mijoz ismi, telefon raqami, manzili, tovarlar ro'yxati va summasini Telegram guruh yoki adminga yuboradi.
+  - Yangi buyurtma kelib tushganda mijoz ismi, telefon raqami, tovarlar ro'yxati va summasini Telegram guruh yoki adminga yuboradi.
 
 ---
 
@@ -79,11 +94,11 @@ Platforma **Vercel Hobby** tarifining Serverless cheklovlariga to'liq moslashtir
 │   └── images/               # Mahsulotlar uchun namunaviy suratlar
 ├── src/
 │   ├── components/
-│   │   ├── Logo.tsx          # Yangi vektorli geometrik DREEM ROOM logotipi
+│   │   ├── Logo.tsx          # Vektorli geometrik DREEM ROOM logotipi
 │   │   ├── ProductCard.tsx   # Tovar kartochkasi (ko'p suratli slider, narx)
 │   │   ├── ProductGallery.tsx# Modal ichidagi galereya va miniatyuralar
 │   │   └── Sheet.tsx         # Responsiv modal (Desktop markaz / Mobil bottom sheet)
-│   ├── App.tsx               # Asosiy do'kon ilovasi, routing, footer watermark
+│   ├── App.tsx               # Asosiy do'kon ilovasi, routing, footer watermark, auth & swipe
 │   ├── data.ts               # Turlar, yordamchi funksiyalar va doimiy ma'lumotlar
 │   ├── index.css             # Asosiy dizayn qoidalari, animatsiyalar va media so'rovlar
 │   └── main.tsx              # React kirish nuqtasi

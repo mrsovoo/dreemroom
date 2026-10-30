@@ -554,7 +554,7 @@ async function notifyTelegramOrder(order) {
       `🛍 <b>YANGI BUYURTMA #${order.id}</b>\n\n` +
       `👤 <b>Mijoz:</b> ${order.customer?.name || "Noma'lum"}\n` +
       `📞 <b>Telefon:</b> ${order.customer?.phone || "Kiritilmagan"}\n` +
-      `📍 <b>Yetkazish manzili:</b> ${order.customer?.address || "Kiritilmagan"}\n` +
+      `🏪 <b>Xarid usuli:</b> ${order.customer?.address || "Do'kondan olib ketish"}\n` +
       `💳 <b>To'lov turi:</b> ${order.paymentMethod || "Naqd / Karta"}\n\n` +
       `📦 <b>Xarid qilingan modellar:</b>\n${itemsList || "—"}\n\n` +
       `💰 <b>JAMI:</b> <b>${Number(order.total || 0).toLocaleString("ru-RU")} so'm</b>\n` +
@@ -1357,7 +1357,7 @@ const DEFAULT_CONTACTS = {
   address: "Toshkent shahri, O'zbekiston",
   workHours: "Har kuni 09:00 — 21:00",
   email: "info@dreemroom.uz",
-  brandDesc: "Zamonaviy va premium sifatdagi kiyimlar to'plami. O'zbekiston bo'ylab tezkor va qulay yetkazib berish xizmati.",
+  brandDesc: "Zamonaviy va premium sifatdagi kiyimlar to'plami. Sifatli va bejirim uslub kafolati.",
 };
 
 export async function getContacts() {
