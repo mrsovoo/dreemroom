@@ -899,7 +899,111 @@ export default function App() {
         {view === "home" ? (
           <>
             {/* =================================================================
-                1. HERO SECTION: DREEM ROOM • Daily Winds For Colors (4 ta banner)
+                MOBIL TELEFON UCHUN ASOS SHABLONIDAGI QIDIRUV VA BANNER
+                (Faqat mobilda ko'rinadi, desktop/tabletdan yashiriladi)
+                ================================================================= */}
+            <div className="mobile-home-top-section">
+              {/* ASOS Qidiruv paneli */}
+              <div className="mobile-search-bar-wrap">
+                <div className="mobile-search-bar">
+                  <Search size={18} className="mobile-search-icon" />
+                  <input
+                    type="text"
+                    className="mobile-search-input"
+                    placeholder="Brendlar, kiyimlarni qidirish..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (view !== "catalog" && e.target.value.trim().length > 0) {
+                        setView("catalog");
+                      }
+                    }}
+                  />
+                  {searchQuery ? (
+                    <button
+                      type="button"
+                      className="mobile-search-clear"
+                      onClick={() => setSearchQuery("")}
+                      aria-label="Tozalash"
+                    >
+                      <X size={15} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mobile-search-filter"
+                      onClick={() => openCatalog()}
+                      aria-label="Filtr"
+                    >
+                      <SlidersHorizontal size={17} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ASOS Shablonidagi Karta Banner (Women/Men tugmalari olib tashlangan) */}
+              <div
+                className="mobile-hero-asos-section"
+                onTouchStart={handleHeroTouchStart}
+                onTouchEnd={handleHeroTouchEnd}
+              >
+                <div className="mobile-hero-asos-card">
+                  <div className="mobile-hero-card-content">
+                    <span className="mobile-hero-pill-tag">
+                      {heroSlidesList[slide]?.eyebrow
+                        ? heroSlidesList[slide]?.eyebrow.replace(/^DREEM ROOM •\s*/i, "")
+                        : "New in"}
+                    </span>
+                    <h2 className="mobile-hero-card-title">
+                      {heroSlidesList[slide]?.title
+                        ? heroSlidesList[slide]?.title.replace(/\n/g, " ")
+                        : "Spring Essentials"}
+                    </h2>
+                    <p className="mobile-hero-card-desc">
+                      {heroSlidesList[slide]?.subtitle ||
+                        "Discover new styles to embrace this exciting season!"}
+                    </p>
+                    <button
+                      type="button"
+                      className="mobile-hero-shop-btn"
+                      onClick={() => {
+                        haptic(tgRef.current, "light");
+                        openCatalog();
+                      }}
+                    >
+                      {heroSlidesList[slide]?.buttonText || "Shop Now"}
+                    </button>
+                  </div>
+
+                  <div className="mobile-hero-card-media">
+                    <img
+                      src={heroSlidesList[slide]?.src}
+                      alt={heroSlidesList[slide]?.alt || "DREEM ROOM"}
+                      className="mobile-hero-card-img"
+                      loading="eager"
+                    />
+                  </div>
+                </div>
+
+                {/* Slayder indikator nuqtalari */}
+                {heroSlidesList.length > 1 && (
+                  <div className="mobile-hero-dots">
+                    {heroSlidesList.map((_, idx) => (
+                      <button
+                        key={"mobile-dot-" + idx}
+                        type="button"
+                        className={`mobile-hero-dot ${idx === slide ? "is-active" : ""}`}
+                        onClick={() => setSlide(idx)}
+                        aria-label={`${idx + 1}-banner`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* =================================================================
+                1. HERO SECTION: DREEM ROOM • Daily Winds For Colors (Desktop va Tablet uchun)
                 ================================================================= */}
             <section
               className="velvorn-hero-section"
