@@ -25,11 +25,18 @@ Platforma **Vercel Hobby** tarifining Serverless cheklovlariga to'liq moslashtir
 - **Avtomatik Narx Tizimi**: Barcha narxlar o'zbek so'mida aks etadi (`250 000 so'm`). Telegram bot yoki admin orqali kiritilgan ixcham qiymatlar (masalan `250` yoki `180`) avtomatik ravishda `1000` ga ko'paytirilib, to'g'ri so'm formatida ko'rsatiladi.
 - **O'zbekiston Telefon Raqamlari Avtomatik Formati (`+998 00 000 0000`)**:
   - Barcha maydonlarda doimiy `+998 ` prefiksi avtomatik chiqadi va xaridor raqam terishi bilan bo'shliqlar bilan `+998 90 123 4567` shaklida formatlanadi.
-- **Shaxsiy Profil va Xavfsiz Ro'yxatdan O'tish**:
-  - Hali ro'yxatdan o'tmagan xaridorlar uchun markazlashtirilgan, qulay ro'yxatdan o'tish interfeysi (Ism, telefon raqam va maxfiy parol).
-  - Parolni ko'rish va berkitish (`Eye` / `EyeOff`) funksiyasi.
-  - Ro'yxatdan o'tgach, to'liq shaxsiy kabinet ochiladi: foydalanuvchi bosh harfi bilan avatar, ism, telefon, o'lchamlar jadvali va ma'lumotlarni tahrirlash imkoniyati.
+- **Tezkor va Qulay Ro'yxatdan O'tish (Ortiqcha Parolsiz)**:
+  - Hali ro'yxatdan o'tmagan xaridorlar uchun markazlashtirilgan, minimalistik ro'yxatdan o'tish interfeysi.
+  - Ortiqcha murakkab parollarsiz, faqat **Ism va familiya** hamda **Telefon raqami**ni kiritish kifoya.
+  - Ro'yxatdan o'tgach, to'liq shaxsiy kabinet ochiladi: foydalanuvchi bosh harfi bilan avatar, ism, telefon, o'lchamlar jadvali va tizimdan chiqish imkoniyati.
   - Headerdagi profil tugmasi: ro'yxatdan o'tmaganida oddiy nishoncha, ro'yxatdan o'tganda foydalanuvchi ismining bosh harfi aks etadi.
+- **Savatda Avtomatik Profil Integratsiyasi**:
+  - Ro'yxatdan o'tgan xaridor uchun savatda ism va raqam kiritish maydonlari takrorlanmaydi.
+  - Xaridor profili avtomatik ravishda chiroyli profil kartochkasi shaklida ulanadi va to'lov usulini tanlab, zudlik bilan buyurtma berish mumkin.
+  - Agar ro'yxatdan o'tmagan bo'lsa, xaridorni qulay ro'yxatdan o'tishga yo'naltiruvchi taklifnoma chiqadi.
+- **Alohida "O'lchamlar Jadvali" Modali**:
+  - Profil va footer orqali ochiladigan mustaqil o'lchamlar oynasi.
+  - Har bir o'lcham (`XS`, `S`, `M`, `L`, `XL`, `XXL`, `Standart`) uchun aniq tavsiya etilgan bo'y va vazn ko'rsatkichlari jadvali hamda foydali maslahat bloki.
 - **Moslashuvchan Mahsulot Modali**:
   - Kompyuterda nafis markaziy ikki ustunli dialog (chapda galereya, o'ngda xarid parametrlari).
   - Mobil qurilmalarda silliq pastdan chiquvchi Bottom Sheet.

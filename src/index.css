@@ -1685,6 +1685,133 @@ p {
 .contact-actions {
   margin-top: 10px;
 }
+
+/* ==========================================================================
+   O'LCHAMLAR JADVALI MODAL SHEET
+   ========================================================================== */
+.size-guide-modal-content {
+  padding: 16px 20px 24px;
+}
+
+.size-guide-modal-header {
+  margin-bottom: 18px;
+}
+
+.size-guide-modal-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #71717a;
+  background: #f4f4f5;
+  padding: 4px 10px;
+  border-radius: 0;
+  margin-bottom: 8px;
+}
+
+.size-guide-modal-desc {
+  font-size: 13.5px;
+  color: #52525b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.size-guide-table-wrap {
+  border: 1px solid #e4e4e7;
+  border-radius: 0;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.size-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+
+.size-guide-table th {
+  background: #fafafa;
+  color: #18181b;
+  font-weight: 700;
+  padding: 11px 14px;
+  border-bottom: 1px solid #e4e4e7;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.size-guide-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f4f4f6;
+  color: #3f3f46;
+}
+
+.size-guide-table tr:last-child td {
+  border-bottom: none;
+}
+
+.size-guide-table tr:hover td {
+  background: #fcfcfd;
+}
+
+.size-name-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 26px;
+  padding: 0 6px;
+  background: #111116;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 0;
+}
+
+.size-guide-tip-box {
+  display: flex;
+  gap: 12px;
+  background: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-radius: 0;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+.size-guide-tip-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.size-guide-tip-text strong {
+  display: block;
+  font-size: 13px;
+  color: #111116;
+  margin-bottom: 3px;
+}
+
+.size-guide-tip-text p {
+  font-size: 12.5px;
+  color: #71717a;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.size-guide-close-btn {
+  height: 48px;
+  background: #111116;
+  color: #ffffff;
+  border-radius: 0 !important;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.size-guide-close-btn:hover {
+  background: #27272a;
+}
 .done {
   padding: 36px 24px 28px;
   text-align: center;
@@ -5227,6 +5354,138 @@ body.in-telegram .mobile-app-layout {
   font-weight: 700;
   color: #18181b;
   margin: 0 0 16px;
+}
+
+/* ==========================================================================
+   SAVATDA BUYURTMACHI PROFILI KARTASI
+   ========================================================================== */
+.cart-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-radius: 0;
+  margin-bottom: 14px;
+}
+
+.cart-profile-avatar {
+  width: 44px;
+  height: 44px;
+  background: #111116;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.cart-profile-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cart-profile-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111116;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cart-profile-phone {
+  font-size: 13px;
+  color: #71717a;
+  font-weight: 500;
+}
+
+.cart-profile-switch-btn {
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #18181b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cart-profile-switch-btn:hover {
+  background: #111116;
+  color: #ffffff;
+  border-color: #111116;
+}
+
+.cart-guest-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px;
+  background: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-radius: 0;
+}
+
+.cart-guest-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cart-guest-avatar {
+  width: 42px;
+  height: 42px;
+  background: #f4f4f5;
+  color: #71717a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  flex-shrink: 0;
+  border: 1px solid #e4e4e7;
+}
+
+.cart-guest-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #18181b;
+  margin-bottom: 2px;
+}
+
+.cart-guest-text p {
+  font-size: 12px;
+  color: #71717a;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cart-guest-btn {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 0 !important;
+  background: #111116;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.cart-guest-btn:hover {
+  background: #27272a;
 }
 
 .page-cart-form {

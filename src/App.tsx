@@ -42,7 +42,7 @@ import {
 } from "./data";
 import { getLocalDemoProducts } from "./demoData";
 
-type Panel = "product" | "cart" | "profile" | "contact" | "wishlist" | null;
+type Panel = "product" | "cart" | "profile" | "contact" | "wishlist" | "size-guide" | null;
 type View = "home" | "catalog" | "cart" | "profile" | "product";
 type CartItem = { id: string; size: string; quantity: number };
 type Profile = { name: string; phone: string; password?: string };
@@ -310,8 +310,6 @@ export default function App() {
     if (profile?.phone) return formatUzbekPhone(profile.phone);
     return "+998 ";
   });
-  const [profilePassword, setProfilePassword] = useState(() => profile?.password || "");
-  const [showPassword, setShowPassword] = useState(false);
   const [notifications, setNotifications] = useState<string[]>([]);
 
   // Bo'sh savat tavsiyalari uchun slayd-swiper holati
@@ -368,9 +366,6 @@ export default function App() {
       const formatted = formatUzbekPhone(profile.phone);
       setProfilePhone(formatted);
       setOrderPhone(formatted);
-    }
-    if (profile?.password) {
-      setProfilePassword(profile.password);
     }
   }, [profile]);
   const [returnView, setReturnView] = useState<View>("home");
@@ -832,16 +827,13 @@ export default function App() {
 
   function submitOrder() {
     const form = orderFormRef.current;
-    const customerName = (form?.elements.namedItem("name") as HTMLInputElement)?.value || orderName || profile?.name || "Mijoz";
-    const customerPhone = (form?.elements.namedItem("phone") as HTMLInputElement)?.value || orderPhone || profile?.phone || "+998 ";
+    const customerName = profile?.name || orderName || (form?.elements.namedItem("name") as HTMLInputElement)?.value;
+    const customerPhone = profile?.phone || orderPhone || (form?.elements.namedItem("phone") as HTMLInputElement)?.value;
     const paymentMethod = (form?.elements.namedItem("paymentMethod") as HTMLSelectElement)?.value || "Naqd pul / Karta";
 
-    if (!customerName || customerName.trim() === "") {
-      setToast("Iltimos, ismingizni kiriting");
-      return;
-    }
-    if (customerPhone.replace(/\D/g, "").length < 12) {
-      setToast("Iltimos, telefon raqamingizni to'liq kiriting (+998 00 000 0000)");
+    if (!customerName || customerName.trim() === "" || !customerPhone || customerPhone.replace(/\D/g, "").length < 12) {
+      setToast("Iltimos, avval ro'yxatdan o'ting");
+      goProfile();
       return;
     }
 
@@ -906,8 +898,6 @@ export default function App() {
       .join(" ");
     setProfileName(profile?.name || telegramName || "");
     setProfilePhone(profile?.phone ? formatUzbekPhone(profile.phone) : "+998 ");
-    setProfilePassword(profile?.password || "");
-    setShowPassword(false);
     setView("profile");
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -919,8 +909,6 @@ export default function App() {
       .join(" ");
     setProfileName(profile?.name || telegramName || "");
     setProfilePhone(profile?.phone ? formatUzbekPhone(profile.phone) : "+998 ");
-    setProfilePassword(profile?.password || "");
-    setShowPassword(false);
     if (typeof window !== "undefined" && window.innerWidth <= 768) {
       goProfile();
     } else {
@@ -931,7 +919,6 @@ export default function App() {
   function saveProfile() {
     const name = profileName.trim();
     const phone = profilePhone.trim();
-    const password = profilePassword.trim();
     if (!name) {
       setToast("Iltimos, ismingizni kiriting");
       return;
@@ -940,14 +927,9 @@ export default function App() {
       setToast("Iltimos, telefon raqamingizni to'liq kiriting (+998 00 000 0000)");
       return;
     }
-    if (!profile && (!password || password.length < 4)) {
-      setToast("Iltimos, kamida 4 xonali parol kiriting");
-      return;
-    }
     setProfile({
       name,
       phone,
-      password: password || profile?.password || "",
     });
     setPanel(null);
     setToast(profile ? "O'zgarishlar saqlandi" : "Muvaffaqiyatli ro'yxatdan o'tdingiz");
@@ -1626,50 +1608,64 @@ export default function App() {
 
                 {/* Buyurtma formasi */}
                 <div className="page-cart-checkout-card">
-                  <h3 className="checkout-title">Buyurtmachi ma'lumotlari</h3>
-                  <form
-                    ref={orderFormRef}
-                    className="page-cart-form"
-                    onSubmit={placeOrder}
-                  >
-                    <label className="page-form-label">
-                      <span>Ism va familiyangiz *</span>
-                      <input
-                        name="name"
-                        autoComplete="name"
-                        value={orderName}
-                        onChange={(e) => setOrderName(e.target.value)}
-                        placeholder="Masalan: Aziz Rahimov"
-                        required
-                      />
-                    </label>
-                    <label className="page-form-label">
-                      <span>Telefon raqamingiz *</span>
-                      <input
-                        name="phone"
-                        type="tel"
-                        autoComplete="tel"
-                        placeholder="+998 00 000 0000"
-                        value={orderPhone}
-                        onChange={(e) => setOrderPhone(formatUzbekPhone(e.target.value))}
-                        onKeyDown={handlePhoneKeyDown}
-                        onFocus={handlePhoneFocus}
-                        required
-                      />
-                    </label>
-                    <label className="page-form-label">
-                      <span>To'lov usuli</span>
-                      <select name="paymentMethod" defaultValue="Naqd pul / Karta">
-                        <option value="Naqd pul / Karta">Naqd pul / Karta</option>
-                        <option value="Payme / Click (oldindan to'lov)">Payme / Click (oldindan to'lov)</option>
-                      </select>
-                    </label>
+                  <h3 className="checkout-title">Buyurtmachi profili</h3>
+                  {profile && profile.name ? (
+                    <form
+                      ref={orderFormRef}
+                      className="page-cart-form"
+                      onSubmit={placeOrder}
+                    >
+                      <div className="cart-profile-badge">
+                        <div className="cart-profile-avatar">
+                          {profile.name.trim().charAt(0).toUpperCase()}
+                        </div>
+                        <div className="cart-profile-details">
+                          <strong className="cart-profile-name">{profile.name}</strong>
+                          <span className="cart-profile-phone">{formatUzbekPhone(profile.phone)}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="cart-profile-switch-btn"
+                          onClick={goProfile}
+                        >
+                          Profil
+                        </button>
+                      </div>
 
-                    <button type="submit" className="page-cart-submit-btn">
-                      <span>Buyurtmani tasdiqlash • {money(total)}</span>
-                      <ArrowRight size={17} />
-                    </button>
-                  </form>
+                      <label className="page-form-label">
+                        <span>To'lov usuli</span>
+                        <select name="paymentMethod" defaultValue="Naqd pul / Karta">
+                          <option value="Naqd pul / Karta">Naqd pul / Karta</option>
+                          <option value="Payme / Click (oldindan to'lov)">Payme / Click (oldindan to'lov)</option>
+                        </select>
+                      </label>
+
+                      <button type="submit" className="page-cart-submit-btn">
+                        <span>Buyurtmani tasdiqlash • {money(total)}</span>
+                        <ArrowRight size={17} />
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="cart-guest-box">
+                      <div className="cart-guest-content">
+                        <div className="cart-guest-avatar">
+                          <UserRound size={22} strokeWidth={1.8} />
+                        </div>
+                        <div className="cart-guest-text">
+                          <strong>Profil kiritilmagan</strong>
+                          <p>Buyurtma berish uchun avval ro'yxatdan o'ting</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-full cart-guest-btn"
+                        onClick={goProfile}
+                      >
+                        <span>Ro'yxatdan o'tish</span>
+                        <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1852,42 +1848,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="auth-input-group">
-                      <label className="auth-field-label" htmlFor="register-password">
-                        <span>Maxfiy parol</span>
-                        <span className="auth-required-star">*</span>
-                      </label>
-                      <div className="auth-input-wrapper">
-                        <span className="auth-input-icon">
-                          <Lock size={18} strokeWidth={1.8} />
-                        </span>
-                        <input
-                          id="register-password"
-                          name="profile-password"
-                          type={showPassword ? "text" : "password"}
-                          autoComplete="new-password"
-                          value={profilePassword}
-                          onChange={(event) => setProfilePassword(event.target.value)}
-                          placeholder="Kamida 4 ta belgi"
-                          className="auth-input auth-input-password"
-                          required
-                          minLength={4}
-                        />
-                        <button
-                          type="button"
-                          className="auth-password-toggle-btn"
-                          onClick={() => setShowPassword((v) => !v)}
-                          tabIndex={-1}
-                          aria-label={showPassword ? "Parolni berkitish" : "Parolni ko'rsatish"}
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      <span className="auth-input-hint">
-                        Shaxsiy profilingiz xavfsizligi uchun maxfiy parol kiriting
-                      </span>
-                    </div>
-
                     <button className="auth-submit-btn" type="submit">
                       <span>Ro'yxatdan o'tish</span>
                       <ArrowRight size={18} strokeWidth={2.2} />
@@ -1963,8 +1923,8 @@ export default function App() {
                       type="button"
                       className="profile-menu-item"
                       onClick={() => {
-                        if (productsList[0]) openProduct(productsList[0]);
-                        setShowSizeGuide(true);
+                        haptic(tgRef.current, "light");
+                        setPanel("size-guide");
                       }}
                     >
                       <div className="menu-item-left">
@@ -1979,75 +1939,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Ma'lumotlarni tahrirlash kartasi */}
-                <div className="profile-edit-card">
-                  <h3 className="profile-section-title">Ma'lumotlarni tahrirlash</h3>
-                  <p className="profile-section-desc">
-                    Ism yoki telefon raqamingizni o'zgartirishingiz mumkin.
-                  </p>
-                  <form
-                    ref={profileFormRef}
-                    className="profile-page-form"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      saveProfile();
-                    }}
-                  >
-                    <label className="page-form-label">
-                      <span>Ism va familiyangiz</span>
-                      <input
-                        name="profile-name"
-                        autoComplete="name"
-                        value={profileName}
-                        onChange={(event) => setProfileName(event.target.value)}
-                        placeholder="Ismingizni kiriting"
-                        required
-                      />
-                    </label>
-                    <label className="page-form-label">
-                      <span>Telefon raqamingiz</span>
-                      <input
-                        name="profile-phone"
-                        type="tel"
-                        autoComplete="tel"
-                        value={profilePhone}
-                        onChange={(event) => setProfilePhone(formatUzbekPhone(event.target.value))}
-                        onKeyDown={handlePhoneKeyDown}
-                        onFocus={handlePhoneFocus}
-                        placeholder="+998 00 000 0000"
-                        required
-                      />
-                    </label>
-                    <label className="page-form-label">
-                      <span>Parol</span>
-                      <div className="page-password-wrap">
-                        <input
-                          name="profile-password"
-                          type={showPassword ? "text" : "password"}
-                          autoComplete="current-password"
-                          value={profilePassword}
-                          onChange={(event) => setProfilePassword(event.target.value)}
-                          placeholder="Parolni kiriting"
-                          minLength={4}
-                        />
-                        <button
-                          type="button"
-                          className="page-password-toggle-btn"
-                          onClick={() => setShowPassword((v) => !v)}
-                          tabIndex={-1}
-                          aria-label={showPassword ? "Parolni berkitish" : "Parolni ko'rsatish"}
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                    </label>
-                    <button className="btn btn-full profile-save-btn" type="submit">
-                      <span>O'zgarishlarni saqlash</span>
-                      <Check size={16} strokeWidth={2} />
-                    </button>
-                  </form>
-                </div>
-
                 {/* Saqlangan profilni o'chirish */}
                 <div className="profile-logout-wrap">
                   <button
@@ -2058,7 +1949,6 @@ export default function App() {
                         setProfile(null);
                         setProfileName("");
                         setProfilePhone("+998 ");
-                        setProfilePassword("");
                         setToast("Profil o'chirildi");
                       }
                     }}
@@ -2379,8 +2269,8 @@ export default function App() {
               <li><button onClick={openProfile}>Mening profilim</button></li>
               <li><button onClick={openContact}>To'lov va xarid shartlari</button></li>
               <li><button onClick={() => {
-                if (productsList[0]) openProduct(productsList[0]);
-                setShowSizeGuide(true);
+                haptic(tgRef.current, "light");
+                setPanel("size-guide");
               }}>O'lchamlar jadvali</button></li>
             </ul>
           </div>
@@ -2702,29 +2592,6 @@ export default function App() {
                     required
                   />
                 </label>
-                <label>
-                  Parol
-                  <div className="page-password-wrap">
-                    <input
-                      name="profile-password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      value={profilePassword}
-                      onChange={(event) => setProfilePassword(event.target.value)}
-                      placeholder="Kamida 4 ta belgi"
-                      minLength={4}
-                    />
-                    <button
-                      type="button"
-                      className="page-password-toggle-btn"
-                      onClick={() => setShowPassword((v) => !v)}
-                      tabIndex={-1}
-                      aria-label={showPassword ? "Parolni berkitish" : "Parolni ko'rsatish"}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </label>
                 <button className="btn btn-full" type="submit">
                   Profilni saqlash
                   <Check size={17} strokeWidth={1.8} />
@@ -2737,7 +2604,6 @@ export default function App() {
                     setProfile(null);
                     setProfileName("");
                     setProfilePhone("+998 ");
-                    setProfilePassword("");
                     setToast("Profil o'chirildi");
                   }}
                 >
@@ -2793,6 +2659,64 @@ export default function App() {
                   </a>
                 </div>
               </div>
+            </div>
+          </Sheet>
+        )}
+
+        {panel === "size-guide" && (
+          <Sheet
+            key="size-guide"
+            title="O'lchamlar jadvali"
+            onClose={() => setPanel(null)}
+          >
+            <div className="size-guide-modal-content">
+              <div className="size-guide-modal-header">
+                <span className="size-guide-modal-badge">STANDART PARAMETRLAR</span>
+                <p className="size-guide-modal-desc">
+                  O'zingizga eng mos keluvchi o'lchamni aniqlash uchun quyidagi tavsiyalardan foydalaning:
+                </p>
+              </div>
+
+              <div className="size-guide-table-wrap">
+                <table className="size-guide-table">
+                  <thead>
+                    <tr>
+                      <th>O'lcham</th>
+                      <th>Tavsiya bo'y</th>
+                      <th>Tavsiya vazn</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(sizeGuideData).map(([sz, val]) => (
+                      <tr key={sz}>
+                        <td>
+                          <span className="size-name-badge">{sz}</span>
+                        </td>
+                        <td>{val.height}</td>
+                        <td>{val.weight}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="size-guide-tip-box">
+                <div className="size-guide-tip-icon">💡</div>
+                <div className="size-guide-tip-text">
+                  <strong>Foydali maslahat:</strong>
+                  <p>
+                    Agar siz ikkita o'lcham oralig'ida bo'lsangiz yoki erkinroq (oversize) uslubni ma'qul ko'rsangiz, bir o'lcham kattaroq tanlashni tavsiya qilamiz.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-full size-guide-close-btn"
+                onClick={() => setPanel(null)}
+              >
+                Tushunarli
+              </button>
             </div>
           </Sheet>
         )}
@@ -2962,51 +2886,71 @@ export default function App() {
                   <span>Jami</span>
                   <strong>{money(total)}</strong>
                 </div>
-                <form
-                  ref={orderFormRef}
-                  className="order-form"
-                  onSubmit={placeOrder}
-                >
-                  <label>
-                    Ism va familiya
-                    <input
-                      name="name"
-                      autoComplete="name"
-                      value={orderName}
-                      onChange={(e) => setOrderName(e.target.value)}
-                      placeholder="Ismingizni kiriting"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Telefon raqam
-                    <input
-                      name="phone"
-                      type="tel"
-                      autoComplete="tel"
-                      placeholder="+998 00 000 0000"
-                      value={orderPhone}
-                      onChange={(e) => setOrderPhone(formatUzbekPhone(e.target.value))}
-                      onKeyDown={handlePhoneKeyDown}
-                      onFocus={handlePhoneFocus}
-                      required
-                    />
-                  </label>
-                  <label>
-                    To'lov turi
-                    <select
-                      name="paymentMethod"
-                      defaultValue="Naqd pul / Karta"
+                {profile && profile.name ? (
+                  <form
+                    ref={orderFormRef}
+                    className="order-form"
+                    onSubmit={placeOrder}
+                  >
+                    <div className="cart-profile-badge">
+                      <div className="cart-profile-avatar">
+                        {profile.name.trim().charAt(0).toUpperCase()}
+                      </div>
+                      <div className="cart-profile-details">
+                        <strong className="cart-profile-name">{profile.name}</strong>
+                        <span className="cart-profile-phone">{formatUzbekPhone(profile.phone)}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="cart-profile-switch-btn"
+                        onClick={() => {
+                          setPanel(null);
+                          goProfile();
+                        }}
+                      >
+                        Profil
+                      </button>
+                    </div>
+
+                    <label>
+                      To'lov turi
+                      <select
+                        name="paymentMethod"
+                        defaultValue="Naqd pul / Karta"
+                      >
+                        <option value="Naqd pul / Karta">Naqd pul / Karta</option>
+                        <option value="Payme / Click (oldindan to'lov)">Payme / Click (oldindan to'lov)</option>
+                      </select>
+                    </label>
+                    <button className="btn btn-full" type="submit">
+                      Buyurtmani tasdiqlash • {money(total)}
+                      <ArrowRight size={16} />
+                    </button>
+                  </form>
+                ) : (
+                  <div className="cart-guest-box">
+                    <div className="cart-guest-content">
+                      <div className="cart-guest-avatar">
+                        <UserRound size={22} strokeWidth={1.8} />
+                      </div>
+                      <div className="cart-guest-text">
+                        <strong>Profil kiritilmagan</strong>
+                        <p>Buyurtma berish uchun avval ro'yxatdan o'ting</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-full cart-guest-btn"
+                      onClick={() => {
+                        setPanel(null);
+                        goProfile();
+                      }}
                     >
-                      <option value="Naqd pul / Karta">Naqd pul / Karta</option>
-                      <option value="Payme / Click (oldindan to'lov)">Payme / Click (oldindan to'lov)</option>
-                    </select>
-                  </label>
-                  <button className="btn btn-full" type="submit">
-                    Buyurtmani tasdiqlash • {money(total)}
-                    <ArrowRight size={16} />
-                  </button>
-                </form>
+                      <span>Ro'yxatdan o'tish</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="empty">
