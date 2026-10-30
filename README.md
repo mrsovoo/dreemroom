@@ -182,7 +182,7 @@ Loyiha **Vercel Hobby** tarifiga 100% moslashtirilgan. Vercel Hobby tarifida 12 
 
 Loyiha uchun yangi vektorli (SVG) **DREEM ROOM** logotipi ishlab chiqilgan va loyihaning barcha asosiy nuqtalariga o'rnatilgan:
 - **Header Navbar**: [`src/components/Logo.tsx`](file:///src/components/Logo.tsx) orqali toza SVG.
-- **Footer Watermark**: Saytning pastki qismida orqa fonda nafis, shaffof suv belgisi sifatida.
+- **Footer**: Saytning pastki qismida brend logotipi va aloqa ma'lumotlari.
 - **Admin Panel**: [`admin.html`](file:///admin.html) yon paneli tepasida brend logotipi.
 
 ---
