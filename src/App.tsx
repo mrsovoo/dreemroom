@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import {
   ArrowRight,
+  Bell,
   Check,
+  ChevronRight,
   Grid2X2,
   Heart,
   Home,
@@ -33,7 +35,7 @@ import {
 } from "./data";
 
 type Panel = "product" | "cart" | "profile" | "contact" | "wishlist" | null;
-type View = "home" | "catalog";
+type View = "home" | "catalog" | "cart" | "profile";
 type CartItem = { id: string; size: string; quantity: number };
 type Profile = { name: string; phone: string };
 
@@ -696,6 +698,25 @@ export default function App() {
     submitOrder();
   }
 
+  function goCart() {
+    setPanel(null);
+    setOrdered(false);
+    setView("cart");
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function goProfile() {
+    setPanel(null);
+    const telegramUser = tgRef.current?.initDataUnsafe?.user;
+    const telegramName = [telegramUser?.first_name, telegramUser?.last_name]
+      .filter(Boolean)
+      .join(" ");
+    setProfileName(profile?.name || telegramName);
+    setProfilePhone(profile?.phone || "");
+    setView("profile");
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
   function openProfile() {
     const telegramUser = tgRef.current?.initDataUnsafe?.user;
     const telegramName = [telegramUser?.first_name, telegramUser?.last_name]
@@ -703,7 +724,11 @@ export default function App() {
       .join(" ");
     setProfileName(profile?.name || telegramName);
     setProfilePhone(profile?.phone || "");
-    setPanel("profile");
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      goProfile();
+    } else {
+      setPanel("profile");
+    }
   }
 
   function saveProfile() {
@@ -722,7 +747,7 @@ export default function App() {
   useEffect(() => {
     const button = tgRef.current?.BackButton;
     if (!button) return;
-    const shouldShow = panel !== null || view === "catalog";
+    const shouldShow = panel !== null || view !== "home";
     const handler = () => {
       if (panel) setPanel(null);
       else goHome();
@@ -756,17 +781,17 @@ export default function App() {
     if (panel === "product") {
       text = "Savatga qo'shish";
       onClick = () => actionsRef.current.addToCart();
-    } else if (panel === "profile") {
+    } else if (panel === "profile" || view === "profile") {
       text = "Profilni saqlash";
       onClick = () => {
         const form = profileFormRef.current;
         if (form && !form.reportValidity()) return;
         actionsRef.current.saveProfile();
       };
-    } else if (panel === "cart" && ordered) {
+    } else if ((panel === "cart" || view === "cart") && ordered) {
       text = "Xaridni davom ettirish";
       onClick = () => actionsRef.current.openCatalog();
-    } else if (panel === "cart" && cart.length > 0) {
+    } else if ((panel === "cart" || view === "cart") && cart.length > 0) {
       text = `Buyurtma berish • ${money(total)}`;
       onClick = () => {
         const form = orderFormRef.current;
@@ -804,7 +829,11 @@ export default function App() {
 
   function openCart() {
     setOrdered(false);
-    setPanel("cart");
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      goCart();
+    } else {
+      setPanel("cart");
+    }
   }
 
   function openContact() {
@@ -892,11 +921,22 @@ export default function App() {
             <span className="cart-frame-label">Savat</span>
             {cartCount > 0 && <span className="action-badge">{cartCount}</span>}
           </button>
+          <button
+            className="action-btn header-notif-btn"
+            onClick={() => {
+              haptic(tgRef.current, "light");
+              setToast("Sizda hozircha yangi bildirishnomalar yo'q");
+            }}
+            aria-label="Bildirishnomalar"
+          >
+            <Bell size={19} strokeWidth={1.8} />
+            <span className="notif-dot" />
+          </button>
         </div>
       </header>
 
       <main id="main">
-        {view === "home" ? (
+        {view === "home" && (
           <>
             {/* =================================================================
                 MOBIL TELEFON UCHUN ASOS SHABLONIDAGI QIDIRUV VA BANNER
@@ -940,70 +980,10 @@ export default function App() {
                   )}
                 </div>
               </div>
-
-              {/* ASOS Shablonidagi Karta Banner (Women/Men tugmalari olib tashlangan) */}
-              <div
-                className="mobile-hero-asos-section"
-                onTouchStart={handleHeroTouchStart}
-                onTouchEnd={handleHeroTouchEnd}
-              >
-                <div className="mobile-hero-asos-card">
-                  <div className="mobile-hero-card-content">
-                    <span className="mobile-hero-pill-tag">
-                      {heroSlidesList[slide]?.eyebrow
-                        ? heroSlidesList[slide]?.eyebrow.replace(/^DREEM ROOM •\s*/i, "")
-                        : "New in"}
-                    </span>
-                    <h2 className="mobile-hero-card-title">
-                      {heroSlidesList[slide]?.title
-                        ? heroSlidesList[slide]?.title.replace(/\n/g, " ")
-                        : "Spring Essentials"}
-                    </h2>
-                    <p className="mobile-hero-card-desc">
-                      {heroSlidesList[slide]?.subtitle ||
-                        "Discover new styles to embrace this exciting season!"}
-                    </p>
-                    <button
-                      type="button"
-                      className="mobile-hero-shop-btn"
-                      onClick={() => {
-                        haptic(tgRef.current, "light");
-                        openCatalog();
-                      }}
-                    >
-                      {heroSlidesList[slide]?.buttonText || "Shop Now"}
-                    </button>
-                  </div>
-
-                  <div className="mobile-hero-card-media">
-                    <img
-                      src={heroSlidesList[slide]?.src}
-                      alt={heroSlidesList[slide]?.alt || "DREEM ROOM"}
-                      className="mobile-hero-card-img"
-                      loading="eager"
-                    />
-                  </div>
-                </div>
-
-                {/* Slayder indikator nuqtalari */}
-                {heroSlidesList.length > 1 && (
-                  <div className="mobile-hero-dots">
-                    {heroSlidesList.map((_, idx) => (
-                      <button
-                        key={"mobile-dot-" + idx}
-                        type="button"
-                        className={`mobile-hero-dot ${idx === slide ? "is-active" : ""}`}
-                        onClick={() => setSlide(idx)}
-                        aria-label={`${idx + 1}-banner`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* =================================================================
-                1. HERO SECTION: DREEM ROOM • Daily Winds For Colors (Desktop va Tablet uchun)
+                1. HERO SECTION: DREEM ROOM • Daily Winds For Colors
                 ================================================================= */}
             <section
               className="velvorn-hero-section"
@@ -1171,7 +1151,9 @@ export default function App() {
               </section>
             )}
           </>
-        ) : (
+        )}
+
+        {view === "catalog" && (
           <section className="section catalog">
             <div className="catalog-head-block">
               <div>
@@ -1259,6 +1241,370 @@ export default function App() {
             )}
           </section>
         )}
+
+        {/* =================================================================
+            SAVAT SAHIFASI (Mobil va Veb to'liq sahifa ko'rinishi)
+            ================================================================= */}
+        {view === "cart" && (
+          <div className="page-cart-container">
+            <div className="page-cart-header">
+              <div>
+                <h1 className="page-cart-title">Savat</h1>
+                <span className="page-cart-subtitle">
+                  {cart.length > 0 ? `${cartCount} ta mahsulot tanlandi` : "Savatingiz bo'sh"}
+                </span>
+              </div>
+              {cart.length > 0 && !ordered && (
+                <button
+                  type="button"
+                  className="page-cart-clear-btn"
+                  onClick={() => {
+                    if (confirm("Savatni tozalashni xohlaysizmi?")) {
+                      setCart([]);
+                      setToast("Savat tozalandi");
+                    }
+                  }}
+                >
+                  Tozalash
+                </button>
+              )}
+            </div>
+
+            {ordered ? (
+              <div className="page-cart-done-card">
+                <div className="done-icon-pulse">
+                  <Check size={36} strokeWidth={2.2} />
+                </div>
+                <h2>Buyurtmangiz qabul qilindi!</h2>
+                <p>
+                  Rahmat! Buyurtmangiz muvaffaqiyatli rasmiylashtirildi. Tez orada operatorimiz siz bilan bog'lanib, buyurtmani tasdiqlaydi.
+                </p>
+                <div className="done-details-box">
+                  <div className="done-row">
+                    <span>Yetkazib berish:</span>
+                    <strong>Bepul (1-3 kun)</strong>
+                  </div>
+                  <div className="done-row">
+                    <span>Holati:</span>
+                    <strong className="status-badge">Kutilmoqda</strong>
+                  </div>
+                </div>
+                <button className="btn btn-full done-back-btn" onClick={() => openCatalog()}>
+                  <span>Xaridni davom ettirish</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            ) : cart.length > 0 ? (
+              <div className="page-cart-content">
+                {/* Mahsulotlar ro'yxati */}
+                <div className="page-cart-items-card">
+                  {cart.map((item) => {
+                    const product = productsList.find((p) => p.id === item.id);
+                    if (!product) return null;
+                    return (
+                      <div className="page-cart-item-row" key={`${item.id}-${item.size}`}>
+                        <img
+                          src={product.images?.[0]?.src || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>DREEM ROOM</text></svg>"}
+                          alt={product.name}
+                          className="page-cart-item-thumb"
+                        />
+                        <div className="page-cart-item-meta">
+                          <h3 className="page-cart-item-name">{product.name}</h3>
+                          <div className="page-cart-item-tags">
+                            <span className="size-badge">O'lcham: {item.size}</span>
+                            {product.color && <span className="color-badge">{product.color}</span>}
+                          </div>
+                          <div className="page-cart-item-bottom">
+                            <span className="page-cart-item-price">{money(product.price * item.quantity)}</span>
+                            <div className="page-cart-qty-stepper">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  haptic(tgRef.current, "light");
+                                  changeQuantity(item.id, item.size, -1);
+                                }}
+                                aria-label="Kamaytirish"
+                              >
+                                <Minus size={13} />
+                              </button>
+                              <span>{item.quantity}</span>
+                              <button
+                                type="button"
+                                disabled={item.quantity >= 10}
+                                onClick={() => {
+                                  haptic(tgRef.current, "light");
+                                  changeQuantity(item.id, item.size, 1);
+                                }}
+                                aria-label="Ko'paytirish"
+                              >
+                                <Plus size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="page-cart-item-del"
+                          onClick={() => {
+                            haptic(tgRef.current, "light");
+                            setCart((curr) => curr.filter((r) => !(r.id === item.id && r.size === item.size)));
+                          }}
+                          aria-label="Olib tashlash"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* To'lov hisobi kartasi */}
+                <div className="page-cart-summary-card">
+                  <h3 className="summary-title">To'lov hisobi</h3>
+                  <div className="summary-row">
+                    <span>Mahsulotlar ({cartCount} ta):</span>
+                    <strong>{money(total)}</strong>
+                  </div>
+                  <div className="summary-row">
+                    <span>Yetkazib berish:</span>
+                    <strong className="text-free">Bepul</strong>
+                  </div>
+                  <div className="summary-divider" />
+                  <div className="summary-row total-row">
+                    <span>Jami to'lov:</span>
+                    <strong className="total-price">{money(total)}</strong>
+                  </div>
+                </div>
+
+                {/* Buyurtma formasi */}
+                <div className="page-cart-checkout-card">
+                  <h3 className="checkout-title">Yetkazib berish ma'lumotlari</h3>
+                  <form
+                    ref={orderFormRef}
+                    className="page-cart-form"
+                    onSubmit={placeOrder}
+                  >
+                    <label className="page-form-label">
+                      <span>Ism va familiyangiz *</span>
+                      <input
+                        name="name"
+                        autoComplete="name"
+                        defaultValue={profile?.name ?? ""}
+                        placeholder="Masalan: Aziz Rahimov"
+                        required
+                      />
+                    </label>
+                    <label className="page-form-label">
+                      <span>Telefon raqamingiz *</span>
+                      <input
+                        name="phone"
+                        type="tel"
+                        autoComplete="tel"
+                        placeholder="+998 90 123 45 67"
+                        defaultValue={profile?.phone ?? ""}
+                        required
+                      />
+                    </label>
+                    <label className="page-form-label">
+                      <span>Yetkazib berish manzili *</span>
+                      <input
+                        name="address"
+                        autoComplete="street-address"
+                        placeholder="Shahar, tuman, ko'cha, uy / xonadon"
+                        required
+                      />
+                    </label>
+                    <label className="page-form-label">
+                      <span>To'lov usuli</span>
+                      <select name="paymentMethod" defaultValue="Naqd pul / Karta (kuryerga)">
+                        <option value="Naqd pul / Karta (kuryerga)">Naqd pul / Karta (kuryerga)</option>
+                        <option value="Payme / Click (oldindan to'lov)">Payme / Click (oldindan to'lov)</option>
+                      </select>
+                    </label>
+
+                    <div className="page-cart-hint">
+                      <span className="hint-icon">🚚</span>
+                      <div>
+                        <strong>Yetkazib berish butunlay bepul</strong>
+                        <p>O'zbekiston bo'ylab 1-3 ish kunida xavfsiz yetkaziladi</p>
+                      </div>
+                    </div>
+
+                    <button type="submit" className="page-cart-submit-btn">
+                      <span>Buyurtmani tasdiqlash • {money(total)}</span>
+                      <ArrowRight size={17} />
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              <div className="page-cart-empty-card">
+                <div className="empty-cart-icon-wrap">
+                  <ShoppingBag size={44} strokeWidth={1.4} />
+                </div>
+                <h2>Savatingiz bo'sh</h2>
+                <p>Hozircha hech qanday mahsulot tanlanmadi. Yangi to'plamdan o'zingizga ma'qul kiyimlarni tanlang!</p>
+                <button
+                  type="button"
+                  className="btn btn-full empty-shop-btn"
+                  onClick={() => openCatalog()}
+                >
+                  <span>Katalogga o'tish</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =================================================================
+            PROFIL SAHIFASI (Mobil va Veb to'liq sahifa ko'rinishi)
+            ================================================================= */}
+        {view === "profile" && (
+          <div className="page-profile-container">
+            <div className="page-profile-header">
+              <div>
+                <h1 className="page-profile-title">Profil</h1>
+                <span className="page-profile-subtitle">Shaxsiy kabinet va sozlamalar</span>
+              </div>
+            </div>
+
+            {/* Foydalanuvchi qisqa kartochkasi */}
+            <div className="profile-identity-card">
+              <div className="profile-identity-avatar">
+                {profileName ? (
+                  profileName.charAt(0).toUpperCase()
+                ) : (
+                  <UserRound size={30} strokeWidth={1.7} />
+                )}
+              </div>
+              <div className="profile-identity-meta">
+                <h2 className="profile-identity-name">{profileName || "Hurmatli mijoz"}</h2>
+                <span className="profile-identity-phone">{profilePhone || "+998 -- --- -- --"}</span>
+                <span className="profile-identity-badge">DREEM ROOM a'zosi</span>
+              </div>
+            </div>
+
+            {/* Ma'lumotlarni tahrirlash kartasi */}
+            <div className="profile-edit-card">
+              <h3 className="profile-section-title">Shaxsiy ma'lumotlar</h3>
+              <p className="profile-section-desc">
+                Buyurtma berishda ushbu ma'lumotlar avtomatik to'ldiriladi.
+              </p>
+              <form
+                ref={profileFormRef}
+                className="profile-page-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  saveProfile();
+                }}
+              >
+                <label className="page-form-label">
+                  <span>Ism va familiyangiz</span>
+                  <input
+                    name="profile-name"
+                    autoComplete="name"
+                    value={profileName}
+                    onChange={(event) => setProfileName(event.target.value)}
+                    placeholder="Ismingizni kiriting"
+                    required
+                  />
+                </label>
+                <label className="page-form-label">
+                  <span>Telefon raqamingiz</span>
+                  <input
+                    name="profile-phone"
+                    type="tel"
+                    autoComplete="tel"
+                    value={profilePhone}
+                    onChange={(event) => setProfilePhone(event.target.value)}
+                    placeholder="+998 90 123 45 67"
+                    required
+                  />
+                </label>
+                <button className="btn btn-full profile-save-btn" type="submit">
+                  <span>Ma'lumotlarni saqlash</span>
+                  <Check size={16} strokeWidth={2} />
+                </button>
+              </form>
+            </div>
+
+            {/* Ilova bo'limlari va qulayliklar */}
+            <div className="profile-menu-card">
+              <h3 className="profile-section-title">Foydali bo'limlar</h3>
+              <div className="profile-menu-list">
+                <button
+                  type="button"
+                  className="profile-menu-item"
+                  onClick={goCart}
+                >
+                  <div className="menu-item-left">
+                    <span className="menu-item-icon"><ShoppingBag size={18} /></span>
+                    <div className="menu-item-text">
+                      <strong>Mening savatim</strong>
+                      <span>{cartCount > 0 ? `${cartCount} ta mahsulot bor` : "Hozircha bo'sh"}</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={17} className="menu-arrow" />
+                </button>
+
+                <button
+                  type="button"
+                  className="profile-menu-item"
+                  onClick={openContact}
+                >
+                  <div className="menu-item-left">
+                    <span className="menu-item-icon"><Phone size={18} /></span>
+                    <div className="menu-item-text">
+                      <strong>Biz bilan bog'lanish</strong>
+                      <span>Qo'llab-quvvatlash xizmati</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={17} className="menu-arrow" />
+                </button>
+
+                <button
+                  type="button"
+                  className="profile-menu-item"
+                  onClick={() => {
+                    if (productsList[0]) openProduct(productsList[0]);
+                    setShowSizeGuide(true);
+                  }}
+                >
+                  <div className="menu-item-left">
+                    <span className="menu-item-icon"><SlidersHorizontal size={18} /></span>
+                    <div className="menu-item-text">
+                      <strong>O'lchamlar jadvali</strong>
+                      <span>XS, S, M, L, XL o'lchamlari</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={17} className="menu-arrow" />
+                </button>
+              </div>
+            </div>
+
+            {/* Saqlangan profilni o'chirish */}
+            {profile && (
+              <div className="profile-logout-wrap">
+                <button
+                  type="button"
+                  className="profile-logout-btn"
+                  onClick={() => {
+                    if (confirm("Saqlangan profil ma'lumotlarini o'chirishni xohlaysizmi?")) {
+                      setProfile(null);
+                      setProfileName("");
+                      setProfilePhone("");
+                      setToast("Profil o'chirildi");
+                    }
+                  }}
+                >
+                  <Trash2 size={16} />
+                  <span>Saqlangan profilni o'chirish</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       <footer className="velvorn-footer" id="contact">
@@ -1342,7 +1688,7 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Mobil telefonlar uchun pastki suzuvchi dok navigatsiya paneli (Tabbar Dock) */}
+      {/* Mobil telefonlar uchun pastki navigatsiya paneli (Tabbar: Asosiy, Katalog, Savat, Profil) */}
       <nav className="tabbar" aria-label="Mobil navigatsiya">
         <button
           className={view === "home" && !panel ? "tab is-active" : "tab"}
@@ -1350,7 +1696,7 @@ export default function App() {
           aria-label="Asosiy"
         >
           <span className="tab-icon">
-            <Home size={22} strokeWidth={1.8} />
+            <Home size={21} strokeWidth={1.8} />
           </span>
           <span className="tab-label">Asosiy</span>
         </button>
@@ -1361,47 +1707,32 @@ export default function App() {
           aria-label="Katalog"
         >
           <span className="tab-icon">
-            <Grid2X2 size={22} strokeWidth={1.8} />
+            <Grid2X2 size={21} strokeWidth={1.8} />
           </span>
           <span className="tab-label">Katalog</span>
         </button>
 
         <button
-          className={panel === "wishlist" ? "tab is-active" : "tab"}
-          onClick={() => {
-            haptic(tgRef.current, "light");
-            setPanel("wishlist");
-          }}
-          aria-label="Sevimlilar"
-        >
-          <span className="tab-icon">
-            <Heart size={22} strokeWidth={1.8} />
-            {wishlist.length > 0 && <span className="tab-badge">{wishlist.length}</span>}
-          </span>
-          <span className="tab-label">Sevimlilar</span>
-        </button>
-
-        <button
-          className={panel === "profile" ? "tab is-active" : "tab"}
-          onClick={openProfile}
-          aria-label="Profil"
-        >
-          <span className="tab-icon">
-            <UserRound size={22} strokeWidth={1.8} />
-          </span>
-          <span className="tab-label">Profil</span>
-        </button>
-
-        <button
-          className={panel === "cart" ? "tab is-active" : "tab"}
-          onClick={openCart}
+          className={(view === "cart" || panel === "cart") ? "tab is-active" : "tab"}
+          onClick={goCart}
           aria-label="Savat"
         >
           <span className="tab-icon">
-            <ShoppingBag size={22} strokeWidth={1.8} />
+            <ShoppingBag size={21} strokeWidth={1.8} />
             {cartCount > 0 && <span className="tab-badge">{cartCount}</span>}
           </span>
           <span className="tab-label">Savat</span>
+        </button>
+
+        <button
+          className={(view === "profile" || panel === "profile") ? "tab is-active" : "tab"}
+          onClick={goProfile}
+          aria-label="Profil"
+        >
+          <span className="tab-icon">
+            <UserRound size={21} strokeWidth={1.8} />
+          </span>
+          <span className="tab-label">Profil</span>
         </button>
       </nav>
 
