@@ -3527,8 +3527,9 @@ body.in-telegram .mobile-app-layout {
     justify-content: space-between !important;
   }
 
-  /* Desktop menyu havolalari telefonda yashiriladi */
-  .velvorn-nav {
+  /* Desktop menyu havolalari va veb-futer telefonda yashiriladi */
+  .velvorn-nav,
+  .velvorn-footer {
     display: none !important;
   }
 
@@ -4581,9 +4582,10 @@ body.in-telegram .mobile-app-layout {
   .velvorn-sportswear-container {
     grid-template-columns: 1fr;
   }
-  .velvorn-footer-inner {
-    grid-template-columns: 1fr;
-    gap: 32px;
+  /* Mobil ilova qolipi: ortiqcha veb-futer mobilda butunlay ko'rinmaydi */
+  .velvorn-footer,
+  .footer {
+    display: none !important;
   }
 }
 
