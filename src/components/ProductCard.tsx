@@ -2,6 +2,8 @@ import { useState, useRef, type TouchEvent, type MouseEvent } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { money, type Product } from "../data";
 
+import { defaultBrandConfig } from "../config/brandConfig";
+
 type Props = {
   product: Product;
   onOpen: (product: Product) => void;
@@ -26,7 +28,7 @@ export default function ProductCard({
   const isSwiping = useRef(false);
 
   const fallbackSvg =
-    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='700' fill='%23eae6df'><rect width='600' height='700' fill='%23eae6df'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%238c899a' font-family='sans-serif' font-size='20'>DREEM ROOM</text></svg>";
+    `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='700' fill='%23eae6df'><rect width='600' height='700' fill='%23eae6df'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%238c899a' font-family='sans-serif' font-size='20'>${defaultBrandConfig.brandName}</text></svg>`;
 
   const images =
     product.images && product.images.length > 0

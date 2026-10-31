@@ -30,6 +30,8 @@ import {
   deleteBanner,
   getContacts,
   setContacts,
+  getStoreSettings,
+  setStoreSettings,
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -117,7 +119,7 @@ export function verifyAdminAuth(req) {
   if (authHeader.startsWith("Bearer ")) {
     token = authHeader.substring(7).trim();
   } else if (req.headers["cookie"]) {
-    const match = req.headers["cookie"].match(/dreem_token=([^;]+)/);
+    const match = req.headers["cookie"].match(/(?:brand_token|admin_token|dreem_token)=([^;]+)/);
     if (match) token = match[1];
   }
 
@@ -701,6 +703,26 @@ export async function handleApiRequest(req, res) {
     const body = await parseBody(req);
     const saved = await setContacts(body);
     sendJson(res, 200, saved);
+    return true;
+  }
+
+  // ------------------------------------------------------------------------
+  // J. STORE SETTINGS API (BREND VA SAYT SOZLAMALARI)
+  // ------------------------------------------------------------------------
+  if (req.method === "GET" && (pathname === "/api/settings" || pathname === "/api/admin/settings")) {
+    const settings = await getStoreSettings();
+    sendJson(res, 200, settings);
+    return true;
+  }
+
+  if ((req.method === "POST" || req.method === "PUT") && (pathname === "/api/settings" || pathname === "/api/admin/settings")) {
+    if (!verifyAdminAuth(req)) {
+      sendJson(res, 401, { error: "Admin ruxsati zarur" });
+      return true;
+    }
+    const body = await parseBody(req);
+    const saved = await setStoreSettings(body);
+    sendJson(res, 200, { success: true, settings: saved });
     return true;
   }
 

@@ -19,6 +19,7 @@ import {
   saveTelegramGroup,
   getTelegramGroups,
 } from "./db.js";
+import { brandConfig } from "./brand.config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,25 +30,37 @@ const ORDERS_FILE = path.join(__dirname, "orders.json");
 const OWNER_TELEGRAM_ID = process.env.OWNER_TELEGRAM_ID ? String(process.env.OWNER_TELEGRAM_ID).trim() : "";
 
 // ==========================================================================
-// 1. NICHE CONFIGURATION (Hamma matn va tugmalar shu yerdan o'qiladi)
+// 1. BRAND CONFIGURATION (Hamma matn va tugmalar brand.config dan o'qiladi)
 // ==========================================================================
-function getNicheConfig() {
-  try {
-    const configPath = path.join(__dirname, "niche.config.json");
-    if (fs.existsSync(configPath)) {
-      return JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    }
-  } catch (err) {
-    console.error("niche.config.json o'qishda xatolik:", err.message);
-  }
-  return {};
+function getBrandConfig() {
+  return brandConfig;
 }
 
-let nicheConfig = getNicheConfig();
-
 function getMsg(key, params = {}) {
-  nicheConfig = getNicheConfig();
-  let text = nicheConfig.bot?.messages?.[key] || "";
+  const cfg = getBrandConfig();
+  let text = cfg.bot?.messages?.[key] || "";
+  if (!text) {
+    // Default fallback xabarlar
+    const fallbacks = {
+      welcomeAdmin: `👋 <b>Assalomu alaykum, Hurmatli Admin ({name})!</b>\n\nSiz do'kon administratorisiz. Quyidagi menyu orqali yangi mahsulot qo'shishingiz, o'chirishingiz yoki do'kon hisobotini ko'rishingiz mumkin.\n\n📢 Ulangan kanal/guruh: <code>{channel}</code>`,
+      welcomeUser: cfg.bot?.welcomeMessage || `🌸 <b>Assalomu alaykum, xush kelibsiz!</b>\n\nBizning barcha yangi to'plamlarimizni ko'rish, o'lchamlarni tanlash va buyurtma berish uchun quyidagi tugmani bosing:`,
+      stepPhoto: `📸 <b>Mahsulot rasmlarini yuboring (1 tadan 4 tagacha):</b>\n\n💡 <i>1-rasm bosh asosiy rasm bo'ladi, qolganlari qo'shimcha rakurslar bo'ladi.\nRasmlarni yuborib bo'lgach, tagiga nom va narxini yozishingiz yoki keyingi qadamga o'tishingiz mumkin!</i>`,
+      stepName: `📝 <b>1-qadam. Mahsulot nomini yozing:</b>\n<i>Masalan: <code>Dvoyka to'plam</code> yoki <code>Klassik kardigan</code></i>`,
+      stepPrice: `💰 <b>2-qadam. Mahsulot narxini kiriting:</b>\n<i>Masalan: <code>350000</code> yoki <code>350 ming</code></i>`,
+      stepSizes: `📏 <b>3-qadam. O'lchamini (variantini) tanlang:</b>`,
+      stepChannel: `📢 <b>4-qadam. Ushbu mahsulotni qaysi kanal yoki guruhga joylaysiz?</b>`,
+      stepConfirm: `📋 <b>5-qadam. Mahsulot ma'lumotlarini tekshiring va tasdiqlang:</b>\n\n👗 <b>Nomi:</b> {name}\n💰 <b>Narxi:</b> {price}\n📏 <b>O'lchamlari:</b> {sizes}\n📂 <b>Kategoriyasi:</b> {category}\n🖼 <b>Rasmlar soni:</b> {photoCount} ta\n📢 <b>Joylanadigan manzil:</b> {targetChannel}`,
+      deploySuccess: `🎉 <b>Mahsulot muvaffaqiyatli saqlandi!</b>\n\n👗 <b>Nom:</b> {name}\n💰 <b>Narx:</b> {price}\n📏 <b>O'lcham:</b> {sizes}\n📂 <b>Kategoriya:</b> {category}\n\n{channelResult}🌐 <b>Veb-sayt va mini appda darhol ko'rish mumkin!</b>`,
+      deployCanceled: `❌ Mahsulot qo'shish bekor qilindi. Hech qanday ma'lumot saqlanmadi.`,
+      invalidPrice: `❌ <b>Noto'g'ri narx!</b> Faqat raqam kiriting (masalan: <code>350000</code>):`,
+      accessDenied: `⛔ Kechirasiz, ushbu amal faqat do'kon administratorlari uchun.`,
+      reportTitle: `📊 <b>Do'kon hisoboti:</b>`,
+      noProductsToDelete: `ℹ️ Hozirda do'konda o'chirish uchun mahsulotlar yo'q.`,
+      deleteSelect: `🗑 <b>O'chirmoqchi bo'lgan mahsulotingizni tanlang:</b>\n<i>(Saytdan ham, ulangan kanaldan ham o'chiriladi)</i>`,
+      deleteSuccess: `✅ <b>"{name}" sayt va kanaldan muvaffaqiyatli o'chirildi!</b>`,
+    };
+    text = fallbacks[key] || "";
+  }
   for (const [k, v] of Object.entries(params)) {
     text = text.replaceAll(`{${k}}`, String(v));
   }
@@ -55,14 +68,26 @@ function getMsg(key, params = {}) {
 }
 
 function getBtn(key) {
-  nicheConfig = getNicheConfig();
-  return nicheConfig.bot?.buttons?.[key] || "";
+  const cfg = getBrandConfig();
+  const fallbacks = {
+    add: "➕ Qo'shish",
+    delete: "🗑 O'chirish",
+    report: "📊 Hisobot",
+    launchApp: "🛍 Do'konni ochish",
+    buyNow: "🛍 Buyurtma berish",
+    confirmDeploy: "✅ Tasdiqlash va chiqarish",
+    cancelDeploy: "❌ Bekor qilish",
+    onlySite: "🌐 Faqat saytga (Kanalga shart emas)",
+    customSize: "✍️ Boshqa o'lcham",
+    photosReady: "✅ Rasmlar tayyor",
+  };
+  return cfg.bot?.buttons?.[key] || fallbacks[key] || "";
 }
 
 function getSizePresets() {
-  nicheConfig = getNicheConfig();
+  const cfg = getBrandConfig();
   return (
-    nicheConfig.bot?.sizePresets || [
+    cfg.bot?.sizePresets || [
       { id: "XS_S_M_L_XL", label: "✨ XS, S, M, L, XL", sizes: ["XS", "S", "M", "L", "XL"] },
       { id: "S_M_L", label: "S, M, L", sizes: ["S", "M", "L"] },
       { id: "Standart", label: "Standart (Universal)", sizes: ["Standart"] },
@@ -255,13 +280,12 @@ function parseNameAndPrice(text = "") {
 
 function detectCategory(name) {
   const n = (name || "").toLowerCase();
-  if (n.includes("kurtka") || n.includes("jaket") || n.includes("palto")) return "Kurtka";
-  if (n.includes("chopon")) return "Choponlar";
-  if (n.includes("sviter") || n.includes("kardigan") || n.includes("jemper")) return "Sviter";
-  if (n.includes("sport") || n.includes("dvoyka") || n.includes("troyka")) return "Sport kiyimlari";
-  if (n.includes("ko'ylak") || n.includes("dress")) return "Ko'ylaklar";
-  if (n.includes("shim") || n.includes("jinsi") || n.includes("bryuk")) return "Shimlar";
-  return "Katalog";
+  for (const cat of brandConfig.categories || []) {
+    if (cat.keywords && cat.keywords.some((kw) => n.includes(kw.toLowerCase()))) {
+      return cat.name;
+    }
+  }
+  return brandConfig.categories?.[0]?.name || "Katalog";
 }
 
 // Bosh klaviatura (Faqat Adminlar uchun ko'rinadi)
@@ -965,8 +989,8 @@ async function autoDeployProduct(chatId, userId, state) {
   const targetChat = state.chosenChatId !== undefined ? state.chosenChatId : config.targetChatId;
 
   // Mini App va Bot havolasi
-  const appName = process.env.TELEGRAM_APP_NAME || nicheConfig.telegramAppName || "app";
-  const botUsername = (config.botUsername || process.env.BOT_USERNAME || "dreemroom_bot").replace(/^@/, "");
+  const appName = process.env.TELEGRAM_APP_NAME || brandConfig.bot?.APP_NAME || "app";
+  const botUsername = (config.botUsername || process.env.BOT_USERNAME || brandConfig.bot?.BOT_USERNAME || "bot").replace(/^@/, "");
 
   // Talab bo'yicha: https://t.me/{BOT_USERNAME}/{APP_NAME}?startapp=product_{id}
   const buyUrl = `https://t.me/${botUsername}/${appName}?startapp=product_${productId}`;

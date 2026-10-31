@@ -12,6 +12,8 @@ try {
   }
 } catch {}
 
+import { brandConfig } from "./brand.config.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
@@ -127,7 +129,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 DREEM ROOM Server running on http://localhost:${PORT}`);
+  console.log(`🚀 ${brandConfig.brandName} Server running on http://localhost:${PORT}`);
   console.log(`📦 REST API available at http://localhost:${PORT}/api/products`);
   console.log(`🛠 Admin panel at http://localhost:${PORT}/admin`);
 });

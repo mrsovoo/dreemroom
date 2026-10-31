@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { neon } from "@neondatabase/serverless";
+import { brandConfig } from "./brand.config.js";
 
 try {
   if (typeof process.loadEnvFile === "function") {
@@ -1242,12 +1243,12 @@ export async function createBanner(bannerData) {
 
   const newBanner = {
     id,
-    src: src || "/image-landing/banner-1.jpg",
-    alt: bannerData.alt || "DREEM ROOM",
-    title: bannerData.title || "DAILY WINDS FOR COLORS",
-    subtitle: bannerData.subtitle || "Zamonaviy bichim va yuqori sifatli matolar.",
-    eyebrow: bannerData.eyebrow || "DREEM ROOM • COLLECTION",
-    buttonText: bannerData.buttonText || "TO'PLAMNI KO'RISH",
+    src: src || brandConfig.hero?.banner || "/image-landing/banner-1.jpg",
+    alt: bannerData.alt || brandConfig.brandName,
+    title: bannerData.title || brandConfig.hero?.title || "DAILY WINDS FOR COLORS",
+    subtitle: bannerData.subtitle || brandConfig.hero?.subtitle || "Zamonaviy bichim va yuqori sifatli matolar.",
+    eyebrow: bannerData.eyebrow || brandConfig.hero?.eyebrow || `${brandConfig.brandName} • COLLECTION`,
+    buttonText: bannerData.buttonText || brandConfig.hero?.buttonText || "TO'PLAMNI KO'RISH",
     position: Number(bannerData.position) || 0,
     created_at: new Date().toISOString(),
   };
@@ -1326,15 +1327,15 @@ export async function deleteBanner(id) {
 // --------------------------------------------------------------------------
 const CONTACTS_FILE = path.join(__dirname, "contacts.json");
 const DEFAULT_CONTACTS = {
-  phone: "+998 90 123 45 67",
-  telegram: "@dreemroom",
-  telegramUrl: "https://t.me/dreemroom",
-  instagram: "@dreemroom",
-  instagramUrl: "https://instagram.com/dreemroom",
-  address: "Toshkent shahri, O'zbekiston",
-  workHours: "Har kuni 09:00 — 21:00",
-  email: "info@dreemroom.uz",
-  brandDesc: "Zamonaviy va premium sifatdagi kiyimlar to'plami. Sifatli va bejirim uslub kafolati.",
+  phone: brandConfig.contacts?.phone || "+998 90 123 45 67",
+  telegram: brandConfig.contacts?.telegram || "@brand",
+  telegramUrl: brandConfig.contacts?.telegramUrl || "https://t.me/brand",
+  instagram: brandConfig.contacts?.instagram || "@brand",
+  instagramUrl: brandConfig.contacts?.instagramUrl || "https://instagram.com/brand",
+  address: brandConfig.contacts?.address || "Toshkent shahri, O'zbekiston",
+  workHours: brandConfig.contacts?.workHours || "Har kuni 09:00 — 21:00",
+  email: brandConfig.contacts?.email || "info@brand.uz",
+  brandDesc: brandConfig.footer?.description || brandConfig.tagline || "Zamonaviy kiyimlar to'plami.",
 };
 
 export async function getContacts() {
@@ -1410,5 +1411,78 @@ export async function setContacts(data) {
 
   return merged;
 }
+
+// --------------------------------------------------------------------------
+// 8. STORE SETTINGS (BREND SOZLAMALARI: BAZA VA BRAND.CONFIG BIRIKMASI)
+// --------------------------------------------------------------------------
+const SETTINGS_FILE = path.join(__dirname, "settings.json");
+
+export async function getStoreSettings() {
+  let dbSettings = {};
+
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`SELECT value FROM bot_config WHERE key = 'store_settings' LIMIT 1;`;
+      if (rows && rows.length > 0 && rows[0].value) {
+        dbSettings = rows[0].value;
+      }
+    } catch (err) {
+      console.warn("[DB WARNING]: Sozlamalar o'qishda xatolik:", err.message);
+    }
+  } else {
+    try {
+      if (fs.existsSync(SETTINGS_FILE)) {
+        dbSettings = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
+      }
+    } catch {}
+  }
+
+  // brandConfig ni asos sifatida olib, admin paneldan o'zgartirilgan maydonlarni ustiga qo'shish
+  return {
+    ...brandConfig,
+    ...dbSettings,
+    colors: { ...brandConfig.colors, ...(dbSettings.colors || {}) },
+    font: { ...brandConfig.font, ...(dbSettings.font || {}) },
+    hero: { ...brandConfig.hero, ...(dbSettings.hero || {}) },
+    contacts: { ...brandConfig.contacts, ...(dbSettings.contacts || {}) },
+    bot: { ...brandConfig.bot, ...(dbSettings.bot || {}) },
+    features: { ...brandConfig.features, ...(dbSettings.features || {}) },
+  };
+}
+
+export async function setStoreSettings(overrides = {}) {
+  const current = await getStoreSettings();
+  const merged = {
+    ...current,
+    ...overrides,
+    colors: { ...current.colors, ...(overrides.colors || {}) },
+    font: { ...current.font, ...(overrides.font || {}) },
+    hero: { ...current.hero, ...(overrides.hero || {}) },
+    contacts: { ...current.contacts, ...(overrides.contacts || {}) },
+    bot: { ...current.bot, ...(overrides.bot || {}) },
+    features: { ...current.features, ...(overrides.features || {}) },
+  };
+
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        INSERT INTO bot_config (key, value)
+        VALUES ('store_settings', ${JSON.stringify(merged)})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+      `;
+    } catch (err) {
+      console.warn("[DB WARNING]: Sozlamalar yozishda xatolik:", err.message);
+    }
+  }
+
+  try {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(merged, null, 2), "utf-8");
+  } catch {}
+
+  return merged;
+}
+
 
 

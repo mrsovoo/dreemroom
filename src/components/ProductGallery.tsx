@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Share2 } from "lucide-react";
 import type { Product } from "../data";
+import { defaultBrandConfig } from "../config/brandConfig";
 
 type Props = {
   product: Product;
@@ -13,7 +14,7 @@ export default function ProductGallery({ product, haptic, onShare }: Props) {
   const [index, setIndex] = useState(0);
 
   const fallbackSvg =
-    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%23f0f0f2'><rect width='600' height='800' fill='%23f0f0f2'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%238c899a' font-family='sans-serif' font-size='20' letter-spacing='2'>DREEM ROOM</text></svg>";
+    `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%23f0f0f2'><rect width='600' height='800' fill='%23f0f0f2'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%238c899a' font-family='sans-serif' font-size='20' letter-spacing='2'>${defaultBrandConfig.brandName}</text></svg>`;
 
   // Agar mahsulotda bir nechta rasm bo'lsa, ulardan foydalanamiz;
   // Aks holda dizayn referensidagi kabi 4 ta ko'rinish nuqtalarini yaratamiz

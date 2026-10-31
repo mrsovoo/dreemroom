@@ -1,3 +1,5 @@
+import { defaultBrandConfig } from "./config/brandConfig";
+
 export type ProductImage = {
   src: string;
   alt: string;
@@ -24,11 +26,20 @@ export type Product = {
 
 export const allCategory = "Barchasi";
 
-export const categories = [allCategory, "Kurtka", "Sviter", "Kostyumlar", "Choponlar", "Sport kiyimlari"];
+export const categories = [
+  allCategory,
+  ...(defaultBrandConfig.categories?.map((c) => c.name) || [
+    "Kurtka",
+    "Sviter",
+    "Kostyumlar",
+    "Choponlar",
+    "Sport kiyimlari",
+  ]),
+];
 
 export const products: Product[] = [];
 
-export const sizes = ["XS", "S", "M", "L", "XL"];
+export const sizes = defaultBrandConfig.sizes || ["XS", "S", "M", "L", "XL"];
 
 export function money(value: number, explicitDisplay?: string): string {
   if (explicitDisplay && !explicitDisplay.includes("$")) {
@@ -39,5 +50,6 @@ export function money(value: number, explicitDisplay?: string): string {
   if (num > 0 && num < 1000) {
     num = num * 1000;
   }
-  return `${num.toLocaleString("ru-RU")} so'm`;
+  const curr = defaultBrandConfig.currency || "so'm";
+  return `${num.toLocaleString("ru-RU")} ${curr}`;
 }

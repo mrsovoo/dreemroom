@@ -5,21 +5,35 @@
 }
 
 :root {
-  /* Asosiy palitra: #403D4F va #ffffff hamda ulardan olingan ohanglar. */
-  --brand: #403D4F;
-  --brand-hover: #322F3E;
-  --brand-light: rgba(64, 61, 79, 0.08);
-  --ink: #403d4f;
-  --ink-strong: #2f2d3a;
-  --ink-hover: #524e63;
-  --muted: #6b6780;
-  --line: #e6e4ec;
-  --surface: #f7f6f9;
-  --white: #ffffff;
+  /* Standart kiyim-kechak shabloni CSS o'zgaruvchilari (brand.config.js dan boshqariladi) */
+  --color-primary: #18181b;
+  --color-secondary: #27272a;
+  --color-accent: #b5935b;
+  --color-background: #fafafa;
+  --color-text: #18181b;
+  --color-card: #ffffff;
+  --color-border: rgba(0, 0, 0, 0.08);
 
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: var(--ink);
-  background: var(--white);
+  --font-heading: 'Cinzel', -apple-system, BlinkMacSystemFont, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --radius-card: 16px;
+  --radius-button: 9999px;
+
+  /* Mavjud komponentlar bilan to'liq 100% moslik (Legacy mapping) */
+  --brand: var(--color-primary);
+  --brand-hover: var(--color-secondary);
+  --brand-light: rgba(24, 24, 27, 0.08);
+  --ink: var(--color-text);
+  --ink-strong: var(--color-primary);
+  --ink-hover: var(--color-secondary);
+  --muted: #71717a;
+  --line: var(--color-border);
+  --surface: #f4f4f7;
+  --white: var(--color-card);
+
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-background);
   -webkit-font-smoothing: antialiased;
   font-synthesis: none;
 }

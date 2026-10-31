@@ -850,6 +850,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           <span>Aloqa & Manzil</span>
         </button>
+
+        <button class="nav-btn" data-tab="settings" onclick="setTab('settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Sozlamalar</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -1238,6 +1243,118 @@
             </form>
           </div>
         </section>
+
+        <!-- TAB: SOZLAMALAR (BRAND & THEME SETTINGS) -->
+        <section class="tab-view" id="view-settings">
+          <div class="panel" style="max-width: 860px; margin: 0 auto;">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">⚙️ Brend va Sayt Sozlamalari</h2>
+                <p style="font-size: 13px; color: var(--ink-muted); margin-top: 2px;">
+                  Ushbu bo'lim orqali logotip, asosiy ranglar, kontaktlar va bosh sahifa matnlarini o'zgartirishingiz mumkin.
+                </p>
+              </div>
+            </div>
+
+            <form id="settingsForm" onsubmit="handleSaveSettings(event)" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+              <!-- 1. Brend va Logotip -->
+              <div style="border-bottom: 1px solid var(--border-light); padding-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">🏷 Brend va Logotip</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div class="field-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Brend nomi</label>
+                    <input type="text" id="settBrandName" placeholder="Masalan: DREEM ROOM" required style="width: 100%;">
+                  </div>
+                  <div class="field-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Qisqa nom</label>
+                    <input type="text" id="settShortName" placeholder="Masalan: DREEM" style="width: 100%;">
+                  </div>
+                </div>
+                <div class="field-group" style="margin-top: 10px;">
+                  <label style="font-weight: 600; display: block; margin-bottom: 6px;">Logotip fayli yo'li (yoki URL)</label>
+                  <input type="text" id="settLogo" placeholder="/brand/logo.svg" required style="width: 100%;">
+                </div>
+                <div class="field-group" style="margin-top: 10px;">
+                  <label style="font-weight: 600; display: block; margin-bottom: 6px;">Shior (Tagline)</label>
+                  <input type="text" id="settTagline" placeholder="Ayollar uchun zamonaviy kiyimlar..." style="width: 100%;">
+                </div>
+              </div>
+
+              <!-- 2. Dizayn va Ranglar -->
+              <div style="border-bottom: 1px solid var(--border-light); padding-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">🎨 Dizayn va Ranglar</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div class="field-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Asosiy rang (Primary)</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <input type="color" id="settPrimaryColorPicker" style="width: 44px; height: 38px; border: none; cursor: pointer; border-radius: 6px;" oninput="document.getElementById('settPrimaryColor').value = this.value">
+                      <input type="text" id="settPrimaryColor" placeholder="#18181b" required style="flex: 1;" oninput="document.getElementById('settPrimaryColorPicker').value = this.value">
+                    </div>
+                  </div>
+                  <div class="field-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Ikkilamchi rang (Secondary)</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <input type="color" id="settSecondaryColorPicker" style="width: 44px; height: 38px; border: none; cursor: pointer; border-radius: 6px;" oninput="document.getElementById('settSecondaryColor').value = this.value">
+                      <input type="text" id="settSecondaryColor" placeholder="#27272a" style="flex: 1;" oninput="document.getElementById('settSecondaryColorPicker').value = this.value">
+                    </div>
+                  </div>
+                </div>
+                <div class="field-group" style="margin-top: 10px;">
+                  <label style="font-weight: 600; display: block; margin-bottom: 6px;">Burchak yumaloqligi (Radius)</label>
+                  <input type="text" id="settRadius" placeholder="16px" style="width: 100%;">
+                </div>
+              </div>
+
+              <!-- 3. Hero va Bosh sahifa -->
+              <div style="border-bottom: 1px solid var(--border-light); padding-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">✨ Bosh Sahifa (Hero) Matnlari</h3>
+                <div class="field-group">
+                  <label style="font-weight: 600; display: block; margin-bottom: 6px;">Bosh banner sarlavhasi</label>
+                  <input type="text" id="settHeroTitle" placeholder="Yangi To'plam 2026" required style="width: 100%;">
+                </div>
+                <div class="field-group" style="margin-top: 10px;">
+                  <label style="font-weight: 600; display: block; margin-bottom: 6px;">Bosh banner tavsifi</label>
+                  <input type="text" id="settHeroSubtitle" placeholder="Eksklyuziv kiyimlar va betakror uslub" style="width: 100%;">
+                </div>
+                <div class="field-group" style="margin-top: 10px;">
+                  <label style="font-weight: 600; display: block; margin-bottom: 6px;">Harakat tugmasi matni</label>
+                  <input type="text" id="settHeroButton" placeholder="Katalogni ko'rish" style="width: 100%;">
+                </div>
+              </div>
+
+              <!-- 4. Aloqa & Ijtimoiy tarmoqlar -->
+              <div style="padding-bottom: 10px;">
+                <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">📞 Aloqa & Ijtimoiy Tarmoqlar</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div class="field-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Telefon raqami</label>
+                    <input type="text" id="settPhone" placeholder="+998 90 123 45 67" required style="width: 100%;">
+                  </div>
+                  <div class="field-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Telegram havolasi</label>
+                    <input type="text" id="settTelegram" placeholder="https://t.me/dreemroom" style="width: 100%;">
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px;">
+                  <div class="field-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Instagram havolasi</label>
+                    <input type="text" id="settInstagram" placeholder="https://instagram.com/dreemroom" style="width: 100%;">
+                  </div>
+                  <div class="field-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Do'kon manzili</label>
+                    <input type="text" id="settAddress" placeholder="Toshkent sh., Bunyodkor ko'chasi" style="width: 100%;">
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+                <button type="submit" class="btn btn-primary" id="btnSaveSettings" style="padding: 12px 32px; font-weight: 700; font-size: 15px;">
+                  💾 Sozlamalarni Saqlash
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -1616,7 +1733,8 @@
       reports: "Hisobot",
       faollar: "Faollar va Guruhlar",
       banners: "Asosiy sahifa bannyerlari",
-      contacts: "Aloqa va Manzil sozlamalari"
+      contacts: "Aloqa va Manzil sozlamalari",
+      settings: "Brend va Sayt Sozlamalari"
     };
 
     function setTab(tab) {
@@ -1638,6 +1756,7 @@
       if (tab === "faollar") renderFaollar();
       if (tab === "banners") renderBanners();
       if (tab === "contacts") renderContacts();
+      if (tab === "settings") renderSettings();
     }
 
     function toggleSidebar() {
@@ -2677,7 +2796,121 @@
       }
     }
 
+    // --- BREND VA SAYT SOZLAMALARI ---
+    let currentStoreSettings = null;
+
+    async function loadGlobalAdminBranding() {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const cfg = await res.json();
+          currentStoreSettings = cfg;
+          if (cfg.brandName) {
+            document.title = `${cfg.brandName} — Admin`;
+            const loginLogo = document.querySelector(".login-logo");
+            if (loginLogo) loginLogo.textContent = cfg.brandName;
+            const sidebarTitle = document.querySelector(".brand-title");
+            if (sidebarTitle) {
+              sidebarTitle.innerHTML = `<span style="font-weight: 800; font-size: 18px; letter-spacing: 0.05em; color: var(--brand);">${cfg.brandName}</span>`;
+            }
+          }
+          if (cfg.colors?.primary) {
+            document.documentElement.style.setProperty("--brand", cfg.colors.primary);
+            document.documentElement.style.setProperty("--brand-hover", cfg.colors.secondary || cfg.colors.primary);
+          }
+        }
+      } catch (err) {
+        console.warn("Branding yuklanmadi:", err.message);
+      }
+    }
+
+    async function renderSettings() {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const cfg = await res.json();
+          currentStoreSettings = cfg;
+          document.getElementById("settBrandName").value = cfg.brandName || "";
+          document.getElementById("settShortName").value = cfg.shortName || "";
+          document.getElementById("settLogo").value = cfg.logo || "";
+          document.getElementById("settTagline").value = cfg.tagline || "";
+
+          const primary = cfg.colors?.primary || "#18181b";
+          document.getElementById("settPrimaryColor").value = primary;
+          document.getElementById("settPrimaryColorPicker").value = primary.startsWith("#") ? primary : "#18181b";
+
+          const secondary = cfg.colors?.secondary || "#27272a";
+          document.getElementById("settSecondaryColor").value = secondary;
+          document.getElementById("settSecondaryColorPicker").value = secondary.startsWith("#") ? secondary : "#27272a";
+
+          document.getElementById("settRadius").value = cfg.radius || "16px";
+
+          document.getElementById("settHeroTitle").value = cfg.hero?.title || "";
+          document.getElementById("settHeroSubtitle").value = cfg.hero?.subtitle || "";
+          document.getElementById("settHeroButton").value = cfg.hero?.buttonText || "";
+
+          document.getElementById("settPhone").value = cfg.contacts?.phone || "";
+          document.getElementById("settTelegram").value = cfg.contacts?.telegramUrl || cfg.contacts?.telegram || "";
+          document.getElementById("settInstagram").value = cfg.contacts?.instagramUrl || cfg.contacts?.instagram || "";
+          document.getElementById("settAddress").value = cfg.contacts?.address || "";
+        }
+      } catch (err) {
+        showToast("Sozlamalarni yuklab bo'lmadi: " + err.message);
+      }
+    }
+
+    async function handleSaveSettings(e) {
+      if (e) e.preventDefault();
+      const btn = document.getElementById("btnSaveSettings");
+      btn.disabled = true;
+      btn.textContent = "Saqlanmoqda...";
+
+      const payload = {
+        brandName: document.getElementById("settBrandName").value.trim(),
+        shortName: document.getElementById("settShortName").value.trim(),
+        logo: document.getElementById("settLogo").value.trim(),
+        tagline: document.getElementById("settTagline").value.trim(),
+        colors: {
+          primary: document.getElementById("settPrimaryColor").value.trim(),
+          secondary: document.getElementById("settSecondaryColor").value.trim(),
+        },
+        radius: document.getElementById("settRadius").value.trim(),
+        hero: {
+          title: document.getElementById("settHeroTitle").value.trim(),
+          subtitle: document.getElementById("settHeroSubtitle").value.trim(),
+          buttonText: document.getElementById("settHeroButton").value.trim(),
+        },
+        contacts: {
+          phone: document.getElementById("settPhone").value.trim(),
+          telegramUrl: document.getElementById("settTelegram").value.trim(),
+          instagramUrl: document.getElementById("settInstagram").value.trim(),
+          address: document.getElementById("settAddress").value.trim(),
+        }
+      };
+
+      try {
+        const res = await fetch("/api/admin/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast("Brend sozlamalari muvaffaqiyatli saqlandi! Sayt yangilandi ✓");
+          await loadGlobalAdminBranding();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          showToast("Xatolik: " + (err.error || "Sozlamalar saqlanmadi"));
+        }
+      } catch (err) {
+        showToast("Tarmoq xatosi: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "💾 Sozlamalarni Saqlash";
+      }
+    }
+
     // Start
+    loadGlobalAdminBranding();
     checkAuth();
   </script>
 </body>
