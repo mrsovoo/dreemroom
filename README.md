@@ -27,7 +27,7 @@ Ushbu shablon kiyim-kechak do'konlari uchun standartlashtirilgan bo'lib, yangi m
 ## 🛠 Texnologiyalar (Stack)
 
 - **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4, Motion (`motion/react`), Lucide React.
-- **Backend:** Node.js HTTP Server (`server.js`), RESTful API (`api-core.js`), Vercel Serverless Functions (`api/index.js`, `api/cron-daily-report.js`).
+- **Backend:** Node.js HTTP Server (`server.js`), RESTful API (`api-core.js`), Railway / VPS uchun yagona jarayonli arxitektura.
 - **Ma'lumotlar Bazasi:** Neon Serverless PostgreSQL (`@neondatabase/serverless`), in-memory kesh, mahalliy JSON zaxira rejimi.
 - **Bot va Integratsiyalar:** Yagona Telegram Bot API (`bot.js`), Telegram WebApp Mini App SDK, Forum Topics API.
 - **Dizayn Tizimi:** CSS Custom Properties (`var(--color-primary)` va h.k.) orqali `brand.config.js` ga 100% bog'langan reaktiv mavzulashtirish.

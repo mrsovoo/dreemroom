@@ -11,3 +11,4 @@
   <circle cx="1000" cy="300" r="180" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="2"/>
   <path d="M750 150 L1150 450" stroke="rgba(255,255,255,0.03)" stroke-width="1.5"/>
 </svg>
+

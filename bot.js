@@ -166,8 +166,8 @@ const albumBuffers = new Map();
 const standalonePhotoBuffers = new Map();
 const userStates = new Map();
 
-// Helper: Call Telegram Bot API
-async function callTelegram(method, payload = {}) {
+// Helper: Call Telegram Bot API (AbortSignal qo'llab-quvvatlanadi)
+async function callTelegram(method, payload = {}, signal = null) {
   const token = config.botToken?.trim();
   if (!token) return null;
 
@@ -176,10 +176,14 @@ async function callTelegram(method, payload = {}) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: signal || undefined,
     });
     const data = await res.json().catch(() => null);
     return data;
   } catch (err) {
+    if (signal?.aborted || err.name === "AbortError") {
+      throw err;
+    }
     console.error(`Telegram API xatosi (${method}):`, err.message);
     return null;
   }
@@ -1570,27 +1574,77 @@ async function handleMyChatMember(memberUpdate) {
   }
 }
 
-// Asosiy polling tsikli
+// ==========================================================================
+// 8. ASOSIY POLLING VA BOT BOSHQARUVI (Railway & Long Polling)
+// ==========================================================================
 let lastUpdateId = 0;
+let isPolling = false;
+let shouldStop = false;
+let currentAbortController = null;
+let botInfo = null;
+let lastPollingAt = null;
+let dailyReportTimer = null;
 
-async function startPolling() {
+export function getBotStatus() {
+  return {
+    configured: Boolean(config?.botToken),
+    polling: isPolling,
+    username: botInfo?.username || config?.botUsername || null,
+    lastUpdateId,
+    lastPollingAt,
+  };
+}
+
+export async function stopBot() {
+  shouldStop = true;
+  if (currentAbortController) {
+    try {
+      currentAbortController.abort();
+    } catch {}
+    currentAbortController = null;
+  }
+  if (dailyReportTimer) {
+    clearInterval(dailyReportTimer);
+    dailyReportTimer = null;
+  }
+  isPolling = false;
+  console.log("\x1b[33m[TELEGRAM BOT]: Bot polling xavfsiz to'xtatildi.\x1b[0m");
+}
+
+export async function startBot() {
+  // Ikki nusxa bir vaqtda ishga tushishini oldini olish (Singleton guard)
+  if (isPolling) {
+    console.warn("\x1b[33m[TELEGRAM BOT]: Polling allaqachon faol. Ikkinchi nusxa ishga tushirilmadi.\x1b[0m");
+    return;
+  }
+
   config = loadConfig();
   const token = config.botToken?.trim();
 
   if (!token) {
-    console.error("\x1b[31m[XATOLIK]: BOT_TOKEN topilmadi, .env faylini to'ldiring!\x1b[0m");
-    process.exit(1);
+    console.warn("\x1b[33m[TELEGRAM BOT]: BOT_TOKEN topilmadi. Bot kutish rejimida.\x1b[0m");
+    return;
   }
 
+  shouldStop = false;
+  isPolling = true;
+
   try {
+    // 1. Webhook ni tozalash (409 conflict va eski webhooklarni olib tashlash)
+    try {
+      await callTelegram("deleteWebhook", { drop_pending_updates: false });
+    } catch {}
+
+    // 2. getMe tekshiruvi
     const me = await callTelegram("getMe");
     if (!me?.ok) {
       console.error("\x1b[31m[TELEGRAM BOT]: Bot token noto'g'ri yoki Telegramga ulanib bo'lmadi.\x1b[0m");
-      setTimeout(startPolling, 10000);
+      isPolling = false;
       return;
     }
 
-    console.log(`\x1b[32m[TELEGRAM BOT]: @${me.result.username} (yagona bot) faol ishga tushdi!\x1b[0m`);
+    botInfo = me.result;
+    console.log(`\x1b[32m[TELEGRAM BOT]: @${me.result.username} (yagona bot) bitta jarayonda faol ishga tushdi!\x1b[0m`);
 
     // WebApp do'kon tugmasini har bir chat menyusiga qo'yish
     if (config.webAppUrl) {
@@ -1605,23 +1659,71 @@ async function startPolling() {
       } catch {}
     }
 
-    while (true) {
+    // 3. 22:00 da (Asia/Tashkent) kunlik hisobot yuborish jadvali
+    if (!dailyReportTimer) {
+      dailyReportTimer = setInterval(async () => {
+        try {
+          const now = new Date();
+          const timeTashkent = now.toLocaleTimeString("en-GB", {
+            timeZone: "Asia/Tashkent",
+            hour12: false,
+          });
+          const [hh, mm] = timeTashkent.split(":");
+          const targetTime = brandConfig.dailyReportTime || "22:00";
+          const [targetH, targetM] = targetTime.split(":");
+
+          if (hh === targetH && mm === targetM) {
+            const todayDate = now.toLocaleDateString("en-CA", {
+              timeZone: "Asia/Tashkent",
+            });
+            const lastSent = await getSetting("daily_report_last_sent");
+            if (lastSent !== todayDate) {
+              await setSetting("daily_report_last_sent", todayDate);
+              console.log(`[DAILY REPORT]: ${todayDate} sana uchun 22:00 hisoboti yuborilmoqda...`);
+              await sendDailyReport(false);
+            }
+          }
+        } catch (err) {
+          console.warn("[DAILY REPORT SCHEDULER WARN]:", err.message);
+        }
+      }, 30000);
+    }
+
+    // 4. Asosiy Long Polling tsikli
+    while (!shouldStop) {
+      lastPollingAt = new Date().toISOString();
+      currentAbortController = new AbortController();
+
       try {
-        const res = await callTelegram("getUpdates", {
-          offset: lastUpdateId + 1,
-          timeout: 25,
-          allowed_updates: [
-            "message",
-            "edited_message",
-            "channel_post",
-            "edited_channel_post",
-            "callback_query",
-            "my_chat_member",
-          ],
-        });
+        const res = await callTelegram(
+          "getUpdates",
+          {
+            offset: lastUpdateId + 1,
+            timeout: 25,
+            allowed_updates: [
+              "message",
+              "edited_message",
+              "channel_post",
+              "edited_channel_post",
+              "callback_query",
+              "my_chat_member",
+            ],
+          },
+          currentAbortController.signal
+        );
+
+        if (shouldStop) break;
+
+        // 409 Conflict: boshqa instansiya bilan to'qnashuv bo'lsa, backoff kutish
+        if (res?.error_code === 409 || (res?.description && /conflict/i.test(res.description))) {
+          console.warn("\x1b[33m[TELEGRAM BOT]: 409 Conflict aniqlandi (boshqa nusxa faol). 5 soniya kutilmoqda...\x1b[0m");
+          await new Promise((r) => setTimeout(r, 5000));
+          continue;
+        }
 
         if (res?.ok && Array.isArray(res.result)) {
           for (const update of res.result) {
+            if (shouldStop) break;
             lastUpdateId = update.update_id;
             if (update.message) {
               await handleMessage(update.message);
@@ -1635,43 +1737,33 @@ async function startPolling() {
               await handleMyChatMember(update.my_chat_member);
             }
           }
+        } else if (!res?.ok && res?.error_code) {
+          await new Promise((r) => setTimeout(r, 2000));
         }
       } catch (err) {
+        if (shouldStop) break;
+        if (err.name === "AbortError") {
+          continue;
+        }
+        console.warn("[TELEGRAM BOT POLLING WARN]:", err.message);
         await new Promise((r) => setTimeout(r, 4000));
+      } finally {
+        currentAbortController = null;
       }
     }
   } catch (err) {
     console.error("[BOT ERROR]:", err.message);
-    setTimeout(startPolling, 10000);
+    if (!shouldStop) {
+      setTimeout(() => startBot(), 10000);
+    }
+  } finally {
+    isPolling = false;
   }
 }
 
-// Har kuni 22:00 da (Asia/Tashkent) "Hisobotlar" topikiga avtomatik hisobot yuborish (Requirement 5)
-setInterval(async () => {
-  try {
-    const now = new Date();
-    const timeTashkent = now.toLocaleTimeString("en-GB", {
-      timeZone: "Asia/Tashkent",
-      hour12: false,
-    });
-    const [hh, mm] = timeTashkent.split(":");
-    const targetTime = brandConfig.dailyReportTime || "22:00";
-    const [targetH, targetM] = targetTime.split(":");
-
-    if (hh === targetH && mm === targetM) {
-      const todayDate = now.toLocaleDateString("en-CA", {
-        timeZone: "Asia/Tashkent",
-      });
-      const lastSent = await getSetting("daily_report_last_sent");
-      if (lastSent !== todayDate) {
-        await setSetting("daily_report_last_sent", todayDate);
-        console.log(`[DAILY REPORT]: ${todayDate} sana uchun 22:00 hisoboti yuborilmoqda...`);
-        await sendDailyReport(false);
-      }
-    }
-  } catch (err) {
-    console.warn("[DAILY REPORT SCHEDULER WARN]:", err.message);
-  }
-}, 30000);
-
-startPolling();
+// Standalone CLI rejimida ishga tushirish (agar to'g'ridan-to'g'ri `node bot.js` chaqirilsa)
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  process.on("SIGINT", () => stopBot().then(() => process.exit(0)));
+  process.on("SIGTERM", () => stopBot().then(() => process.exit(0)));
+  startBot();
+}

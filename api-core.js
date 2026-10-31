@@ -286,6 +286,19 @@ export async function handleApiRequest(req, res) {
     return false;
   }
 
+  // --------------------------------------------------------------------------
+  // HEALTH CHECK (/api/health)
+  // --------------------------------------------------------------------------
+  if (req.method === "GET" && pathname === "/api/health") {
+    sendJson(res, 200, {
+      ok: true,
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.floor(process.uptime()),
+    });
+    return true;
+  }
+
   // ------------------------------------------------------------------------
   // A. AUTHENTICATION ENDPOINTS
   // ------------------------------------------------------------------------

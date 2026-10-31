@@ -124,17 +124,26 @@ npm run build
 
 ---
 
-## 7-Qadam: Serverga (Deploy) Joylash
+## 7-Qadam: Railway yoki Bulutli Serverga (Deploy) Joylash
 
-### Vercel (Frontend & Serverless API):
-1. Vercel dashboardiga loyihani import qiling.
-2. Environment Variables bo'limida `.env` dagi o'zgaruvchilarni (`DATABASE_URL`, `BOT_TOKEN`, `WEB_APP_URL` va h.k.) kiriting.
-3. Deploy tugmasini bosing.
-4. Kunlik hisobot uchun `vercel.json` faylidagi cron avtomatik ishlaydi.
+Loyiha **Railway** da bitta yagona Node.js jarayonida (`server.js`) to'liq ishlash uchun optimallashtirilgan:
 
-### Railway yoki VPS (Node.js Server & Bot):
-1. Repozitoriyni ulang.
-2. Start Command: `npm start` (server.js avtomatik tarzda bot.js ni ham fonda ishga tushiradi).
-3. Environment variables larni sozlang.
+### Railway da Deploy Qilish:
+1. **Repozitoriyni ulash:** Railway dashboardida `New Project` -> `Deploy from GitHub repo` orqali ushbu omborni tanlang.
+2. **Build & Start sozlamalari:**
+   - **Build Command:** `npm run build`
+   - **Start Command:** `npm start` (yoki `node server.js`)
+   - **Railway Healthcheck Path:** `/health` (sozlamalarda `Healthcheck Path: /health` deb belgilang).
+3. **Environment Variables:**
+   - `DATABASE_URL` (Neon PostgreSQL)
+   - `BOT_TOKEN` (Telegram Bot)
+   - `TARGET_CHAT_ID` (Guruh/kanal ID)
+   - `OWNER_TELEGRAM_ID` (Egasi ID)
+   - `WEB_APP_URL` (`https://${{RAILWAY_PUBLIC_DOMAIN}}` yoki o'z domeningiz)
+   - `PORT` (Railway avtomatik tarzda dinamik port beradi va `server.js` uni to'g'ridan-to'g'ri o'qiydi).
+4. **Bitta Jarayonli Arxitektura Afzalliklari:**
+   - Statik sayt, REST API va Telegram Bot bitta Node.js jarayoni (PID) ichida ishlaydi.
+   - Long polling vaqtidagi `409 Conflict` (ikki nusxa to'qnashuvi) avtomatik `deleteWebhook`, yagona instansiya nazorati va `SIGTERM` da darhol so'rovni uzuvchi `AbortController` orqali to'liq bartaraf etilgan.
 
 Muvaffaqiyatli ishga tushirildi! Savollar yoki moslashtirish bo'yicha [CUSTOMIZE.md](CUSTOMIZE.md) qo'llanmasiga qarang.
+
