@@ -51,3 +51,4 @@ export function renderCategoryIcon(cat: string): React.ReactNode {
 
   return <Tag size={14} strokeWidth={1.8} />;
 }
+

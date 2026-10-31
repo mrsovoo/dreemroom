@@ -157,7 +157,32 @@ Sayt ishga tushgandan keyin ham ba'zi sozlamalarni to'g'ridan-to'g'ri brauzer or
 
 ---
 
-## 🧪 7. Sinov va Tekshirish (Checklist)
+## 👥 7. Ichki Guruh va Forum Topiklari (Buyurtmalarni Telegramda Boshqarish)
+
+Xodimlar admin panelga kirmasdan, ichki Telegram guruh orqali barcha buyurtmalarni ko'rishi, qabul qilishi va yetkazilganini belgilashi mumkin:
+
+### 1-qadam: Guruhda "Topics" (Mavzular) ni yoqing
+1. Telegramda ichki guruh profilini oching va **Tahrirlash (Edit)** tugmasini bosing.
+2. **"Topics" (Mavzular)** sozlamasini yoqing (ON).
+
+### 2-qadam: Botni Administrator qiling
+1. Guruh sozlamalarida **Administratorlar** bo'limiga kiring.
+2. Do'kon botini qo'shing va unga **"Manage Topics" (Mavzularni boshqarish)** ruxsatini bering.
+
+### 3-qadam: Topiklarni avtomatik sozlang
+Guruh ichida botga quyidagi buyruqni yuboring (faqat `OWNER_TELEGRAM_ID` uchun):
+```
+/setupgroup
+```
+Bot guruhda avtomatik 4 ta topik yaratadi va ularning ID larini bazada saqlaydi:
+* 🛍 **Buyurtmalar** — Yangi buyurtmalar rasmi, tarkibi va `[✅ Qabul qilindi]`, `[🚚 Yetkazildi]`, `[❌ Bekor qilindi]` tugmalari bilan tushadi.
+* 🚚 **Yetkazilganlar** — Xodim "Yetkazildi" tugmasini bosishi bilan xabar ushbu topikga ko'chiriladi.
+* 📊 **Hisobotlar** — Har kuni soat 22:00 da (Asia/Tashkent) kunlik savdo tushumi, buyurtmalar soni va eng ko'p sotilgan tovarlar statistikasi avtomatik yuboriladi.
+* ⚙️ **Tizim** — Bot ulanishi, ogohlantirishlar va tizim xabarlari.
+
+---
+
+## 🧪 8. Sinov va Tekshirish (Checklist)
 
 Yangi brendga o'tkazgandan so'ng quyidagilarni tekshiring:
 - [ ] Bosh sahifada brend nomi va to'g'ri logotip chiqayotgani.
@@ -166,4 +191,8 @@ Yangi brendga o'tkazgandan so'ng quyidagilarni tekshiring:
 - [ ] O'lcham yo'riqnomasi (Size guide) ochilishi va qiymatlar to'g'riligi.
 - [ ] Savatga mahsulot qo'shish va buyurtma berish jarayoni.
 - [ ] Telegram botda `/start` bosilganda brend salomlashish matni va Mini App tugmasi chiqishi.
-- [ ] Admin panelda yangi brend rangi va nomi aks etayotgani.
+- [ ] Ichki guruhda `/setupgroup` orqali 4 ta topik ochilgani.
+- [ ] Yangi buyurtma "Buyurtmalar" topikiga rasmi va inline tugmalari bilan tushayotgani.
+- [ ] Inline tugma bosilganda status yangilanayotgani va "Yetkazildi" bosilganda "Yetkazilganlar" topikiga o'tayotgani.
+- [ ] Admin panelda "Mijozlar" va "Sozlamalar" bo'limlari to'g'ri ishlayotgani.
+

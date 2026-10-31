@@ -145,6 +145,10 @@ export const brandConfig = {
     // Telegram BotFather dagi Web App (Short name) nomi
     APP_NAME: "app",
 
+    // Kunlik avtomatik hisobot yuboriladigan vaqt ("22:00") va vaqt zonasi
+    dailyReportTime: "22:00",
+    timezone: "Asia/Tashkent",
+
     // Foydalanuvchi /start bosganda chiqadigan salomlashish matni
     welcomeMessage: "🌸 <b>Assalomu alaykum, xush kelibsiz!</b>\n\nBizning barcha yangi to'plamlarimizni ko'rish, o'lchamlarni tanlash va buyurtma berish uchun quyidagi tugmani bosing:",
 
@@ -255,3 +259,4 @@ export const brandConfig = {
 };
 
 export default brandConfig;
+

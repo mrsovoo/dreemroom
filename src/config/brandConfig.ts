@@ -65,6 +65,8 @@ export type BrandConfig = {
     APP_NAME: string;
     welcomeMessage: string;
     buttons: Record<string, string>;
+    dailyReportTime?: string;
+    timezone?: string;
   };
   categories: CategoryConfig[];
   sizes: string[];

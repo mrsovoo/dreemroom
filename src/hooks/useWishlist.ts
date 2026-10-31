@@ -18,3 +18,4 @@ export function useWishlist() {
 
   return [wishlist, setWishlist] as const;
 }
+

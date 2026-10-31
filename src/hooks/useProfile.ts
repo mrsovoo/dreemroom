@@ -26,3 +26,4 @@ export function useProfile() {
 
   return [profile, setProfile] as const;
 }
+

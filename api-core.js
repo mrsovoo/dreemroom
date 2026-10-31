@@ -32,6 +32,10 @@ import {
   setContacts,
   getStoreSettings,
   setStoreSettings,
+  getCustomersWithStats,
+  sendDailyReport,
+  getSetting,
+  setSetting,
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -486,6 +490,20 @@ export async function handleApiRequest(req, res) {
   }
 
   // ------------------------------------------------------------------------
+  // D. MIJOZLAR (CUSTOMERS - Requirement 6)
+  // ------------------------------------------------------------------------
+  // GET /api/admin/customers (Himoyalangan - Sodiqlik / Statistikasi bilan)
+  if (req.method === "GET" && pathname === "/api/admin/customers") {
+    if (!verifyAdminAuth(req)) {
+      sendJson(res, 401, { error: "Admin ruxsati zarur" });
+      return true;
+    }
+    const customers = await getCustomersWithStats();
+    sendJson(res, 200, customers);
+    return true;
+  }
+
+  // ------------------------------------------------------------------------
   // E. ADMIN FOYDALANUVCHILAR (ADMIN USERS)
   // ------------------------------------------------------------------------
   // GET /api/admin/users (Himoyalangan)
@@ -723,6 +741,25 @@ export async function handleApiRequest(req, res) {
     const body = await parseBody(req);
     const saved = await setStoreSettings(body);
     sendJson(res, 200, { success: true, settings: saved });
+    return true;
+  }
+
+  // ------------------------------------------------------------------------
+  // K. KUNLIK HISOBOT CRON (Requirement 5)
+  // ------------------------------------------------------------------------
+  if (pathname === "/api/cron-daily-report" || pathname === "/api/cron/daily-report") {
+    const now = new Date();
+    const todayDate = now.toLocaleDateString("en-CA", { timeZone: "Asia/Tashkent" });
+    const lastSent = await getSetting("daily_report_last_sent");
+    if (lastSent === todayDate) {
+      sendJson(res, 200, { ok: true, message: "Bugun hisobot allaqachon yuborilgan", date: todayDate });
+      return true;
+    }
+    const result = await sendDailyReport(false);
+    if (result.ok) {
+      await setSetting("daily_report_last_sent", todayDate);
+    }
+    sendJson(res, 200, { ok: true, result, date: todayDate });
     return true;
   }
 

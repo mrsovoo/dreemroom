@@ -19,6 +19,7 @@ const CONFIG_FILE = path.join(__dirname, "bot-config.json");
 const ADMIN_USERS_FILE = path.join(__dirname, "admin_users.json");
 const ADMIN_KEYS_FILE = path.join(__dirname, "admin_keys.json");
 const TELEGRAM_GROUPS_FILE = path.join(__dirname, "telegram_groups.json");
+const CUSTOMERS_FILE = path.join(__dirname, "customers.json");
 
 const DATABASE_URL = process.env.DATABASE_URL?.trim();
 const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
@@ -79,6 +80,35 @@ export async function initDatabase() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
+
+    // 1. Mijozlar jadvali (Sodiqlik / Loyalty uchun - Requirement 6)
+    await sql`
+      CREATE TABLE IF NOT EXISTS customers (
+        id TEXT PRIMARY KEY,
+        phone TEXT UNIQUE NOT NULL,
+        telegram_id TEXT,
+        name TEXT,
+        first_order_at TIMESTAMPTZ DEFAULT NOW(),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
+    // 2. Tizim sozlamalari (Guruh message_thread_id lari va h.k. - Requirement 1)
+    await sql`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value JSONB NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
+    // Mavjud orders jadvaliga yangi ustunlarni xavfsiz migratsiya qilish (Requirement 7)
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id TEXT;`.catch(() => {});
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS telegram_message_id INTEGER;`.catch(() => {});
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;`.catch(() => {});
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS telegram_topic_id INTEGER;`.catch(() => {});
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_by TEXT;`.catch(() => {});
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;`.catch(() => {});
 
     await sql`
       CREATE TABLE IF NOT EXISTS bot_config (
@@ -466,8 +496,318 @@ export async function clearAllProducts() {
 }
 
 // --------------------------------------------------------------------------
-// 2. ORDERS
+// 2. ORDERS & CUSTOMERS
 // --------------------------------------------------------------------------
+
+/**
+ * Buyurtma statusi o'zgarganda chaqiriladigan integratsiya funksiyasi.
+ * Kelajakda sodiqlik / cashback / ballar moduli shu yerga ulanadi (Requirement 6).
+ */
+export function onOrderStatusChange(order, oldStatus, newStatus) {
+  const orderId = order?.id || "NOMA'LUM";
+  const customerName = order?.customer?.name || order?.customerId || "Mijoz";
+  console.log(`[ORDER STATUS CHANGED]: #${orderId} | "${oldStatus || 'Yangi'}" -> "${newStatus}" | Mijoz: ${customerName}`);
+}
+
+/**
+ * Mijoz ma'lumotlarini saqlash yoki yangilash (Requirement 6)
+ */
+export async function saveOrUpdateCustomer({ phone, name, telegramId }) {
+  if (!phone) return null;
+  const digits = String(phone).replace(/\D/g, "");
+  if (digits.length < 9) return null;
+
+  const custId = `CUST-${digits}`;
+  const formattedPhone = String(phone).trim();
+  const customerName = (name && name.trim()) || "Mijoz";
+
+  if (sql) {
+    await initDatabase();
+    try {
+      const existing = await sql`
+        SELECT id, name FROM customers 
+        WHERE phone = ${formattedPhone} OR id = ${custId} 
+        LIMIT 1;
+      `;
+      if (existing && existing.length > 0) {
+        if (name && name !== "Mijoz") {
+          await sql`UPDATE customers SET name = ${customerName} WHERE id = ${existing[0].id};`;
+        }
+        return existing[0].id;
+      }
+
+      await sql`
+        INSERT INTO customers (id, phone, name, telegram_id, first_order_at, created_at)
+        VALUES (${custId}, ${formattedPhone}, ${customerName}, ${telegramId ? String(telegramId) : null}, NOW(), NOW())
+        ON CONFLICT (phone) DO UPDATE SET name = COALESCE(EXCLUDED.name, customers.name);
+      `;
+      return custId;
+    } catch (err) {
+      console.error("[DB]: saveOrUpdateCustomer xatosi:", err.message);
+    }
+  }
+
+  // File fallback
+  try {
+    let list = [];
+    if (fs.existsSync(CUSTOMERS_FILE)) {
+      list = JSON.parse(fs.readFileSync(CUSTOMERS_FILE, "utf-8"));
+    }
+    const idx = list.findIndex((c) => c.phone === formattedPhone || c.id === custId);
+    if (idx >= 0) {
+      if (name && name !== "Mijoz") list[idx].name = customerName;
+      fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(list, null, 2), "utf-8");
+      return list[idx].id;
+    }
+    const newCust = {
+      id: custId,
+      phone: formattedPhone,
+      name: customerName,
+      telegramId: telegramId ? String(telegramId) : null,
+      firstOrderAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    list.push(newCust);
+    fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(list, null, 2), "utf-8");
+    return custId;
+  } catch {}
+  return custId;
+}
+
+/**
+ * Admin panel uchun mijozlar ro'yxatini statistika bilan olish (Requirement 6)
+ */
+export async function getCustomersWithStats() {
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`
+        SELECT 
+          c.id,
+          c.phone,
+          c.name,
+          c.telegram_id as "telegramId",
+          c.first_order_at as "firstOrderAt",
+          c.created_at as "createdAt",
+          COUNT(o.id)::int as "ordersCount",
+          COALESCE(SUM(o.total), 0)::int as "totalSpent"
+        FROM customers c
+        LEFT JOIN orders o ON (o.customer_id = c.id OR o.customer->>'phone' = c.phone)
+        GROUP BY c.id, c.phone, c.name, c.telegram_id, c.first_order_at, c.created_at
+        ORDER BY c.created_at DESC;
+      `;
+      return rows;
+    } catch (err) {
+      console.error("[DB]: getCustomersWithStats xatosi:", err.message);
+    }
+  }
+
+  // File fallback
+  try {
+    let customersList = [];
+    if (fs.existsSync(CUSTOMERS_FILE)) {
+      customersList = JSON.parse(fs.readFileSync(CUSTOMERS_FILE, "utf-8"));
+    }
+    const ordersList = await getOrders();
+    return customersList.map((c) => {
+      const custOrders = ordersList.filter(
+        (o) => o.customerId === c.id || o.customer?.phone === c.phone
+      );
+      const totalSpent = custOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+      return {
+        id: c.id,
+        phone: c.phone,
+        name: c.name,
+        telegramId: c.telegramId,
+        firstOrderAt: c.firstOrderAt,
+        createdAt: c.createdAt,
+        ordersCount: custOrders.length,
+        totalSpent,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Tizim sozlamalari (settings jadvali) (Requirement 1)
+ */
+export async function getSetting(key) {
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`SELECT value FROM settings WHERE key = ${key} LIMIT 1;`;
+      if (rows && rows.length > 0) return rows[0].value;
+    } catch {}
+  }
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const fileCfg = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+      return fileCfg[key] ?? null;
+    }
+  } catch {}
+  return null;
+}
+
+export async function setSetting(key, value) {
+  if (sql) {
+    await initDatabase();
+    try {
+      await sql`
+        INSERT INTO settings (key, value, updated_at)
+        VALUES (${key}, ${JSON.stringify(value)}, NOW())
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
+      `;
+      await sql`
+        INSERT INTO bot_config (key, value)
+        VALUES (${key}, ${JSON.stringify(value)})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+      `.catch(() => {});
+    } catch (err) {
+      console.error(`[DB]: setSetting(${key}) xatosi:`, err.message);
+    }
+  }
+  try {
+    let fileCfg = {};
+    if (fs.existsSync(CONFIG_FILE)) {
+      fileCfg = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+    }
+    fileCfg[key] = value;
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(fileCfg, null, 2), "utf-8");
+  } catch {}
+  return value;
+}
+
+/**
+ * Guruh Forum Topiklari sozlamalari (Requirement 1)
+ */
+export async function getGroupTopics() {
+  return await getSetting("group_topics");
+}
+
+export async function saveGroupTopics(topics) {
+  return await setSetting("group_topics", topics);
+}
+
+/**
+ * Kunlik savdo hisoboti matnini tayyorlash (Requirement 5)
+ */
+export async function generateDailyReportText(targetDateStr) {
+  const dateStr =
+    targetDateStr ||
+    new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tashkent" });
+
+  const allOrders = await getOrders();
+  const todayOrders = allOrders.filter((o) => {
+    if (!o.createdAt) return false;
+    const orderDate = new Date(o.createdAt).toLocaleDateString("en-CA", {
+      timeZone: "Asia/Tashkent",
+    });
+    return orderDate === dateStr;
+  });
+
+  const totalCount = todayOrders.length;
+  let totalSum = 0;
+  let countNew = 0;
+  let countAccepted = 0;
+  let countDelivered = 0;
+  let countCanceled = 0;
+
+  const itemCounts = {};
+
+  for (const o of todayOrders) {
+    const total = Number(o.total) || 0;
+    if (o.status !== "Bekor qilindi") {
+      totalSum += total;
+    }
+
+    if (o.status === "Qabul qilindi") countAccepted++;
+    else if (o.status === "Yetkazildi") countDelivered++;
+    else if (o.status === "Bekor qilindi") countCanceled++;
+    else countNew++;
+
+    if (o.status !== "Bekor qilindi" && Array.isArray(o.items)) {
+      for (const it of o.items) {
+        const name = (it.name || "Mahsulot").trim();
+        const qty = Number(it.quantity) || 1;
+        itemCounts[name] = (itemCounts[name] || 0) + qty;
+      }
+    }
+  }
+
+  let topProductText = "Hozircha yo'q";
+  let topCount = 0;
+  for (const [name, cnt] of Object.entries(itemCounts)) {
+    if (cnt > topCount) {
+      topCount = cnt;
+      topProductText = `<b>${name}</b> (${cnt} ta)`;
+    }
+  }
+
+  const [y, m, d] = dateStr.split("-");
+  const formattedDate = `${d}.${m}.${y}`;
+
+  return (
+    `📊 <b>KUNLIK SAVDO HISOBOTI</b>\n` +
+    `📅 <b>Sana:</b> ${formattedDate}\n\n` +
+    `🛍 <b>Bugungi buyurtmalar:</b> <b>${totalCount} ta</b>\n` +
+    `💰 <b>Jami savdo summasi:</b> <b>${totalSum.toLocaleString("ru-RU")} ${brandConfig.currency || "so'm"}</b>\n\n` +
+    `📈 <b>Statuslar bo'yicha taqsimot:</b>\n` +
+    `• 🟡 Yangi: <b>${countNew} ta</b>\n` +
+    `• 🔵 Qabul qilindi: <b>${countAccepted} ta</b>\n` +
+    `• 🟢 Yetkazildi: <b>${countDelivered} ta</b>\n` +
+    `• 🔴 Bekor qilindi: <b>${countCanceled} ta</b>\n\n` +
+    `👑 <b>Eng ko'p buyurtma qilingan mahsulot:</b>\n${topProductText}\n\n` +
+    `🕒 <i>Hisobot vaqti: ${new Date().toLocaleTimeString("uz-UZ", { timeZone: "Asia/Tashkent" })}</i>`
+  );
+}
+
+/**
+ * Kunlik hisobotni guruhga yoki adminga yuborish (Requirement 5)
+ */
+export async function sendDailyReport(isManual = false, manualChatId = null) {
+  const reportText = await generateDailyReportText();
+  const cfg = await getBotConfig();
+  const token = cfg.botToken?.trim();
+  if (!token) return { ok: false, error: "BOT_TOKEN yo'q" };
+
+  if (isManual && manualChatId) {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: manualChatId,
+        text: reportText,
+        parse_mode: "HTML",
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    return { ok: Boolean(data?.ok), reportText };
+  }
+
+  const topics = await getGroupTopics();
+  const targetChat = topics?.groupChatId || cfg.targetChatId;
+  if (!targetChat) return { ok: false, error: "Target chat yo'q" };
+
+  const payload = {
+    chat_id: targetChat,
+    text: reportText,
+    parse_mode: "HTML",
+  };
+  if (topics?.reportsThreadId) {
+    payload.message_thread_id = Number(topics.reportsThreadId);
+  }
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => null);
+  return { ok: Boolean(data?.ok), reportText };
+}
+
 export async function getOrders() {
   if (sql) {
     await initDatabase();
@@ -480,6 +820,12 @@ export async function getOrders() {
           total, 
           status, 
           payment_method as "paymentMethod",
+          customer_id as "customerId",
+          telegram_message_id as "telegramMessageId",
+          telegram_chat_id as "telegramChatId",
+          telegram_topic_id as "telegramTopicId",
+          updated_by as "updatedBy",
+          updated_at as "updatedAt",
           created_at as "createdAt"
         FROM orders 
         ORDER BY created_at DESC;
@@ -498,6 +844,39 @@ export async function getOrders() {
   return [];
 }
 
+export async function getOrderById(id) {
+  if (sql) {
+    await initDatabase();
+    try {
+      const rows = await sql`
+        SELECT 
+          id, 
+          customer, 
+          items, 
+          total, 
+          status, 
+          payment_method as "paymentMethod",
+          customer_id as "customerId",
+          telegram_message_id as "telegramMessageId",
+          telegram_chat_id as "telegramChatId",
+          telegram_topic_id as "telegramTopicId",
+          updated_by as "updatedBy",
+          updated_at as "updatedAt",
+          created_at as "createdAt"
+        FROM orders 
+        WHERE id = ${id}
+        LIMIT 1;
+      `;
+      if (rows && rows.length > 0) return rows[0];
+    } catch (err) {
+      console.error("[DB]: Neon getOrderById xatosi:", err.message);
+    }
+  }
+
+  const list = await getOrders();
+  return list.find((o) => o.id === id) || null;
+}
+
 export async function createOrder(order) {
   if (!order.id) {
     order.id = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -509,12 +888,29 @@ export async function createOrder(order) {
     order.status = "Yangi";
   }
 
+  // Sodiqlik uchun mijozni saqlash va customer_id ni bog'lash (Requirement 6)
+  const custPhone = order.customer?.phone || "";
+  const custName = order.customer?.name || "Mijoz";
+  let customerId = order.customerId || null;
+  if (custPhone) {
+    try {
+      customerId = await saveOrUpdateCustomer({
+        phone: custPhone,
+        name: custName,
+        telegramId: order.customer?.telegramId || null,
+      });
+      order.customerId = customerId;
+    } catch (err) {
+      console.warn("[CUSTOMER SYNC WARN]:", err.message);
+    }
+  }
+
   if (sql) {
     await initDatabase();
     try {
       await sql`
         INSERT INTO orders (
-          id, customer, items, total, status, payment_method, created_at
+          id, customer, items, total, status, payment_method, customer_id, created_at
         ) VALUES (
           ${order.id},
           ${JSON.stringify(order.customer || {})},
@@ -522,11 +918,12 @@ export async function createOrder(order) {
           ${order.total || 0},
           ${order.status || "Yangi"},
           ${order.paymentMethod || "Naqd / Karta"},
+          ${customerId},
           ${order.createdAt}
         );
       `;
 
-      // Yangi buyurtma haqida Telegram adminga avtomatik xabar yuborish
+      onOrderStatusChange(order, null, order.status || "Yangi");
       notifyTelegramOrder(order).catch(() => null);
 
       return order;
@@ -538,16 +935,24 @@ export async function createOrder(order) {
   const list = await getOrders();
   list.unshift(order);
   fs.writeFileSync(ORDERS_FILE, JSON.stringify(list, null, 2), "utf-8");
+  onOrderStatusChange(order, null, order.status || "Yangi");
   notifyTelegramOrder(order).catch(() => null);
   return order;
 }
 
-async function notifyTelegramOrder(order) {
+export async function notifyTelegramOrder(order) {
   try {
     const cfg = await getBotConfig();
-    const token = cfg.botToken;
-    const targetChat = cfg.targetChatId;
-    if (!token || !targetChat) return;
+    const token = cfg.botToken?.trim();
+    if (!token) return;
+
+    // Guruh yoki Forum topik parametrlarini olish (Requirement 1 & 7)
+    const topics = await getGroupTopics();
+    const targetChat = topics?.groupChatId || cfg.targetChatId;
+    if (!targetChat) return;
+
+    const ordersThreadId = topics?.ordersThreadId ? Number(topics.ordersThreadId) : null;
+    const systemThreadId = topics?.systemThreadId ? Number(topics.systemThreadId) : null;
 
     const itemsList = (order.items || [])
       .map((it) => `• <b>${it.name}</b> (O'lcham: ${it.size}) × ${it.quantity} ta — ${(Number(it.price || 0) * it.quantity).toLocaleString("ru-RU")} so'm`)
@@ -557,23 +962,127 @@ async function notifyTelegramOrder(order) {
       `🛍 <b>YANGI BUYURTMA #${order.id}</b>\n\n` +
       `👤 <b>Mijoz:</b> ${order.customer?.name || "Noma'lum"}\n` +
       `📞 <b>Telefon:</b> ${order.customer?.phone || "Kiritilmagan"}\n` +
-      `🏪 <b>Xarid usuli:</b> ${order.customer?.address || "Do'kondan olib ketish"}\n` +
+      `🏪 <b>Manzil / Usul:</b> ${order.customer?.address || "Do'kondan olib ketish"}\n` +
       `💳 <b>To'lov turi:</b> ${order.paymentMethod || "Naqd / Karta"}\n\n` +
-      `📦 <b>Xarid qilingan modellar:</b>\n${itemsList || "—"}\n\n` +
+      `📦 <b>Buyurtma tarkibi:</b>\n${itemsList || "—"}\n\n` +
       `💰 <b>JAMI:</b> <b>${Number(order.total || 0).toLocaleString("ru-RU")} so'm</b>\n` +
-      `🕒 <b>Vaqt:</b> ${new Date().toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent" })}`;
+      `🕒 <b>Vaqt:</b> ${new Date().toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent" })}\n\n` +
+      `📊 <b>Holat:</b> 🟡 Yangi`;
 
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: "✅ Qabul qilindi", callback_data: `ord:accept:${order.id}` },
+          { text: "🚚 Yetkazildi", callback_data: `ord:deliver:${order.id}` },
+          { text: "❌ Bekor qilindi", callback_data: `ord:cancel:${order.id}` },
+        ],
+      ],
+    };
+
+    let sentMessage = null;
+    const firstImg = order.items?.[0]?.image;
+    let photoUrl = "";
+    if (firstImg && typeof firstImg === "string") {
+      if (firstImg.startsWith("http://") || firstImg.startsWith("https://")) {
+        photoUrl = firstImg;
+      } else if (cfg.webAppUrl && (firstImg.startsWith("/api/images") || firstImg.startsWith("/brand") || firstImg.startsWith("/image"))) {
+        photoUrl = `${cfg.webAppUrl.replace(/\/+$/, "")}${firstImg}`;
+      }
+    }
+
+    // 1-urinish: Rasmli xabar (sendPhoto)
+    if (photoUrl) {
+      const payload = {
+        chat_id: targetChat,
+        photo: photoUrl,
+        caption: msg,
+        parse_mode: "HTML",
+        reply_markup: inlineKeyboard,
+      };
+      if (ordersThreadId) payload.message_thread_id = ordersThreadId;
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => null);
+        if (data?.ok) {
+          sentMessage = data.result;
+        } else if (data?.description?.includes("thread not found")) {
+          // Topik topilmasa yoki o'chirilgan bo'lsa Tizimga xabar
+          if (systemThreadId) {
+            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: targetChat,
+                message_thread_id: systemThreadId,
+                text: "⚠️ <b>Ogohlantirish:</b> 'Buyurtmalar' topiki topilmadi yoki o'chirilgan! Iltimos, /setupgroup buyrug'i orqali topiklarni qayta sozlang.",
+                parse_mode: "HTML",
+              }),
+            }).catch(() => null);
+          }
+          // Fallback: umumiy chatga yuborish
+          delete payload.message_thread_id;
+          const retryRes = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const retryData = await retryRes.json().catch(() => null);
+          if (retryData?.ok) sentMessage = retryData.result;
+        }
+      } catch (err) {
+        console.warn("[SEND PHOTO FAILED]:", err.message);
+      }
+    }
+
+    // 2-urinish: Matnli xabar (sendMessage)
+    if (!sentMessage) {
+      const payload = {
         chat_id: targetChat,
         text: msg,
         parse_mode: "HTML",
-      }),
-    });
+        reply_markup: inlineKeyboard,
+      };
+      if (ordersThreadId) payload.message_thread_id = ordersThreadId;
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => null);
+        if (data?.ok) {
+          sentMessage = data.result;
+        } else if (data?.description?.includes("thread not found")) {
+          delete payload.message_thread_id;
+          const retryRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const retryData = await retryRes.json().catch(() => null);
+          if (retryData?.ok) sentMessage = retryData.result;
+        }
+      } catch (err) {
+        console.error("[ORDER NOTIFY ERROR]:", err.message);
+      }
+    }
+
+    // Xabar ma'lumotlarini buyurtmaga biriktirib qo'yish
+    if (sentMessage?.message_id) {
+      await updateOrder(order.id, {
+        telegramMessageId: sentMessage.message_id,
+        telegramChatId: String(targetChat),
+        telegramTopicId: ordersThreadId || null,
+      }).catch(() => null);
+    }
   } catch (err) {
-    console.warn("[ORDER NOTIFY ERROR]:", err.message);
+    console.warn("[ORDER NOTIFY MAIN ERROR]:", err.message);
   }
 }
 
@@ -584,12 +1093,22 @@ export async function updateOrder(id, updates) {
 
   const merged = { ...existing, ...updates, id };
 
+  if (updates.status && updates.status !== existing.status) {
+    onOrderStatusChange(existing, existing.status, updates.status);
+  }
+
   if (sql) {
     await initDatabase();
     try {
       await sql`
         UPDATE orders SET
-          status = ${merged.status || "Yangi"}
+          status = ${merged.status || "Yangi"},
+          customer_id = ${merged.customerId || null},
+          telegram_message_id = ${merged.telegramMessageId || null},
+          telegram_chat_id = ${merged.telegramChatId || null},
+          telegram_topic_id = ${merged.telegramTopicId || null},
+          updated_by = ${merged.updatedBy || null},
+          updated_at = ${merged.updatedAt || new Date().toISOString()}
         WHERE id = ${id};
       `;
       return merged;

@@ -18,6 +18,16 @@ import {
   saveAdminUser,
   saveTelegramGroup,
   getTelegramGroups,
+  saveGroupTopics,
+  getGroupTopics,
+  getOrderById,
+  updateOrder,
+  onOrderStatusChange,
+  getOrders,
+  getSetting,
+  setSetting,
+  generateDailyReportText,
+  sendDailyReport,
 } from "./db.js";
 import { brandConfig } from "./brand.config.js";
 
@@ -212,11 +222,11 @@ async function downloadTelegramPhoto(fileId, prefix = "img") {
 // Helper: Narxni formatlash
 function formatPrice(price) {
   let num = parseInt(String(price).replace(/\D/g, ""), 10);
-  if (isNaN(num)) return `0 ${nicheConfig.currency || "so'm"}`;
+  if (isNaN(num)) return `0 ${brandConfig.currency || "so'm"}`;
   if (num > 0 && num < 1000) {
     num = num * 1000;
   }
-  return `${num.toLocaleString("ru-RU")} ${nicheConfig.currency || "so'm"}`;
+  return `${num.toLocaleString("ru-RU")} ${brandConfig.currency || "so'm"}`;
 }
 
 // Helper: Captiondan nom va narxni ajratish (Tezkor usul uchun)
@@ -299,6 +309,421 @@ function getAdminMainKeyboard() {
   };
 }
 
+// ==========================================================================
+// FORUM TOPIKLARI VA BUYURTMALAR BOSHQARUVI (Requirements 1, 2, 3, 4, 5)
+// ==========================================================================
+
+// Guruh Forum topiklarni avtomatik sozlash (/setupgroup - Faqat OWNER uchun)
+async function handleSetupGroup(msg) {
+  const chatId = msg.chat?.id;
+  const chatType = msg.chat?.type;
+  const from = msg.from || {};
+  const fromId = String(from.id || "");
+  const text = (msg.text || "").trim();
+
+  // 1. Huquq tekshiruvi (Faqat OWNER)
+  if (OWNER_TELEGRAM_ID && fromId !== OWNER_TELEGRAM_ID) {
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: "⛔ Ushbu buyruq faqat loyiha egasi (Owner) uchun!",
+    });
+    return;
+  }
+
+  // 2. Qaysi guruh sozlanishini aniqlash
+  let targetChat = chatId;
+  const parts = text.split(/\s+/);
+  if (parts.length > 1 && parts[1].startsWith("-")) {
+    targetChat = parts[1].trim();
+  } else if (chatType === "private") {
+    const cfg = loadConfig();
+    if (cfg.targetChatId) {
+      targetChat = cfg.targetChatId;
+    } else {
+      await callTelegram("sendMessage", {
+        chat_id: chatId,
+        text: "ℹ️ <b>Guruh ID sini ko'rsating yoki buyruqni bevosita guruh ichida yozing:</b>\n\n<code>/setupgroup -100xxxxxxxxxx</code>",
+        parse_mode: "HTML",
+      });
+      return;
+    }
+  }
+
+  await callTelegram("sendMessage", {
+    chat_id: chatId,
+    text: `⏳ Guruh tekshirilmoqda va topiklar sozlanmoqda (Chat ID: <code>${targetChat}</code>)...`,
+    parse_mode: "HTML",
+  });
+
+  // 3. Guruh ma'lumotlarini tekshirish
+  const chatInfo = await callTelegram("getChat", { chat_id: targetChat });
+  if (!chatInfo?.ok) {
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: `❌ <b>Guruhga ulanib bo'lmadi!</b>\nSabab: <code>${chatInfo?.description || "Noma'lum xatolik"}</code>\n\nIltimos, botni guruhga a'zo qilganingizni va to'g'ri guruh ID kiritilganini tekshiring.`,
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  // 4. Forum (Topics) rejimi yoqilganligini tekshirish
+  if (!chatInfo.result.is_forum) {
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text:
+        `❌ <b>Guruhda "Topics" (Mavzular / Forum) rejimi yoqilmagan!</b>\n\n` +
+        `📌 <b>Nima qilish kerak:</b>\n` +
+        `1. Telegramda <b>${chatInfo.result.title || "Guruh"}</b> profiliga kiring.\n` +
+        `2. <b>Tahrirlash (Edit / ✏️)</b> tugmasini bosing.\n` +
+        `3. <b>"Topics" (Mavzular)</b> sozlamasini topib, uni yoqing (ON qiling).\n` +
+        `4. O'zgarishlarni saqlang va qaytadan <code>/setupgroup</code> buyrug'ini yuboring.`,
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  // 5. Bot huquqlarini tekshirish (Manage Topics)
+  const me = await callTelegram("getMe");
+  if (!me?.ok) {
+    await callTelegram("sendMessage", { chat_id: chatId, text: "❌ Bot ma'lumotlarini olib bo'lmadi." });
+    return;
+  }
+
+  const member = await callTelegram("getChatMember", { chat_id: targetChat, user_id: me.result.id });
+  if (!member?.ok || member.result.status !== "administrator" || !member.result.can_manage_topics) {
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text:
+        `❌ <b>Botda guruhda "Manage Topics" (Mavzularni boshqarish) huquqi yo'q!</b>\n\n` +
+        `📌 <b>Nima qilish kerak:</b>\n` +
+        `1. Guruh Administratorlar (Administrators) ro'yxatiga kiring.\n` +
+        `2. <b>@${me.result.username}</b> botini administrator qiling (yoki mavjud huquqlarini oching).\n` +
+        `3. <b>"Manage Topics" (Mavzularni boshqarish / yaratish)</b> ruxsatini yoqing.\n` +
+        `4. O'zgarishlarni saqlang va qaytadan <code>/setupgroup</code> buyrug'ini yuboring.`,
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  // 6. 4 ta topikni yaratish
+  const tOrders = await callTelegram("createForumTopic", {
+    chat_id: targetChat,
+    name: "🛍 Buyurtmalar",
+    icon_color: 7322096, // Moviy
+  });
+
+  const tDelivered = await callTelegram("createForumTopic", {
+    chat_id: targetChat,
+    name: "🚚 Yetkazilganlar",
+    icon_color: 9367192, // Yashil
+  });
+
+  const tReports = await callTelegram("createForumTopic", {
+    chat_id: targetChat,
+    name: "📊 Hisobotlar",
+    icon_color: 16766590, // Sariq
+  });
+
+  const tSystem = await callTelegram("createForumTopic", {
+    chat_id: targetChat,
+    name: "⚙️ Tizim",
+    icon_color: 16478047, // Qizil
+  });
+
+  if (!tOrders?.ok || !tDelivered?.ok || !tReports?.ok || !tSystem?.ok) {
+    const errMsg = [tOrders?.description, tDelivered?.description, tReports?.description, tSystem?.description]
+      .filter(Boolean)
+      .join("; ");
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: `❌ <b>Topiklarni yaratishda xatolik yuz berdi:</b>\n<code>${errMsg}</code>`,
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  const topicsData = {
+    groupChatId: String(targetChat),
+    ordersThreadId: tOrders.result.message_thread_id,
+    deliveredThreadId: tDelivered.result.message_thread_id,
+    reportsThreadId: tReports.result.message_thread_id,
+    systemThreadId: tSystem.result.message_thread_id,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await saveGroupTopics(topicsData);
+
+  // Tizim topikiga tabrik xabari
+  await callTelegram("sendMessage", {
+    chat_id: targetChat,
+    message_thread_id: topicsData.systemThreadId,
+    text:
+      `⚙️ <b>Tizim topiki muvaffaqiyatli ishga tushdi!</b>\n\n` +
+      `Barcha tizim ogohlantirishlari, sozlashlar va xatoliklar shu yerda xabar qilinadi.\n` +
+      `🕒 ${new Date().toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent" })}`,
+    parse_mode: "HTML",
+  });
+
+  // Ownerga hisobot
+  await callTelegram("sendMessage", {
+    chat_id: chatId,
+    text:
+      `🎉 <b>Guruh forum rejimi va barcha topiklar muvaffaqiyatli sozlandi!</b>\n\n` +
+      `📢 <b>Guruh:</b> <code>${chatInfo.result.title || targetChat}</code>\n\n` +
+      `📌 <b>🛍 Buyurtmalar:</b> thread <code>#${topicsData.ordersThreadId}</code>\n` +
+      `📌 <b>🚚 Yetkazilganlar:</b> thread <code>#${topicsData.deliveredThreadId}</code>\n` +
+      `📌 <b>📊 Hisobotlar:</b> thread <code>#${topicsData.reportsThreadId}</code>\n` +
+      `📌 <b>⚙️ Tizim:</b> thread <code>#${topicsData.systemThreadId}</code>\n\n` +
+      `<i>Endi tushgan barcha yangi buyurtmalar "Buyurtmalar" topikiga inline tugmalar bilan yuboriladi!</i>`,
+    parse_mode: "HTML",
+  });
+}
+
+// Buyurtma tugmalari callback query mantiqi (Requirements 3 & 4)
+async function handleOrderCallback(cb) {
+  const cbId = cb.id;
+  const data = cb.data || "";
+  const from = cb.from || {};
+  const fromId = String(from.id);
+  const msg = cb.message;
+  const chatId = msg?.chat?.id;
+
+  // 1. Ruxsat tekshiruvi (Requirement 4)
+  const isAdmin = await isUserAdmin(fromId);
+  if (!isAdmin) {
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "⛔ Sizda ushbu amalni bajarish uchun ruxsat yo'q!",
+      show_alert: true,
+    });
+    return;
+  }
+
+  // 2. Callback parsing: ord:<action>:<orderId>
+  const parts = data.split(":");
+  const action = parts[1]; // 'accept', 'deliver', 'cancel'
+  const orderId = parts.slice(2).join(":");
+
+  const order = await getOrderById(orderId);
+  if (!order) {
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "❌ Buyurtma topilmadi!",
+      show_alert: true,
+    });
+    return;
+  }
+
+  // 3. Concurrency va noto'g'ri o'tishlar tekshiruvi (Requirement 3)
+  if (order.status === "Bekor qilindi") {
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "⛔ Ushbu buyurtma bekor qilingan va qayta o'zgartirib bo'lmaydi!",
+      show_alert: true,
+    });
+    return;
+  }
+
+  if (order.status === "Yetkazildi") {
+    if (action === "accept") {
+      await callTelegram("answerCallbackQuery", {
+        callback_query_id: cbId,
+        text: "⛔ Yetkazilgan buyurtmani qayta 'Qabul qilindi'ga o'tkazib bo'lmaydi!",
+        show_alert: true,
+      });
+      return;
+    }
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "ℹ️ Bu buyurtma allaqachon yetkazilgan!",
+      show_alert: true,
+    });
+    return;
+  }
+
+  if (order.status === "Qabul qilindi" && action === "accept") {
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "ℹ️ Bu buyurtma allaqachon yangilangan (Qabul qilingan)!",
+      show_alert: true,
+    });
+    return;
+  }
+
+  // 4. Yangi statusni belgilash
+  let newStatus = "";
+  if (action === "accept") newStatus = "Qabul qilindi";
+  else if (action === "deliver") newStatus = "Yetkazildi";
+  else if (action === "cancel") newStatus = "Bekor qilindi";
+
+  const updaterName = from.username
+    ? `@${from.username}`
+    : [from.first_name, from.last_name].filter(Boolean).join(" ") || `ID: ${fromId}`;
+  const timeStr = new Date().toLocaleTimeString("uz-UZ", {
+    timeZone: "Asia/Tashkent",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  await updateOrder(orderId, {
+    status: newStatus,
+    updatedBy: updaterName,
+    updatedAt: new Date().toISOString(),
+  });
+
+  const topics = await getGroupTopics();
+
+  function buildOrderCaption(ord, st, upInfo) {
+    const statusEmojis = {
+      "Yangi": "🟡 Yangi",
+      "Qabul qilindi": "🔵 Qabul qilindi",
+      "Yetkazildi": "🟢 Yetkazildi",
+      "Bekor qilindi": "🔴 Bekor qilindi",
+    };
+    const itemsList = (ord.items || [])
+      .map((it) => `• <b>${it.name}</b> (O'lcham: ${it.size}) × ${it.quantity} ta — ${(Number(it.price || 0) * it.quantity).toLocaleString("ru-RU")} so'm`)
+      .join("\n");
+
+    let t =
+      `🛍 <b>BUYURTMA #${ord.id}</b>\n\n` +
+      `👤 <b>Mijoz:</b> ${ord.customer?.name || "Noma'lum"}\n` +
+      `📞 <b>Telefon:</b> ${ord.customer?.phone || "Kiritilmagan"}\n` +
+      `🏪 <b>Manzil / Usul:</b> ${ord.customer?.address || "Do'kondan olib ketish"}\n` +
+      `💳 <b>To'lov turi:</b> ${ord.paymentMethod || "Naqd / Karta"}\n\n` +
+      `📦 <b>Buyurtma tarkibi:</b>\n${itemsList || "—"}\n\n` +
+      `💰 <b>JAMI:</b> <b>${Number(ord.total || 0).toLocaleString("ru-RU")} so'm</b>\n` +
+      `🕒 <b>Vaqt:</b> ${ord.createdAt ? new Date(ord.createdAt).toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent" }) : "—"}\n\n` +
+      `📊 <b>Holat:</b> ${statusEmojis[st] || st}`;
+
+    if (upInfo) {
+      t += `\n👤 <b>Kim tomonidan:</b> ${upInfo.by}\n🕒 <b>Yangilangan:</b> ${upInfo.time}`;
+    }
+    return t;
+  }
+
+  const isPhoto = Boolean(msg?.photo && msg.photo.length > 0);
+  const upInfo = { by: updaterName, time: timeStr };
+  const newText = buildOrderCaption(order, newStatus, upInfo);
+
+  if (action === "accept") {
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: "🚚 Yetkazildi", callback_data: `ord:deliver:${order.id}` },
+          { text: "❌ Bekor qilindi", callback_data: `ord:cancel:${order.id}` },
+        ],
+      ],
+    };
+
+    if (isPhoto) {
+      await callTelegram("editMessageCaption", {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        caption: newText,
+        parse_mode: "HTML",
+        reply_markup: keyboard,
+      });
+    } else {
+      await callTelegram("editMessageText", {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        text: newText,
+        parse_mode: "HTML",
+        reply_markup: keyboard,
+      });
+    }
+
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "✅ Buyurtma qabul qilindi deb belgilandi!",
+    });
+    return;
+  }
+
+  if (action === "cancel") {
+    if (isPhoto) {
+      await callTelegram("editMessageCaption", {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        caption: newText,
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: [] },
+      });
+    } else {
+      await callTelegram("editMessageText", {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        text: newText,
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: [] },
+      });
+    }
+
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "❌ Buyurtma bekor qilindi deb belgilandi!",
+    });
+    return;
+  }
+
+  if (action === "deliver") {
+    // "Yetkazildi" bosilsa buyurtma xabari "Yetkazilganlar" topikiga ko'chirilsin
+    const deliveredThreadId = topics?.deliveredThreadId ? Number(topics.deliveredThreadId) : null;
+    const targetGroup = topics?.groupChatId || chatId;
+
+    if (isPhoto && msg.photo?.[0]?.file_id) {
+      const bestPhoto = msg.photo[msg.photo.length - 1].file_id;
+      const sendPayload = {
+        chat_id: targetGroup,
+        photo: bestPhoto,
+        caption: newText,
+        parse_mode: "HTML",
+      };
+      if (deliveredThreadId) sendPayload.message_thread_id = deliveredThreadId;
+      await callTelegram("sendPhoto", sendPayload);
+    } else {
+      const sendPayload = {
+        chat_id: targetGroup,
+        text: newText,
+        parse_mode: "HTML",
+      };
+      if (deliveredThreadId) sendPayload.message_thread_id = deliveredThreadId;
+      await callTelegram("sendMessage", sendPayload);
+    }
+
+    // Eskisi o'chiriladi
+    const delRes = await callTelegram("deleteMessage", {
+      chat_id: chatId,
+      message_id: msg.message_id,
+    });
+    if (!delRes?.ok) {
+      if (isPhoto) {
+        await callTelegram("editMessageCaption", {
+          chat_id: chatId,
+          message_id: msg.message_id,
+          caption: `${newText}\n\n<i>(Yetkazilganlar topikiga ko'chirildi)</i>`,
+          parse_mode: "HTML",
+          reply_markup: { inline_keyboard: [] },
+        });
+      } else {
+        await callTelegram("editMessageText", {
+          chat_id: chatId,
+          message_id: msg.message_id,
+          text: `${newText}\n\n<i>(Yetkazilganlar topikiga ko'chirildi)</i>`,
+          parse_mode: "HTML",
+          reply_markup: { inline_keyboard: [] },
+        });
+      }
+    }
+
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "🚚 Buyurtma 'Yetkazilganlar' topikiga ko'chirildi!",
+    });
+    return;
+  }
+}
+
 // Handle incoming messages
 async function handleMessage(msg) {
   const chatId = msg.chat?.id;
@@ -309,6 +734,12 @@ async function handleMessage(msg) {
   const photo = msg.photo;
 
   config = loadConfig();
+
+  // 1. /setupgroup buyrug'i (Guruhda yoki shaxsiy chatda Forum topiklarni sozlash - Faqat OWNER uchun)
+  if (text.startsWith("/setupgroup")) {
+    await handleSetupGroup(msg);
+    return;
+  }
 
   // Guruh yoki kanaldan kelgan faollikni ro'yxatga olamiz
   if (chatType === "channel" || chatType === "group" || chatType === "supergroup") {
@@ -423,26 +854,14 @@ async function handleMessage(msg) {
     return;
   }
 
-  // 📊 Hisobot
-  if (text === getBtn("report") || text === "📊 Hisobot") {
+  // 📊 Hisobot (Requirement 5)
+  if (text === getBtn("report") || text === "📊 Hisobot" || text === "/report") {
     userStates.delete(userId);
-    const prods = await getProducts();
-    const orders = readOrders();
-    const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-    const newOrders = orders.filter((o) => o.status === "Yangi").length;
-
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text:
-        `${getMsg("reportTitle")}\n\n` +
-        `📦 <b>Jami mahsulotlar:</b> ${prods.length} ta\n` +
-        `🛍 <b>Jami buyurtmalar:</b> ${orders.length} ta\n` +
-        `💰 <b>Jami tushum:</b> ${formatPrice(revenue)}\n` +
-        `🆕 <b>Kutilayotgan yangi buyurtmalar:</b> ${newOrders} ta\n\n` +
-        `📢 <b>Asosiy kanal:</b> <code>${config.targetChatId || "Belgilanmagan"}</code>`,
-      parse_mode: "HTML",
-      reply_markup: getAdminMainKeyboard(),
+      text: "⏳ Bugungi hisobot tayyorlanmoqda...",
     });
+    await sendDailyReport(true, chatId);
     return;
   }
 
@@ -817,6 +1236,12 @@ async function handleCallbackQuery(cb) {
       text: getMsg("accessDenied"),
       show_alert: true,
     });
+    return;
+  }
+
+  // Buyurtma tugmalari callback query mantiqi (Requirements 3 & 4)
+  if (data.startsWith("ord:")) {
+    await handleOrderCallback(cb);
     return;
   }
 
@@ -1223,5 +1648,33 @@ async function startPolling() {
     setTimeout(startPolling, 10000);
   }
 }
+
+// Har kuni 22:00 da (Asia/Tashkent) "Hisobotlar" topikiga avtomatik hisobot yuborish (Requirement 5)
+setInterval(async () => {
+  try {
+    const now = new Date();
+    const timeTashkent = now.toLocaleTimeString("en-GB", {
+      timeZone: "Asia/Tashkent",
+      hour12: false,
+    });
+    const [hh, mm] = timeTashkent.split(":");
+    const targetTime = brandConfig.dailyReportTime || "22:00";
+    const [targetH, targetM] = targetTime.split(":");
+
+    if (hh === targetH && mm === targetM) {
+      const todayDate = now.toLocaleDateString("en-CA", {
+        timeZone: "Asia/Tashkent",
+      });
+      const lastSent = await getSetting("daily_report_last_sent");
+      if (lastSent !== todayDate) {
+        await setSetting("daily_report_last_sent", todayDate);
+        console.log(`[DAILY REPORT]: ${todayDate} sana uchun 22:00 hisoboti yuborilmoqda...`);
+        await sendDailyReport(false);
+      }
+    }
+  } catch (err) {
+    console.warn("[DAILY REPORT SCHEDULER WARN]:", err.message);
+  }
+}, 30000);
 
 startPolling();

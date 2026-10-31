@@ -831,6 +831,11 @@
           <span>Buyurtmalar</span>
         </button>
 
+        <button class="nav-btn" data-tab="customers" onclick="setTab('customers')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Mijozlar</span>
+        </button>
+
         <button class="nav-btn" data-tab="reports" onclick="setTab('reports')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span>Hisobot</span>
@@ -1009,6 +1014,56 @@
             </table>
             <div id="ordersEmpty" class="empty-text" style="display: none;">
               Buyurtmalar topilmadi.
+            </div>
+          </div>
+        </section>
+
+        <!-- MIJOZLAR (CUSTOMERS - Requirement 6) -->
+        <section class="tab-view" id="view-customers">
+          <div class="stats-row">
+            <div class="stat-box">
+              <span class="stat-box-label">Jami xaridorlar</span>
+              <span class="stat-box-val" id="custTotal">0 ta</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-box-label">Doimiy mijozlar (2+ xarid)</span>
+              <span class="stat-box-val" id="custRepeat">0 ta</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-box-label">Mijozlar umumiy xaridi</span>
+              <span class="stat-box-val" id="custTotalSpent">0 so'm</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+              <h2 class="panel-title">Ro'yxatdan o'tgan mijozlar (Sodiqlik)</h2>
+              <div class="panel-actions">
+                <input
+                  type="text"
+                  id="custSearch"
+                  placeholder="Ism yoki telefon bo'yicha qidirish..."
+                  oninput="filterCustomers()"
+                  style="padding: 7px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; min-width: 240px;"
+                />
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Mijoz ismi</th>
+                  <th>Telefon raqami</th>
+                  <th>Buyurtmalar soni</th>
+                  <th>Jami summa</th>
+                  <th>Birinchi xarid sanasi</th>
+                </tr>
+              </thead>
+              <tbody id="customersTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+            <div id="customersEmpty" class="empty-text" style="display: none;">
+              Mijozlar topilmadi.
             </div>
           </div>
         </section>
@@ -1730,6 +1785,7 @@
       dashboard: "Boshqaruv",
       products: "Mahsulotlar",
       orders: "Buyurtmalar",
+      customers: "Mijozlar Bazasi (Sodiqlik)",
       reports: "Hisobot",
       faollar: "Faollar va Guruhlar",
       banners: "Asosiy sahifa bannyerlari",
@@ -1752,6 +1808,7 @@
       if (tab === "dashboard") renderDashboard();
       if (tab === "products") renderProducts();
       if (tab === "orders") renderOrders();
+      if (tab === "customers") renderCustomers();
       if (tab === "reports") renderReports();
       if (tab === "faollar") renderFaollar();
       if (tab === "banners") renderBanners();
@@ -1967,6 +2024,96 @@
       } catch {
         showToast("Xatolik");
       }
+    }
+
+    /* 3.1 Mijozlar (Customers - Requirement 6) */
+    let allCustomers = [];
+
+    async function renderCustomers() {
+      const tbody = document.getElementById("customersTableBody");
+      const empty = document.getElementById("customersEmpty");
+      if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 24px; color: var(--ink-muted);">Mijozlar yuklanmoqda...</td></tr>`;
+      if (empty) empty.style.display = "none";
+
+      try {
+        const res = await fetch("/api/admin/customers");
+        if (res.ok) {
+          allCustomers = await res.json();
+          displayCustomers(allCustomers);
+        } else {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc2626; padding: 24px;">Mijozlarni yuklab bo'lmadi</td></tr>`;
+        }
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc2626; padding: 24px;">Xatolik yuz berdi: ${err.message}</td></tr>`;
+      }
+    }
+
+    function displayCustomers(list) {
+      const tbody = document.getElementById("customersTableBody");
+      const empty = document.getElementById("customersEmpty");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const totalCust = list.length;
+      const repeatCust = list.filter(c => (Number(c.ordersCount) || 0) > 1).length;
+      const totalSpent = list.reduce((sum, c) => sum + (Number(c.totalSpent) || 0), 0);
+
+      const elTotal = document.getElementById("custTotal");
+      const elRepeat = document.getElementById("custRepeat");
+      const elSpent = document.getElementById("custTotalSpent");
+      if (elTotal) elTotal.textContent = `${totalCust} ta`;
+      if (elRepeat) elRepeat.textContent = `${repeatCust} ta`;
+      if (elSpent) elSpent.textContent = formatMoney(totalSpent);
+
+      if (!list || list.length === 0) {
+        if (empty) empty.style.display = "block";
+        return;
+      }
+      if (empty) empty.style.display = "none";
+
+      list.forEach(c => {
+        const tr = document.createElement("tr");
+        const dateStr = c.firstOrderAt ? new Date(c.firstOrderAt).toLocaleDateString("uz-UZ", { timeZone: "Asia/Tashkent" }) : "—";
+        const count = Number(c.ordersCount) || 0;
+        const badgeClass = count > 1 ? "status-success" : "status-pending";
+        tr.innerHTML = `
+          <td>
+            <strong>${c.name || "Mijoz"}</strong>
+            ${c.telegramId ? `<div style="font-size: 11.5px; color: var(--ink-muted);">TG: ${c.telegramId}</div>` : ""}
+          </td>
+          <td>
+            <a href="tel:${c.phone}" style="color: var(--brand); font-weight: 600; text-decoration: none;">
+              ${c.phone}
+            </a>
+          </td>
+          <td>
+            <span class="status-badge ${badgeClass}">
+              ${count} ta buyurtma
+            </span>
+          </td>
+          <td>
+            <strong>${formatMoney(c.totalSpent || 0)}</strong>
+          </td>
+          <td style="color: var(--ink-muted); font-size: 13px;">
+            ${dateStr}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterCustomers() {
+      const q = (document.getElementById("custSearch")?.value || "").toLowerCase().trim();
+      if (!q) {
+        displayCustomers(allCustomers);
+        return;
+      }
+      const filtered = allCustomers.filter(c =>
+        (c.name || "").toLowerCase().includes(q) ||
+        (c.phone || "").toLowerCase().includes(q)
+      );
+      displayCustomers(filtered);
     }
 
     /* 4. Reports */

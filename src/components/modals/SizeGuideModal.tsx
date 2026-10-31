@@ -76,3 +76,4 @@ export default function SizeGuideModal({ isOpen, onClose }: SizeGuideModalProps)
     </Sheet>
   );
 }
+
