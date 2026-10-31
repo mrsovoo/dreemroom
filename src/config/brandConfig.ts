@@ -65,8 +65,6 @@ export type BrandConfig = {
     APP_NAME: string;
     welcomeMessage: string;
     buttons: Record<string, string>;
-    dailyReportTime?: string;
-    timezone?: string;
   };
   categories: CategoryConfig[];
   sizes: string[];
@@ -202,5 +200,4 @@ export function getBrandFallbackSvg(name?: string): string {
   const brand = name || activeConfig.brandName || "Brand";
   return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' fill='%232b2836'><rect width='600' height='800' fill='%232b2836'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23716d82' font-family='sans-serif' font-size='22'>${encodeURIComponent(brand)}</text></svg>`;
 }
-
 

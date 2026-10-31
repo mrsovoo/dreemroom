@@ -30,18 +30,22 @@ if (isGenerated) {
   console.log("=".repeat(64) + "\n");
 }
 
-// 2. Railway yoki serverda Telegram botni avtomatik ishga tushirish
+// 2. Railway yoki serverda Telegram botni avtomatik ishga tushirish (agar BOT_TOKEN mavjud bo'lsa)
 if (!process.env.DEV_ALL) {
-  try {
-    const botProcess = spawn("node", ["bot.js"], {
-      stdio: "inherit",
-      env: process.env,
-    });
-    botProcess.on("error", (err) => {
-      console.error("[BOT START ERROR]:", err.message);
-    });
-  } catch (err) {
-    console.error("[BOT SPAWN ERROR]:", err.message);
+  if (process.env.BOT_TOKEN) {
+    try {
+      const botProcess = spawn("node", ["bot.js"], {
+        stdio: "inherit",
+        env: process.env,
+      });
+      botProcess.on("error", (err) => {
+        console.error("[BOT START ERROR]:", err.message);
+      });
+    } catch (err) {
+      console.error("[BOT SPAWN ERROR]:", err.message);
+    }
+  } else {
+    console.warn("\x1b[33m[TELEGRAM BOT]: BOT_TOKEN belgilanmagan. Bot ishga tushmadi. (.env ni to'ldiring)\x1b[0m");
   }
 }
 

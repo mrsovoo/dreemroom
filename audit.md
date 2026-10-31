@@ -1,8 +1,8 @@
-# DREEM ROOM — To'liq Loyiha Texnik Auditi va Funksiyalar Xaritasi
+# UNIVERSAL CLOTHING STORE PLATFORM — To'liq Loyiha Texnik Auditi va Funksiyalar Xaritasi
 
-> **Hujjat yaratilgan sana:** 2026-yil 30-oktabr  
-> **Loyiha nomi:** DREEM ROOM (zamonaviy premium ayollar kiyimlari e-tijorat platformasi va Telegram ekotizimi)  
-> **Dastur turi:** Full-stack veb-ilova (SPA + REST API + PostgreSQL + Telegram WebApp + Telegram Bot)
+> **Hujjat turi:** Texnik arxitektura va funksiyalar auditi  
+> **Loyiha nomi:** Universal Kiyim-Kechak E-Tijorat Tizimi (Telegram WebApp & Forum Integratsiyasi)  
+> **Dastur turi:** Full-stack veb-ilova (SPA + REST API + PostgreSQL + Telegram WebApp + Yagona Telegram Bot)
 
 ---
 
@@ -37,7 +37,7 @@ Platforma uchta asosiy qismdan tashkil topgan:
                                    ▼                ▼
 ┌──────────────────────────────────────────┐   ┌─────────────────────────────┐
 │          DATABASE LAYER (db.js)          │   │      TELEGRAM EKOTIZIMI     │
-│  - Neon Serverless PostgreSQL            │   │  - Admin Bot (@dreemroom_*) │
+│  - Neon Serverless PostgreSQL            │   │  - Yagona Bot (Admin & User)│
 │  - In-Memory Cache (TTL)                 │   │  - Buyurtmalar guruhi/kanali│
 │  - Fallback JSON (products/orders)       │   │  - Inline WebApp klaviatura │
 └──────────────────────────────────────────┘   └─────────────────────────────┘

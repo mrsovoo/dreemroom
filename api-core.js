@@ -123,7 +123,7 @@ export function verifyAdminAuth(req) {
   if (authHeader.startsWith("Bearer ")) {
     token = authHeader.substring(7).trim();
   } else if (req.headers["cookie"]) {
-    const match = req.headers["cookie"].match(/(?:brand_token|admin_token|dreem_token)=([^;]+)/);
+    const match = req.headers["cookie"].match(/(?:brand_token|admin_token)=([^;]+)/);
     if (match) token = match[1];
   }
 
@@ -238,7 +238,7 @@ export async function parseBody(req) {
 
 export async function deleteTelegramMessages(chatId, messageIds) {
   const cfg = await getBotConfig();
-  const token = cfg?.botToken?.trim() || process.env.BOT_TOKEN?.trim() || process.env.ADMIN_BOT_TOKEN?.trim();
+  const token = cfg?.botToken?.trim() || process.env.BOT_TOKEN?.trim();
   if (!token || !chatId || !Array.isArray(messageIds) || messageIds.length === 0) return;
 
   for (const msgId of messageIds) {

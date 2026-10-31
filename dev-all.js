@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import process from "node:process";
 
 console.log("\x1b[1m\x1b[35m=========================================\x1b[0m");
-console.log("\x1b[1m\x1b[36m🚀 DREEM ROOM: Barcha xizmatlar ishga tushmoqda...\x1b[0m");
+console.log("\x1b[1m\x1b[36m🚀 Do'kon tizimi: Barcha xizmatlar ishga tushmoqda...\x1b[0m");
 console.log("\x1b[90m📦 Do'kon:       http://localhost:5173\x1b[0m");
 console.log("\x1b[90m⚙️  Admin panel:  http://localhost:3000\x1b[0m");
 console.log("\x1b[90m🤖 Telegram bot: node bot.js\x1b[0m");

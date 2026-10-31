@@ -1162,12 +1162,12 @@ export async function getBotConfig() {
   } catch {}
 
   return {
-    botToken: process.env.BOT_TOKEN || process.env.ADMIN_BOT_TOKEN || process.env.ORDER_BOT_TOKEN || fileCfg.botToken || "",
-    adminBotUsername: process.env.BOT_USERNAME || process.env.ADMIN_BOT_USERNAME || fileCfg.adminBotUsername || "",
-    orderBotToken: process.env.BOT_TOKEN || process.env.ORDER_BOT_TOKEN || fileCfg.orderBotToken || "",
-    orderBotUsername: process.env.BOT_USERNAME || process.env.ORDER_BOT_USERNAME || fileCfg.orderBotUsername || "",
+    botToken: process.env.BOT_TOKEN || fileCfg.botToken || "",
+    adminBotUsername: process.env.BOT_USERNAME || fileCfg.adminBotUsername || "",
+    orderBotToken: process.env.BOT_TOKEN || fileCfg.orderBotToken || "",
+    orderBotUsername: process.env.BOT_USERNAME || fileCfg.orderBotUsername || "",
     targetChatId: process.env.TARGET_CHAT_ID ? Number(process.env.TARGET_CHAT_ID) : (fileCfg.targetChatId || ""),
-    adminSecret: process.env.ADMIN_SECRET || fileCfg.adminSecret || "",
+    adminSecret: fileCfg.adminSecret || "",
     webAppUrl: process.env.WEB_APP_URL || fileCfg.webAppUrl || "http://localhost:5173",
   };
 }

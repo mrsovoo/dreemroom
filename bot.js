@@ -119,16 +119,14 @@ function loadConfig() {
 
   const botToken =
     process.env.BOT_TOKEN ||
-    process.env.ADMIN_BOT_TOKEN ||
-    process.env.ORDER_BOT_TOKEN ||
     fileCfg.botToken ||
     "";
 
   return {
     botToken,
-    botUsername: process.env.BOT_USERNAME || process.env.ADMIN_BOT_USERNAME || fileCfg.botUsername || "",
+    botUsername: (process.env.BOT_USERNAME || fileCfg.botUsername || brandConfig.bot?.BOT_USERNAME || "").replace(/^@/, ""),
     targetChatId: process.env.TARGET_CHAT_ID ? Number(process.env.TARGET_CHAT_ID) : (fileCfg.targetChatId || ""),
-    webAppUrl: process.env.WEB_APP_URL || fileCfg.webAppUrl || "https://dreemroom.vercel.app",
+    webAppUrl: process.env.WEB_APP_URL || fileCfg.webAppUrl || "https://your-brand.vercel.app",
     adminIds: fileCfg.adminIds || [],
   };
 }
@@ -755,7 +753,7 @@ async function handleMessage(msg) {
 
   // Shaxsiy chat tekshiruvlari
   const isAdmin = await isUserAdmin(userId);
-  const webAppUrl = config.webAppUrl || process.env.WEB_APP_URL || "https://dreemroom.vercel.app";
+  const webAppUrl = config.webAppUrl || process.env.WEB_APP_URL || "https://your-brand.vercel.app";
 
   const LAUNCH_BUTTON = {
     inline_keyboard: [
@@ -1580,9 +1578,8 @@ async function startPolling() {
   const token = config.botToken?.trim();
 
   if (!token) {
-    console.log("\x1b[33m[TELEGRAM BOT]: BOT_TOKEN kiritilmagan. Bot hozircha kutish rejimida.\x1b[0m");
-    setTimeout(startPolling, 10000);
-    return;
+    console.error("\x1b[31m[XATOLIK]: BOT_TOKEN topilmadi, .env faylini to'ldiring!\x1b[0m");
+    process.exit(1);
   }
 
   try {

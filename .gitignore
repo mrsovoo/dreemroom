@@ -5,7 +5,25 @@ dist
 .env
 .env.*
 !.env.example
+
+# Runtime & Local Data Fallbacks
 bot-config.json
 admin_users.json
 telegram_groups.json
 .auth_credentials.json
+admin_keys.json
+orders.json
+customers.json
+products.json
+settings.json
+contacts.json
+
+# Dynamically uploaded images (DB saves in Base64 / Neon)
+public/images/img-*
+public/images/main-*
+public/images/side-*
+
+# Test reports and artifacts
+artifacts/
+test-results/
+playwright-report/

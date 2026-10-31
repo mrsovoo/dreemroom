@@ -69,7 +69,7 @@ export default function App() {
   const [profile, setProfile] = useProfile();
   const [productsList, setProductsList] = useState<Product[]>(() => {
     try {
-      const cached = localStorage.getItem("dreemroom_cached_prods");
+      const cached = localStorage.getItem("store_cached_prods");
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -83,7 +83,7 @@ export default function App() {
 
   const [heroSlidesList, setHeroSlidesList] = useState<HeroSlide[]>(() => {
     try {
-      const cached = localStorage.getItem("dreemroom_cached_slides");
+      const cached = localStorage.getItem("store_cached_slides");
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -94,7 +94,7 @@ export default function App() {
 
   const [siteContacts, setSiteContacts] = useState<SiteContacts>(() => {
     try {
-      const cached = localStorage.getItem("dreemroom_cached_contacts");
+      const cached = localStorage.getItem("store_cached_contacts");
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && typeof parsed === "object") return { ...defaultSiteContacts, ...parsed };
@@ -105,7 +105,7 @@ export default function App() {
 
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(() => {
     try {
-      const cached = localStorage.getItem("dreemroom_cached_prods");
+      const cached = localStorage.getItem("store_cached_prods");
       return !cached || JSON.parse(cached).length === 0;
     } catch {
       return true;
@@ -181,7 +181,7 @@ export default function App() {
             if (data.length > 0) {
               setProductsList(data);
               try {
-                localStorage.setItem("dreemroom_cached_prods", JSON.stringify(data));
+                localStorage.setItem("store_cached_prods", JSON.stringify(data));
               } catch {}
             } else if (import.meta.env.DEV) {
               setProductsList((curr) => (curr.length > 0 ? curr : getLocalDemoProducts()));
@@ -220,7 +220,7 @@ export default function App() {
           if (Array.isArray(data) && data.length > 0) {
             setHeroSlidesList(data);
             try {
-              localStorage.setItem("dreemroom_cached_slides", JSON.stringify(data));
+              localStorage.setItem("store_cached_slides", JSON.stringify(data));
             } catch {}
           }
         }
@@ -246,7 +246,7 @@ export default function App() {
           if (data && typeof data === "object") {
             setSiteContacts((prev) => ({ ...prev, ...data }));
             try {
-              localStorage.setItem("dreemroom_cached_contacts", JSON.stringify(data));
+              localStorage.setItem("store_cached_contacts", JSON.stringify(data));
             } catch {}
           }
         }
@@ -268,8 +268,8 @@ export default function App() {
       setCart([]);
       setWishlist([]);
       try {
-        localStorage.removeItem("dreemroom-cart");
-        localStorage.removeItem("dreemroom-wishlist");
+        localStorage.removeItem("store-cart");
+        localStorage.removeItem("store-wishlist");
       } catch {}
       return;
     }

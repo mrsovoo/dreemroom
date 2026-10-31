@@ -4,7 +4,7 @@ import type { CartItem } from "../types/store";
 export function useCart() {
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
-      const stored = localStorage.getItem("store-cart") || localStorage.getItem("dreemroom-cart");
+      const stored = localStorage.getItem("store-cart");
       return stored ? (JSON.parse(stored) as CartItem[]) : [];
     } catch {
       return [];

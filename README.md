@@ -1,214 +1,99 @@
-# DREEM ROOM — Ayollar Kiyimlari Do'koni & Telegram WebApp
+# Universal Kiyim-Kechak Do'koni Shabloni (E-Commerce & Telegram WebApp)
 
 <p align="center">
-  <img src="public/favicon.svg" width="90" height="90" alt="DREEM ROOM Logo" />
+  <img src="public/brand/logo.svg" width="220" alt="Brand Logo" />
 </p>
 
 <p align="center">
-  <b>DREEM ROOM</b> — zamonaviy ayollar kiyimlari to'plamini taqdim etuvchi yuqori unumdorlikka ega, to'liq responsiv elektron tijorat platformasi hamda Telegram WebApp (Mini App).
+  <b>Universal Kiyim-Kechak Shabloni</b> — har qanday kiyim-kechak, moda va to'qimachilik brendlari uchun tayyorlangan, yuqori unumdorlikka ega zamonaviy elektron tijorat platformasi, Telegram WebApp (Mini App), yagona Telegram bot va boshqaruv admin paneli.
 </p>
 
 ---
 
-## 📌 Loyiha haqida
+## 📌 Loyiha Haqida
 
-Loyiha eng so'nggi zamonaviy veb-texnologiyalar yordamida ishlab chiqilgan bo'lib, xaridorlarga brauzerda ham, Telegram messenjeri ichida ham birdek qulay, tezkor va intuitiv xarid qilish tajribasini taqdim etadi.
+Ushbu shablon kiyim-kechak do'konlari uchun standartlashtirilgan bo'lib, yangi mijoz yoki brendga moslashtirish uchun **kodni o'zgartirish talab etilmaydi**. Do'kon nomi, logotipi, ranglar gammasi, shriftlar, bannerlar, kategoriyalar va kontaktlar faqat bitta `brand.config.js` konfiguratsiya fayli orqali boshqariladi.
 
-Platforma **Vercel Hobby** tarifining Serverless cheklovlariga to'liq moslashtirilgan, **Neon Serverless PostgreSQL** ma'lumotlar bazasi bilan integratsiya qilingan hamda buyurtmalar va mahsulotlarni boshqaruvchi Telegram bot tizimiga ega.
-
----
-
-## 🚀 Asosiy Imkoniyatlar va Afzalliklar
-
-### 🛍 Xaridorlar uchun (Storefront & UX)
-- **0-sekundli Tezkor Yuklanish**: Brauzer `localStorage` keshidan foydalanib ma'lumotlar zudlik bilan ochiladi, fonda backend API bilan yangilanadi (in-memory 6 soniyali kesh va Edge Cache s-maxage).
-- **Avtomatik Narx Tizimi**: Barcha narxlar o'zbek so'mida aks etadi (`250 000 so'm`). Telegram bot yoki admin orqali kiritilgan ixcham qiymatlar (masalan `250` yoki `180`) avtomatik ravishda `1000` ga ko'paytirilib, to'g'ri so'm formatida ko'rsatiladi.
-- **O'zbekiston Telefon Raqamlari Avtomatik Formati (`+998 00 000 0000`)**:
-  - Barcha maydonlarda doimiy `+998 ` prefiksi avtomatik chiqadi va xaridor raqam terishi bilan bo'shliqlar bilan `+998 90 123 4567` shaklida formatlanadi.
-- **Tezkor va Qulay Ro'yxatdan O'tish (Ortiqcha Parolsiz)**:
-  - Hali ro'yxatdan o'tmagan xaridorlar uchun markazlashtirilgan, minimalistik ro'yxatdan o'tish interfeysi.
-  - Ortiqcha murakkab parollarsiz, faqat **Ism va familiya** hamda **Telefon raqami**ni kiritish kifoya.
-  - Ro'yxatdan o'tgach, to'liq shaxsiy kabinet ochiladi: foydalanuvchi bosh harfi bilan avatar, ism, telefon, o'lchamlar jadvali va tizimdan chiqish imkoniyati.
-  - Headerdagi profil tugmasi: ro'yxatdan o'tmaganida oddiy nishoncha, ro'yxatdan o'tganda foydalanuvchi ismining bosh harfi aks etadi.
-- **Savatda Avtomatik Profil Integratsiyasi**:
-  - Ro'yxatdan o'tgan xaridor uchun savatda ism va raqam kiritish maydonlari takrorlanmaydi.
-  - Xaridor profili avtomatik ravishda chiroyli profil kartochkasi shaklida ulanadi va to'lov usulini tanlab, zudlik bilan buyurtma berish mumkin.
-  - Agar ro'yxatdan o'tmagan bo'lsa, xaridorni qulay ro'yxatdan o'tishga yo'naltiruvchi taklifnoma chiqadi.
-- **Alohida "O'lchamlar Jadvali" Modali**:
-  - Profil va footer orqali ochiladigan mustaqil o'lchamlar oynasi.
-  - Har bir o'lcham (`XS`, `S`, `M`, `L`, `XL`, `XXL`, `Standart`) uchun aniq tavsiya etilgan bo'y va vazn ko'rsatkichlari jadvali hamda foydali maslahat bloki.
-- **Moslashuvchan Mahsulot Modali**:
-  - Kompyuterda nafis markaziy ikki ustunli dialog (chapda galereya, o'ngda xarid parametrlari).
-  - Mobil qurilmalarda silliq pastdan chiquvchi Bottom Sheet.
-  - Har doim pastda qadalib turuvchi (*bottom sticky*) qulay **"SAVATGA QO'SHISH"** tugmasi.
-- **Bo'sh Savat va Swipe Tavsiyalar Karuseli**:
-  - Savat bo'sh bo'lgan holatda foydalanuvchiga mos tavsiya etilgan eng sara liboslar karuseli ochiladi.
-  - **Mobilda:** Silliq sensorli swipe (touch swipe + snap scroll).
-  - **Desktop va planshetda:** Sichqoncha bilan ushlab tortish (drag-to-scroll), trekpad yoki chapga/o'ngga navigatsiya tugmalari.
-  - **Zen Tank minimalist moda uslubi:** Barcha kartochkalar va rasmlar radiussiz (to'g'ri burchakli, sharp), rasmlar toza va ortiqcha yozuvlarsiz.
-- **Aqlli Bildirishnomalar (Notification Bell)**:
-  - Qo'ng'iroqcha tugmasidagi qizil nuqta behuda ko'rinmaydi.
-  - Faqat yangi bildirishnoma (masalan, buyurtma muvaffaqiyatli qabul qilinganda) paydo bo'lgandagina qizil nuqta yonadi va ko'rilgach avtomatik o'chadi.
-- **O'lcham Tanlash (XS, S, M, L, XL)**:
-  - Har bir kiyim uchun o'lcham tugmalari.
-  - **"O'lcham jadvali"** interaktiv tavsiya bloki (bo'y va vaznga mos tavsiyalar: *masalan, XS — 150–158 sm, 40–48 kg*).
-- **Ko'p Rakursli Suratlar Galereyasi**:
-  - Mahsulot kartochkalarida suratlarni almashtirish (Desktopda hover/klik, mobil qurilmalarda qulay navigatsiya).
-  - Mahsulot oynasida vertikal miniatyuralar, pagination ko'rsatkichlari va ulashish (*Share*) tugmasi.
-- **Savat va Sevimlilar (Wishlist)**:
-  - O'lcham bo'yicha mahsulotlarni guruhlash, sonini oshirish/kamaytirish.
-  - Sevimli tovarlarni bir klikda saqlash va boshqarish.
-- **Telegram Mini App Integratsiyasi**:
-  - Telegram ichida to'liq ekranga moslashish, *safe-area* va tebranishlar (*Telegram Haptic Feedback*).
-  - Telegram orqali bitta klikda buyurtma rasmiylashtirish.
-
-### ⚙️ Boshqaruv va Administrator Tizimi (Admin & Bots)
-- **Zamonaviy Admin Panel (`/admin` yoki `admin.html`)**:
-  - **Boshqaruv (Dashboard)**: Buyurtmalar statistikasi, umumiy tushum, faol tovarlar monitoringi.
-  - **Mahsulotlar Katalogi**: Barcha tovarlar ro'yxati, narxlarni ko'rish, qidirish va bazani tozalash (*Reset*).
-  - **Bannerlar Slayderi**: Bosh sahifadagi promo slayderlarni boshqarish (yangi rasm, sarlavha, havola qo'shish yoki o'chirish).
-  - **Aloqa & Manzil Sozlamalari**: Telefon raqam, Telegram kanal, Instagram sahifa, do'kon manzili, ish vaqti va brend tavsifini to'g'ridan-to'g'ri o'zgartirish.
-  - **Foydalanuvchilar & Xavfsizlik**: Admin huquqlari va maxfiy ruxsat kalitlarini boshqarish.
-- **Telegram Admin Bot (`@dreemroom_adm_bot`)**:
-  - Do'kon egasi uchun to'g'ridan-to'g'ri Telegram orqali yangi tovarlar va fotosuratlarni yuklash.
-- **Buyurtma Xabarnomalari Boti**:
-  - Yangi buyurtma kelib tushganda mijoz ismi, telefon raqami, tovarlar ro'yxati va summasini Telegram guruh yoki adminga yuboradi.
+### Asosiy Afzalliklari:
+1. **White-label Arxitektura:** Kodda hech qanday mijozga xos nomlar yoki hardcoded havolalar yo'q.
+2. **Yagona Telegram Bot:** Foydalanuvchilar va administratorlar bitta botdan foydalanadi (rollar Telegram ID va baza orqali aniqlanadi).
+3. **Forum Topiklar Integratsiyasi:** Telegram ichki guruhida `Buyurtmalar`, `Yetkazilganlar`, `Hisobotlar` va `Tizim` mavzulari (forum topics) orqali to'liq avtomatlashtirilgan buyurtmalar nazorati.
+4. **Kunlik Avtomatik Hisobot:** Har kuni soat 22:00 da (Asia/Tashkent) "Hisobotlar" topikiga kunlik tushum, yangi mijozlar va buyurtmalar statistikasi avtomatik yuboriladi.
+5. **Mijozlar Bazasi (Loyalty):** Har bir xaridorning buyurtmalari soni, sarflagan summasi va oxirgi faolligi saqlanadi.
+6. **Xavfsiz Admin Panel:** JWT sessiya va HTTP-only cookie bilan himoyalangan, parolsiz kirish imkonsiz, birinchi ishga tushishda avtomatik xavfsiz parol generatsiya qilinadi.
 
 ---
 
-## 🛠 Texnologik Stek
+## 🛠 Texnologiyalar (Stack)
 
-| Qatlam | Texnologiyalar |
-|---|---|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Motion (Framer Motion), Lucide Icons |
-| **Bundler** | Vite Single-File Bundle (Yuqori tezlik va optimallashtirilgan assetlar) |
-| **Backend & API** | Node.js Serverless Function (Vercel yagona router `api/index.js`), Express/HTTP `server.js` |
-| **Ma'lumotlar Bazasi** | Neon Serverless PostgreSQL (`db.js`, Pool Connection & Resilience Fallbacks) |
-| **Telegram API** | Telegraf / Telegram Bot API (Mini App SDK, WebApp Haptics) |
-| **Dizayn & Stil** | Maxsus zamonaviy palitra: `#403D4F` (Velvorn Slate), `#18181b` (Onyx Black), `#FFFFFF` |
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4, Motion (`motion/react`), Lucide React.
+- **Backend:** Node.js HTTP Server (`server.js`), RESTful API (`api-core.js`), Vercel Serverless Functions (`api/index.js`, `api/cron-daily-report.js`).
+- **Ma'lumotlar Bazasi:** Neon Serverless PostgreSQL (`@neondatabase/serverless`), in-memory kesh, mahalliy JSON zaxira rejimi.
+- **Bot va Integratsiyalar:** Yagona Telegram Bot API (`bot.js`), Telegram WebApp Mini App SDK, Forum Topics API.
+- **Dizayn Tizimi:** CSS Custom Properties (`var(--color-primary)` va h.k.) orqali `brand.config.js` ga 100% bog'langan reaktiv mavzulashtirish.
 
 ---
 
-## 📁 Loyiha Tuzilmasi
+## 📁 Papka Strukturasi
 
-```text
-├── api/
-│   └── index.js              # Vercel Serverless Function (Yagona birlashtirilgan router)
-├── public/
-│   ├── favicon.svg           # Brauzer nishonchasi
-│   ├── admin.html            # Administrator boshqaruv paneli
-│   ├── image-landing/        # Hero promo slayder rasmlari
-│   └── images/               # Mahsulotlar uchun namunaviy suratlar
-├── src/
-│   ├── components/
-│   │   ├── Logo.tsx          # Vektorli geometrik DREEM ROOM logotipi
-│   │   ├── ProductCard.tsx   # Tovar kartochkasi (ko'p suratli slider, narx)
-│   │   ├── ProductGallery.tsx# Modal ichidagi galereya va miniatyuralar
-│   │   └── Sheet.tsx         # Responsiv modal (Desktop markaz / Mobil bottom sheet)
-│   ├── App.tsx               # Asosiy do'kon ilovasi, routing, footer watermark, auth & swipe
-│   ├── data.ts               # Turlar, yordamchi funksiyalar va doimiy ma'lumotlar
-│   ├── index.css             # Asosiy dizayn qoidalari, animatsiyalar va media so'rovlar
-│   └── main.tsx              # React kirish nuqtasi
-├── admin.html                # Asosiy Administrator paneli
-├── bot.js                    # Mijoz buyurtmalarini qabul qiluvchi Telegram bot
-├── admin-bot.js              # Admin uchun tovar yuklovchi Telegram bot
-├── db.js                     # Neon PostgreSQL bilan ishlash qatlami (CRUD amallari)
-├── server.js                 # Standart Node.js HTTP server (Local yoki Docker/Railway uchun)
-├── vercel.json               # Vercel deploy, kesh va rewrites konfiguratsiyasi
-├── package.json              # Bog'liqliklar va buyruqlar
-└── README.md                 # Loyiha hujjatlari
+```
+├── brand.config.js         # Yagona konfiguratsiya fayli (nom, ranglar, shriftlar, bot, kontaktlar)
+├── public/                 # Statik fayllar
+│   ├── brand/              # Brend logotipi (logo.svg), favicon va boshlang'ich banner
+│   ├── image-landing/      # Vitrina karusel bannerlari
+│   ├── images/             # Mahsulot rasmlari va placeholder
+│   └── admin.html          # Boshqaruv admin paneli interfeysi
+├── src/                    # Frontend React ilovasi
+│   ├── App.tsx             # Asosiy do'kon ilovasi va marshrutlash
+│   ├── config/             # brandConfig yuklovchi modul
+│   ├── components/         # UI komponentlar (Header, Footer, Logo, ProductCard va h.k.)
+│   ├── pages/              # Sahifalar (HomeView, CatalogView, CartView, ProductView, ProfileView)
+│   ├── hooks/              # Reusable hooklar (useCart, useWishlist, useProfile)
+│   └── demoData.ts         # 7 ta neytral demo mahsulot (VITE_DEMO_MODE="true" da)
+├── api-core.js             # Barcha backend API marshrutlari va biznes mantiq
+├── server.js               # Node.js mustaqil serveri (port 3000)
+├── bot.js                  # Yagona Telegram bot (admin menyusi, qadamma-qadam qo'shish, forum)
+├── db.js                   # Neon PostgreSQL va JSON zaxira qatlami
+├── scripts/
+│   ├── init-db.js          # Ma'lumotlar bazasini bir buyruq bilan sozlash
+│   └── schema.sql          # SQL sxemasi
+├── README.md               # Loyiha tavsifi
+├── INSTALL.md              # O'rnatish va ishga tushirish qo'llanmasi
+└── CUSTOMIZE.md            # Yangi brendga moslashtirish yo'riqnomasi
 ```
 
 ---
 
-## ⚙️ Sozlash va Ishga Tushirish
+## 🚀 Ishga Tushirish (Qisqa)
 
-### 1. Repozitoriyani klonlash
-```sh
-git clone https://github.com/mrsovoo/dreemroom.git
-cd dreemroom
-```
+Batafsil ko'rsatmalar uchun [INSTALL.md](INSTALL.md) fayliga qarang.
 
-### 2. Bog'liqliklarni o'rnatish
-```sh
+```bash
+# 1. Bog'liqliklarni o'rnatish
 npm install
-```
 
-### 3. Muhit o'zgaruvchilari (`.env`)
-Loyihaning ildiz papkasida `.env` faylini yarating va quyidagi parametrlarni kiriting:
+# 2. Muhit o'zgaruvchilarini sozlash
+cp .env.example .env
 
-```env
-# Neon PostgreSQL ma'lumotlar bazasi URL
-DATABASE_URL=postgresql://user:password@ep-sample-pool.eu-central-1.aws.neon.tech/neondb?sslmode=require
+# 3. Baza jadvallarini yaratish
+npm run db:init
 
-# Telegram Bot tokenlari
-BOT_TOKEN=123456789:AAExampleBotTokenForOrders
-ADMIN_BOT_TOKEN=123456789:AAExampleBotTokenForAdmin
-
-# Server porti (ixtiyoriy, standart 3000)
-PORT=3000
-```
-
-### 4. Dasturchi rejimida ishga tushirish (Local)
-Frontendni Vite orqali ishga tushirish:
-```sh
-npm run dev
-```
-
-Mahalliy to'liq serverni (API + Static) ishga tushirish:
-```sh
-node server.js
-```
-
-Telegram botlarini alohida ishga tushirish (kerak bo'lsa):
-```sh
-node admin-bot.js   # Tovar qo'shuvchi bot
-node bot.js         # Buyurtma qabul qiluvchi bot
+# 4. Dasturlash rejimida ishga tushirish (Frontend + Backend + Bot)
+npm run dev:all
 ```
 
 ---
 
-## 🌐 Deploy Qilish (Vercel)
+## 🎨 Yangi Brendga Moslashtirish
 
-Loyiha **Vercel Hobby** tarifiga 100% moslashtirilgan. Vercel Hobby tarifida 12 tadan ortiq Serverless Funksiyaga ruxsat berilmaganligi sababli, barcha API so'rovlari `api/index.js` yagona routeriga birlashtirilgan.
+Do'konni yangi brendga moslashtirish uchun faqat:
+1. `brand.config.js` faylini oching va brend ma'lumotlarini kiriting.
+2. `public/brand/logo.svg` va `public/brand/favicon.svg` fayllarini almashtiring.
 
-1. Repozitoriyani Vercel bilan ulang: [https://vercel.com](https://vercel.com)
-2. `Settings -> Environment Variables` bo'limida quyidagilarni kiriting:
-   - `DATABASE_URL` (Neon PostgreSQL ulanish manzili)
-   - `BOT_TOKEN`
-   - `ADMIN_BOT_TOKEN`
-3. Vercel avtomatik ravishda `npm run build` buyrug'ini bajaradi va saytni `dist/` katalogidan bir necha soniyada ishga tushiradi.
-4. Admin paneliga kirish uchun: `https://sizning-domen.vercel.app/admin` manzilidan foydalaning.
-
----
-
-## 📡 Asosiy API Endpointlar
-
-| Usul | Yo'nalish | Tavsif |
-|---|---|---|
-| `GET` | `/api/products` | Barcha mahsulotlar ro'yxatini olish (keshlangan) |
-| `POST` | `/api/products` | Yangi mahsulot qo'shish |
-| `PUT` | `/api/products/:id` | Mahsulot ma'lumotlarini yangilash |
-| `DELETE` | `/api/products/:id` | Mahsulotni o'chirish |
-| `GET` | `/api/banners` | Bosh sahifa hero bannerlari |
-| `POST` | `/api/banners` | Yangi promo banner qo'shish |
-| `DELETE` | `/api/banners/:id`| Bannerni o'chirish |
-| `GET` | `/api/contacts` | Sayt aloqa va manzil ma'lumotlari |
-| `POST` | `/api/contacts` | Aloqa ma'lumotlarini yangilash |
-| `POST` | `/api/orders` | Yangi xarid buyurtmasini yaratish va botga yuborish |
-| `POST` | `/api/admin/clear-all` | Barcha tovarlarni tozalash |
-
----
-
-## 🎨 Brend va Logotip
-
-Loyiha uchun yangi vektorli (SVG) **DREEM ROOM** logotipi ishlab chiqilgan va loyihaning barcha asosiy nuqtalariga o'rnatilgan:
-- **Header Navbar**: [`src/components/Logo.tsx`](file:///src/components/Logo.tsx) orqali toza SVG.
-- **Footer**: Saytning pastki qismida brend logotipi va aloqa ma'lumotlari.
-- **Admin Panel**: [`admin.html`](file:///admin.html) yon paneli tepasida brend logotipi.
+Batafsil qo'llanma: [CUSTOMIZE.md](CUSTOMIZE.md).
 
 ---
 
 ## 📄 Litsenziya
 
-Ushbu loyiha mualliflik huquqi bilan himoyalangan. DREEM ROOM brendi uchun maxsus ishlab chiqilgan.
+Universal tijorat shabloni. Barcha huquqlar himoyalangan.

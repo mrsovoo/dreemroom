@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 export function useWishlist() {
   const [wishlist, setWishlist] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem("store-wishlist") || localStorage.getItem("dreemroom-wishlist");
+      const stored = localStorage.getItem("store-wishlist");
       return stored ? (JSON.parse(stored) as string[]) : [];
     } catch {
       return [];

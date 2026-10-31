@@ -58,7 +58,7 @@ async function openProfile(page: Page) {
 }
 
 test("bosh sahifada faqat kerakli bo'limlar bor", async ({ page }) => {
-  await expect(page).toHaveTitle("DREEM ROOM | Ayollar uchun sport kiyimlari");
+  await expect(page).toHaveTitle(/Kiyim Do'koni/i);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Kuch maqsad",
   );
@@ -304,7 +304,7 @@ test("profil saqlanadi va buyurtma formasiga avtomatik qo'yiladi", async ({
   ).toHaveValue("+998901234567");
   expect(
     await page.evaluate(() =>
-      JSON.parse(localStorage.getItem("dreemroom-profile") || "null"),
+      JSON.parse(localStorage.getItem("store-profile") || "null"),
     ),
   ).toEqual({ name: "Malika Karimova", phone: "+998901234567" });
 });
@@ -327,7 +327,7 @@ test("buyurtma berish oddiy forma orqali ishlaydi", async ({ page }) => {
   await expect(dialog.getByRole("heading", { name: "Rahmat!" })).toBeVisible();
   expect(
     await page.evaluate(() =>
-      JSON.parse(localStorage.getItem("dreemroom-cart") || "[]"),
+      JSON.parse(localStorage.getItem("store-cart") || "[]"),
     ),
   ).toEqual([]);
   await dialog
@@ -455,10 +455,9 @@ test("kompyuterda tab menyu yashirin", async ({ page }, testInfo) => {
   ).toBeVisible();
 });
 
-test("DREEM ROOM logotipi sarlavha va footerda turadi", async ({ page }) => {
+test("Brand logotipi sarlavha va footerda turadi", async ({ page }) => {
   const brandButtons = page.getByRole("button", {
-    name: "DREEM ROOM — bosh sahifa",
-    exact: true,
+    name: /bosh sahifa/i,
   });
   await expect(brandButtons).toHaveCount(2);
 

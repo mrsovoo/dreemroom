@@ -10,13 +10,13 @@ export const brandConfig = {
   // 1. BREND ASOSIY MA'LUMOTLARI
   // --------------------------------------------------------------------------
   // Do'konning to'liq rasmiy nomi (Sayt sarlavhalari, bot, admin va cheklarda chiqadi)
-  brandName: "DREEM ROOM",
+  brandName: "Brand Name",
 
   // Qisqa nom (Kichik bo'limlar, SMS yoki bildirishnomalarda ishlatiladi)
-  shortName: "DREEM",
+  shortName: "Brand",
 
   // Shior yoki brend ta'rifi (Hero, meta teglar va ulashish havolalarida ko'rinadi)
-  tagline: "Ayollar uchun zamonaviy va nafis kiyimlar to'plami",
+  tagline: "Zamonaviy va sifatli kiyimlar to'plami",
 
   // --------------------------------------------------------------------------
   // 2. LOGOTIP VA FAVICON (brand/ papkasidagi fayllar)
@@ -87,7 +87,7 @@ export const brandConfig = {
     buttonText: "Katalogni ko'rish",
 
     // Boshlang'ich banner rasmi (public/brand/ papkasida)
-    banner: "/brand/banner.jpg",
+    banner: "/brand/banner.svg",
   },
 
   // --------------------------------------------------------------------------
@@ -118,15 +118,15 @@ export const brandConfig = {
     workHours: "Har kuni 09:00 dan 21:00 gacha",
 
     // Rasmiy elektron pochta
-    email: "info@dreemroom.uz",
+    email: "info@example.com",
 
     // Telegram profil yoki guruh havolasi
-    telegram: "@dreemroom",
-    telegramUrl: "https://t.me/dreemroom",
+    telegram: "@brand_channel",
+    telegramUrl: "https://t.me/brand_channel",
 
     // Instagram sahifasi
-    instagram: "@dreemroom",
-    instagramUrl: "https://instagram.com/dreemroom",
+    instagram: "@brand_profile",
+    instagramUrl: "https://instagram.com/brand_profile",
   },
 
   // --------------------------------------------------------------------------
@@ -140,7 +140,7 @@ export const brandConfig = {
   // --------------------------------------------------------------------------
   bot: {
     // Telegram bot username (boshida @ siz yoziladi)
-    BOT_USERNAME: "dreemroom_bot",
+    BOT_USERNAME: "brand_shop_bot",
 
     // Telegram BotFather dagi Web App (Short name) nomi
     APP_NAME: "app",

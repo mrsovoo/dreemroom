@@ -1,38 +1,29 @@
 [
   {
     "id": "banner-1",
-    "src": "/image-landing/banner-1.jpg",
-    "alt": "DREEM ROOM • Yangi mavsum",
-    "title": "HAR KUNLIK NAFISLIK\nVA GO'ZALLIK",
+    "src": "/image-landing/banner-1.svg",
+    "alt": "Yangi mavsum • To'plam",
+    "title": "HAR KUNLIK NAFISLIK\nVA QULAYLIK",
     "subtitle": "Zamonaviy bichim va yuqori sifatli matolar. Har bir kun uchun nafislik va qulaylik uyg'unligi.",
-    "eyebrow": "DREEM ROOM • TO'PLAM",
+    "eyebrow": "YANGI TO'PLAM • 2026",
     "buttonText": "TO'PLAMNI KO'RISH"
   },
   {
     "id": "banner-2",
-    "src": "/image-landing/banner-2.jpg",
-    "alt": "DREEM ROOM • Eksklyuziv to'plam",
-    "title": "EKSKLYUZIV QISHKI\nTO'PLAM",
-    "subtitle": "Har bir detalda nozik did va qulaylik. Cheklangan miqdordagi eksklyuziv modellar.",
-    "eyebrow": "DREEM ROOM • TO'PLAM",
+    "src": "/image-landing/banner-2.svg",
+    "alt": "Eksklyuziv to'plam",
+    "title": "EKSKLYUZIV SHAHAR\nUSLUBI",
+    "subtitle": "Har bir detalda nozik did va qulaylik. Cheklangan miqdordagi zamonaviy modellar.",
+    "eyebrow": "PREMIUM KOLLEKSIYA",
     "buttonText": "TO'PLAMNI KO'RISH"
   },
   {
     "id": "banner-3",
-    "src": "/image-landing/banner-3.jpg",
-    "alt": "DREEM ROOM • Premium uslub",
-    "title": "ZAMONAVIY SHAHAR\nUSLUBI",
-    "subtitle": "Zamonaviy shahar ritmi uchun maxsus yaratilgan qulay va bejirim kiyimlar.",
-    "eyebrow": "DREEM ROOM • TO'PLAM",
-    "buttonText": "TO'PLAMNI KO'RISH"
-  },
-  {
-    "id": "banner-4",
-    "src": "/image-landing/banner-4.jpg",
-    "alt": "DREEM ROOM • Nafis kolleksiya",
+    "src": "/image-landing/banner-3.svg",
+    "alt": "Nafis kolleksiya",
     "title": "QULAYLIK VA\nNAFIS DID",
     "subtitle": "Har doim urfda bo'ladigan klassik va zamonaviy uslub uyg'unligi.",
-    "eyebrow": "DREEM ROOM • TO'PLAM",
+    "eyebrow": "URFDAGI MODELLAR",
     "buttonText": "TO'PLAMNI KO'RISH"
   }
 ]

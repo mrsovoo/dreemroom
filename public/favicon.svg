@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#403D4F"/><g fill="#fff" transform="translate(12.3 20) scale(0.24)"><path fill-rule="evenodd" d="M0 0H37.72C64.29 0 82 21 82 50C82 79 64.29 100 37.72 100H0ZM17 7H37.72C54.26 7 64.4 23 64.4 50C64.4 77 54.26 93 37.72 93H17ZM90 0H127C145.35 0 156.6 10.8 156.6 27C156.6 43.2 145.35 54 127 54H90ZM107 7H127C135.06 7 140 12.96 140 27C140 41.04 135.06 47 127 47H107Z"/><path d="M90 0H107V100H90ZM118 47L136.5 47L164 100L145.5 100Z"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="24" fill="#18181b"/>
+  <!-- Minimalist Hanger Icon -->
+  <path d="M50 24 C50 17 56 17 56 22 C56 27 50 29 50 34" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M22 62 L50 44 L78 62 Z" fill="none" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+  <line x1="22" y1="62" x2="78" y2="62" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+</svg>
