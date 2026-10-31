@@ -929,13 +929,8 @@
               <div>
                 <h2 class="panel-title" style="margin: 0;">Do'kondagi mahsulotlar</h2>
                 <div style="font-size: 12.5px; color: var(--ink-muted); margin-top: 4px;">
-                  🤖 Yangi mahsulotlar rasmlari va narxlari bilan <strong>@dreemroom_adm_bot</strong> orqali avtomatik joylanadi.
+                  🤖 Yangi mahsulotlar rasmlari va narxlari bilan bot orqali avtomatik joylanadi.
                 </div>
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <button type="button" class="btn btn-danger btn-sm" onclick="clearAllProductsAction()" style="background: #dc2626; color: white;">
-                  🗑️ Barcha kartochkalarni tozalash (0 qilish)
-                </button>
               </div>
             </div>
 
@@ -1099,12 +1094,15 @@
           <div class="panel">
             <div class="panel-header">
               <div>
-                <h2 class="panel-title">👥 Admin bot foydalanuvchilari</h2>
+                <h2 class="panel-title">👥 Do'kon Administratorlari</h2>
                 <p style="font-size: 12px; color: var(--ink-muted); margin-top: 2px;">
-                  Kalit so'zni to'g'ri kiritib @dreemroom_adm_bot dan foydalanayotgan adminlar
+                  Telegram botda boshqaruv huquqiga ega bo'lgan administratorlar ro'yxati
                 </p>
               </div>
-              <input type="text" id="adminUserSearch" class="filter-search" style="max-width: 240px;" placeholder="Qidirish (ism, username)..." oninput="renderFaolAdminlar()">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="adminUserSearch" class="filter-search" style="max-width: 200px;" placeholder="Qidirish..." oninput="renderFaolAdminlar()">
+                <button type="button" class="btn btn-primary btn-sm" onclick="openAddAdminModal()">+ Telegram ID bo'yicha admin qo'shish</button>
+              </div>
             </div>
             <table>
               <thead>
@@ -1448,6 +1446,37 @@
     </div>
   </div>
 
+  <!-- ADD ADMIN USER MODAL -->
+  <div class="modal-backdrop" id="addAdminModal">
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Yangi Admin qo'shish</h3>
+        <button class="modal-close" onclick="closeAddAdminModal()">✕</button>
+      </div>
+      <form id="addAdminForm" onsubmit="saveNewAdminAction(event)">
+        <div class="modal-body">
+          <div class="field-group">
+            <label class="field-label">Telegram User ID *</label>
+            <input type="text" id="newAdminUserId" class="field-input" required placeholder="Masalan: 123456789" autocomplete="off">
+            <small style="color: var(--ink-muted); font-size: 11px; display: block; margin-top: 4px;">Adminning raqamli Telegram ID si (@userinfobot orqali bilish mumkin)</small>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Ism / Lavozim</label>
+            <input type="text" id="newAdminFullName" class="field-input" placeholder="Masalan: Azizbek (Menejer)">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Telegram Username (ixtiyoriy)</label>
+            <input type="text" id="newAdminUsername" class="field-input" placeholder="@menejer_username">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeAddAdminModal()">Bekor qilish</button>
+          <button type="submit" class="btn btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- LOGIN MODAL OVERLAY -->
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card">
@@ -1474,39 +1503,99 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const ADMIN_LOGIN = "admin";
-    const ADMIN_PASS = "dreem2025";
-
-    function checkAuth() {
-      const isAuth = localStorage.getItem("dreem_auth") === "true";
-      const overlay = document.getElementById("loginOverlay");
-      if (overlay) {
-        overlay.style.display = isAuth ? "none" : "flex";
+    // Universal Fetch Interceptor: Har bir so'rovga JWT token qo'shish va 401 ni ushlash
+    const nativeFetch = window.fetch;
+    window.fetch = async function(url, options = {}) {
+      options = options || {};
+      options.headers = options.headers || {};
+      const token = localStorage.getItem("dreem_token");
+      if (token) {
+        if (options.headers instanceof Headers) {
+          if (!options.headers.has("Authorization")) {
+            options.headers.set("Authorization", `Bearer ${token}`);
+          }
+        } else if (Array.isArray(options.headers)) {
+          options.headers.push(["Authorization", `Bearer ${token}`]);
+        } else {
+          if (!options.headers["Authorization"] && !options.headers["authorization"]) {
+            options.headers["Authorization"] = `Bearer ${token}`;
+          }
+        }
       }
-      if (isAuth) {
-        loadData();
+
+      const res = await nativeFetch(url, options);
+      if (res.status === 401 && String(url).startsWith("/api/") && !String(url).includes("/api/auth/login")) {
+        localStorage.removeItem("dreem_token");
+        const overlay = document.getElementById("loginOverlay");
+        if (overlay) overlay.style.display = "flex";
+        const err = document.getElementById("loginError");
+        if (err) {
+          err.style.display = "block";
+          err.textContent = "Sessiya muddati tugadi. Qaytadan kiring.";
+        }
+      }
+      return res;
+    };
+
+    async function checkAuth() {
+      const token = localStorage.getItem("dreem_token");
+      const overlay = document.getElementById("loginOverlay");
+      if (!token) {
+        if (overlay) overlay.style.display = "flex";
+        return;
+      }
+
+      try {
+        const res = await nativeFetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          if (overlay) overlay.style.display = "none";
+          loadData();
+        } else {
+          localStorage.removeItem("dreem_token");
+          if (overlay) overlay.style.display = "flex";
+        }
+      } catch {
+        if (overlay) overlay.style.display = "flex";
       }
     }
 
-    function handleLogin(e) {
+    async function handleLogin(e) {
       e.preventDefault();
       const u = document.getElementById("loginUser").value.trim();
       const p = document.getElementById("loginPass").value.trim();
       const err = document.getElementById("loginError");
 
-      if (u === ADMIN_LOGIN && p === ADMIN_PASS) {
-        localStorage.setItem("dreem_auth", "true");
-        document.getElementById("loginOverlay").style.display = "none";
-        loadData();
-      } else {
-        err.style.display = "block";
-        err.textContent = "Login yoki parol noto'g'ri!";
+      try {
+        const res = await nativeFetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.token) {
+          localStorage.setItem("dreem_token", data.token);
+          if (err) err.style.display = "none";
+          document.getElementById("loginOverlay").style.display = "none";
+          loadData();
+        } else {
+          if (err) {
+            err.style.display = "block";
+            err.textContent = data.error || "Login yoki parol noto'g'ri!";
+          }
+        }
+      } catch (ex) {
+        if (err) {
+          err.style.display = "block";
+          err.textContent = "Serverga ulanishda xatolik yuz berdi.";
+        }
       }
     }
 
     function logoutAdmin() {
       if (confirm("Admin paneldan chiqmoqchimisiz?")) {
-        localStorage.removeItem("dreem_auth");
+        localStorage.removeItem("dreem_token");
         window.location.reload();
       }
     }
@@ -1867,23 +1956,6 @@
       `).join("");
     }
 
-    async function clearAllProductsAction() {
-      if (!confirm("Diqqat! Barcha kartochkalarni o'chirish va barcha ma'lumotlarni 0 qilishni tasdiqlaysizmi?")) return;
-      try {
-        const res = await fetch("/api/admin/clear-all", { method: "POST" });
-        if (res.ok) {
-          showToast("Barcha kartochkalar tozalandi (0 qilindi) ✓");
-          products = [];
-          renderProducts();
-          renderDashboard();
-        } else {
-          showToast("Xatolik yuz berdi");
-        }
-      } catch (err) {
-        showToast("Server xatosi: " + err.message);
-      }
-    }
-
     function openCreateModal() {
       currentEditingProduct = null;
       currentProdImages = [];
@@ -2173,7 +2245,7 @@
             </td>
             <td>${unameLink}</td>
             <td><code style="font-size: 12px; background: #f4f4f6; padding: 2px 6px; border-radius: 4px;">${u.userId}</code></td>
-            <td><code style="font-size: 12px; color: var(--brand); font-weight: 600;">${u.usedKey || 'dreemroom-adm'}</code></td>
+            <td><code style="font-size: 12px; color: var(--brand); font-weight: 600;">${u.usedKey || 'admin-panel'}</code></td>
             <td><span style="font-size: 12px; color: var(--ink-muted);">${createdDate}</span></td>
             <td><span style="font-size: 12px; color: var(--ink-muted);">${activeDate}</span></td>
             <td>
@@ -2229,6 +2301,49 @@
           </tr>
         `;
       }).join("");
+    }
+
+    /* Yangi Admin qo'shish modal boshqaruvi */
+    function openAddAdminModal() {
+      document.getElementById("newAdminUserId").value = "";
+      document.getElementById("newAdminFullName").value = "";
+      document.getElementById("newAdminUsername").value = "";
+      document.getElementById("addAdminModal").classList.add("is-open");
+    }
+
+    function closeAddAdminModal() {
+      document.getElementById("addAdminModal").classList.remove("is-open");
+    }
+
+    async function saveNewAdminAction(e) {
+      e.preventDefault();
+      const userId = document.getElementById("newAdminUserId").value.trim();
+      const fullName = document.getElementById("newAdminFullName").value.trim();
+      const username = document.getElementById("newAdminUsername").value.trim();
+
+      if (!userId) {
+        alert("Telegram ID kiritilishi shart!");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/admin/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, fullName, username }),
+        });
+
+        if (res.ok) {
+          showToast("Yangi admin muvaffaqiyatli qo'shildi ✓");
+          closeAddAdminModal();
+          await loadFaollarData();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert("Xatolik: " + (err.error || "Admin qo'shib bo'lmadi"));
+        }
+      } catch (err) {
+        alert("Serverga ulanishda xatolik: " + err.message);
+      }
     }
 
     /* Kalit so'z modal boshqaruvi */

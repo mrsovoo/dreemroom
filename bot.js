@@ -16,7 +16,6 @@ import {
   getAdminUsers,
   getAdminUser,
   saveAdminUser,
-  isValidAdminKey,
   saveTelegramGroup,
 } from "./db.js";
 
@@ -24,13 +23,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CONFIG_FILE = path.join(__dirname, "bot-config.json");
-const PRODUCTS_FILE = path.join(__dirname, "products.json");
 const ORDERS_FILE = path.join(__dirname, "orders.json");
-const IMAGES_DIR = path.join(__dirname, "public", "images");
 
-if (!fs.existsSync(IMAGES_DIR)) {
-  fs.mkdirSync(IMAGES_DIR, { recursive: true });
-}
+const OWNER_TELEGRAM_ID = process.env.OWNER_TELEGRAM_ID ? String(process.env.OWNER_TELEGRAM_ID).trim() : "";
 
 function loadConfig() {
   let fileCfg = {};
@@ -42,24 +37,19 @@ function loadConfig() {
     console.error("bot-config.json xatosi:", err);
   }
 
+  const botToken =
+    process.env.BOT_TOKEN ||
+    process.env.ADMIN_BOT_TOKEN ||
+    process.env.ORDER_BOT_TOKEN ||
+    fileCfg.botToken ||
+    "";
+
   return {
-    // 1. Admin Bot Token (@dreemroom_adm_bot)
-    botToken: process.env.ADMIN_BOT_TOKEN || process.env.BOT_TOKEN || fileCfg.botToken || "",
-    adminBotUsername: process.env.ADMIN_BOT_USERNAME || fileCfg.adminBotUsername || "dreemroom_adm_bot",
-
-    // 2. Mijozlar uchun Buyurtma Boti (@dreemroom_bot)
-    orderBotToken: process.env.ORDER_BOT_TOKEN || fileCfg.orderBotToken || "",
-    orderBotUsername: process.env.ORDER_BOT_USERNAME || fileCfg.orderBotUsername || "dreemroom_bot",
-
-    // 3. Maqsadli Telegram Kanal yoki Guruh ID
+    botToken,
+    botUsername: process.env.BOT_USERNAME || process.env.ADMIN_BOT_USERNAME || fileCfg.botUsername || "",
     targetChatId: process.env.TARGET_CHAT_ID ? Number(process.env.TARGET_CHAT_ID) : (fileCfg.targetChatId || ""),
-
-    // 4. Admin kalit so'zi
-    adminSecret: process.env.ADMIN_SECRET || fileCfg.adminSecret || "dreemroom-adm",
+    webAppUrl: process.env.WEB_APP_URL || fileCfg.webAppUrl || "https://dreemroom.vercel.app",
     adminIds: fileCfg.adminIds || [],
-
-    // 5. Web App URL (Vercel yoki lokal URL)
-    webAppUrl: process.env.WEB_APP_URL || fileCfg.webAppUrl || "http://localhost:5173",
   };
 }
 
@@ -68,25 +58,6 @@ function saveConfig(cfg) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), "utf-8");
   } catch (err) {
     console.error("bot-config.json saqlashda xatolik:", err);
-  }
-}
-
-function readProducts() {
-  try {
-    if (fs.existsSync(PRODUCTS_FILE)) {
-      return JSON.parse(fs.readFileSync(PRODUCTS_FILE, "utf-8"));
-    }
-  } catch {
-    return [];
-  }
-  return [];
-}
-
-function saveProducts(products) {
-  try {
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2), "utf-8");
-  } catch (err) {
-    console.error("products.json saqlashda xatolik:", err);
   }
 }
 
@@ -103,37 +74,43 @@ function readOrders() {
 
 let config = loadConfig();
 
-// In-memory states
-const userStates = new Map();
+// Adminlikni server darajasida tekshirish (OWNER_TELEGRAM_ID yoki DB dagi faol adminlar)
+async function isUserAdmin(userId) {
+  if (!userId) return false;
+  const uId = String(userId).trim();
+  if (OWNER_TELEGRAM_ID && uId === OWNER_TELEGRAM_ID) return true;
+  const dbAdmin = await getAdminUser(uId);
+  return Boolean(dbAdmin && dbAdmin.status === "active");
+}
 
 // Album (media_group_id) accumulator
-// key: media_group_id, value: { photos: [{fileId, order}], caption, timer, chatId, userId }
 const albumBuffers = new Map();
-
-// Standalone multi-photo buffer for photos sent without media_group_id
-// key: userId, value: { photos: [], timer, caption, chatId }
+// Standalone multi-photo buffer
 const standalonePhotoBuffers = new Map();
 
-// Helper: Call Telegram API
+// Session states for step-by-step product creation
+const userStates = new Map();
+
+// Helper: Call Telegram Bot API
 async function callTelegram(method, payload = {}) {
   const token = config.botToken?.trim();
   if (!token) return null;
 
-  const url = `https://api.telegram.org/bot${token}/${method}`;
   try {
-    const res = await fetch(url, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return await res.json();
+    const data = await res.json().catch(() => null);
+    return data;
   } catch (err) {
     console.error(`Telegram API xatosi (${method}):`, err.message);
     return null;
   }
 }
 
-// Helper: Download a photo file from Telegram to DB and public/images/
+// Helper: Download photo file from Telegram and save directly to DB product_images (diskka emas)
 async function downloadTelegramPhoto(fileId, prefix = "img") {
   const token = config.botToken?.trim();
   if (!token) return null;
@@ -150,141 +127,106 @@ async function downloadTelegramPhoto(fileId, prefix = "img") {
 
     const arrayBuffer = await res.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
-    // 1. Data URL - rasm to'g'ridan-to'g'ri saytda hech qanday 404 xatosiz,
-    // qo'shimcha tarmoq so'rovisiz va zaxira rasmga aylanib ketmasdan asl holida ochiladi!
     const base64Data = buffer.toString("base64");
-    const dataUrl = `data:image/jpeg;base64,${base64Data}`;
 
     const filename = `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}.jpg`;
-    
-    // 2. Lokal faylga kesh sifatida yozish
-    try {
-      const destPath = path.join(IMAGES_DIR, filename);
-      fs.writeFileSync(destPath, buffer);
-    } catch {}
 
-    // 3. Neon PostgreSQL ga ham saqlab qo'yamiz
-    try {
-      await saveImage(filename, base64Data, "image/jpeg");
-    } catch {}
+    // Diskka emas, bazaga (product_images) saqlaymiz
+    await saveImage(filename, base64Data, "image/jpeg");
 
-    // Data URL qaytaramiz (saytda asl rasm o'tirishi kafolatlanadi)
-    return dataUrl;
+    // Sayt va bot uchun universal rasm havolasini qaytaramiz
+    return `/api/images?id=${encodeURIComponent(filename)}`;
   } catch (err) {
     console.error("Rasmni saqlashda xatolik:", err.message);
     return null;
   }
 }
 
-// Helper: Narxni faqat so'mda ko'rsatish (180 yoki 45 kiritilsa ham 180 000 yoki 45 000 so'm bo'ladi)
+// Helper: Narxni chiroyli formatlash
 function formatPrice(price) {
-  let num = typeof price === "number" ? price : parseInt(String(price).replace(/[^0-9]/g, ""), 10) || 0;
+  let num = parseInt(String(price).replace(/\D/g, ""), 10);
+  if (isNaN(num)) return "0 so'm";
   if (num > 0 && num < 1000) {
     num = num * 1000;
   }
   return `${num.toLocaleString("ru-RU")} so'm`;
 }
 
-// Extract Name, Price and Sizes from caption/text intelligently
+// Helper: Captiondan nom va narxni ajratish
 function parseNameAndPrice(text = "") {
-  if (!text || !text.trim()) {
-    return { name: "Yangi to'plam", price: 180000, extractedSize: null };
-  }
+  if (!text) return { name: "", price: 0 };
 
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  let price = 0;
-  let extractedSize = null;
-  const nameLines = [];
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
-  for (const line of lines) {
-    // 1. O'lcham (Size) qatorini aniqlash
-    const sizeMatch = line.match(/(?:размер|razmer|o['`]?lcham|size)s?\s*[:=-]?\s*(.+)/i);
-    if (sizeMatch) {
-      const val = sizeMatch[1].trim().toLowerCase();
-      if (/стандарт|standart|universal|free/i.test(val)) {
-        extractedSize = ["Standart"];
-      } else {
-        const found = val.toUpperCase().match(/(?:XXL|3XL|2XL|XL|XS|[SML]|[0-9]{2})/g);
-        if (found && found.length) {
-          extractedSize = [...new Set(found)];
+  let detectedPrice = 0;
+  let detectedName = "";
+
+  const priceRegex =
+    /(?:narxi|narx|price|цена)?\s*[:=-]?\s*(\d[\d\s.,]{0,12}\d|\d+)\s*(?:ming|k|so['`]?m|sum|сум|usd|\$)?/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (
+      /(?:dastavka|yetkazish|razmer|o['`]?lcham|matosi|sifat|batafsil|bog['`]?lanish)/i.test(line) &&
+      !priceRegex.test(line)
+    ) {
+      continue;
+    }
+
+    const priceMatch = line.match(priceRegex);
+    if (priceMatch && !detectedPrice) {
+      let rawVal = priceMatch[1].replace(/[\s.,]/g, "");
+      let val = parseInt(rawVal, 10);
+
+      if (!isNaN(val) && val > 0) {
+        if (/ming|k/i.test(line) && val < 10000) {
+          val = val * 1000;
+        } else if (val < 1000) {
+          val = val * 1000;
         }
+        detectedPrice = val;
       }
-      continue;
     }
 
-    // 2. Buyurtma / aloqa / kontakt / link qatorlarini tashlab yuborish
-    const isContactLine =
-      /(?:для заказа|buyurtma|murojaat|aloqa|bog['`]?lanish|zakaz|админ|admin|tg:|тел:|tel:)/i.test(line) ||
-      line.startsWith("@") ||
-      line.startsWith("t.me/");
-    if (isContactLine) {
-      continue;
-    }
-
-    // 3. Narx (Price) qatorini aniqlash
-    const hasPriceWord = /(?:цена|narx|narxi|price|baho)/i.test(line);
-    const hasPriceSymbol = line.includes("$") || /so['`]?m|сум|🏷/i.test(line) || /[0-9]{1,3}[.,\s][0-9]{3}/.test(line);
-
-    if (hasPriceWord || hasPriceSymbol) {
-      const rawNum = line.match(/([0-9]{1,3}(?:[.,\s][0-9]{3})+|[0-9]{2,6})/);
-      if (rawNum && !price) {
-        price = parseInt(rawNum[1].replace(/[^0-9]/g, ""), 10);
-      }
-      // Agar qatorda narxdan tashqari nom ham bo'lsa (masalan: "Ziyo to'plam 250.000 so'm")
-      const cleanedLine = line
-        .replace(/(?:цена|narx|narxi|price|baho)\s*[:=-]?/gi, "")
-        .replace(/([0-9]{1,3}(?:[.,\s][0-9]{3})+|[0-9]{2,6})\s*(?:\$|so['`]?m|сум|🏷)?/gi, "")
-        .replace(/[:=–\-\s🏷]+$/g, "")
-        .replace(/^[:=–\-\s🏷]+/g, "")
+    if (!detectedName && line.length > 2 && line.length < 50 && !/^(narxi|narx|цена)/i.test(line)) {
+      const cleanLine = line
+        .replace(/^[•\-\*⚡️✨🔥👉📍✅]+\s*/, "")
+        .replace(priceRegex, "")
         .trim();
-      if (cleanedLine.length >= 2) {
-        nameLines.push(cleanedLine);
+
+      if (cleanLine.length > 2 && !/^(dastavka|yetkazish|aloqa)/i.test(cleanLine)) {
+        detectedName = cleanLine;
       }
-    } else {
-      nameLines.push(line);
     }
   }
 
-  let name = nameLines.join(" ").replace(/^[•\-\*#]+\s*/, "").trim();
-  if (!name || name.length < 2) {
-    name = "Yangi to'plam";
-  }
-  if (!price) {
-    price = 180000;
-  } else if (price < 1000) {
-    price = price * 1000;
+  if (detectedName) {
+    detectedName = detectedName.charAt(0).toUpperCase() + detectedName.slice(1);
   }
 
-  return { name, price, extractedSize };
+  return { name: detectedName, price: detectedPrice };
 }
 
-// Mahsulot nomidan toifani aqlli aniqlash (Dvoyka, Pijama, Kostyum va h.k.)
 function detectCategory(name) {
-  const n = (name || "").toLowerCase().trim();
-  if (/dvoyka|dvoika|ikkitalik|2-talik/i.test(n)) return "Dvoyka";
-  if (/troyka|troika|uchtalik|3-talik/i.test(n)) return "Troyka";
-  if (/pijama|uy kiyim|tunika/i.test(n)) return "Pijama";
-  if (/kostyum|kostum|suit/i.test(n)) return "Kostyum";
-  if (/koylak|ko'ylak|platye|dress/i.test(n)) return "Ko'ylak";
-  if (/xudi|hoodie|tolstovka|sviter/i.test(n)) return "Xudi";
-  if (/shim|losina|leggins|leggings|bryuki/i.test(n)) return "Shim";
-  if (/kurtka|vetrovka|nimcha|jilet/i.test(n)) return "Tashqi kiyim";
-  if (/futbolka|futbolka|mayka|top/i.test(n)) return "Futbolka & Top";
-  if (/sport|fitnes/i.test(n)) return "Sport kiyim";
-
-  const firstWord = (name || "").split(/\s+/)[0]?.trim();
-  if (firstWord && firstWord.length >= 2) {
-    return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
-  }
+  const n = (name || "").toLowerCase();
+  if (n.includes("kurtka") || n.includes("jaket") || n.includes("palto")) return "Kurtka";
+  if (n.includes("chopon")) return "Choponlar";
+  if (n.includes("sviter") || n.includes("kardigan") || n.includes("jemper")) return "Sviter";
+  if (n.includes("sport") || n.includes("dvoyka") || n.includes("troyka")) return "Sport kiyimlari";
+  if (n.includes("ko'ylak") || n.includes("dress")) return "Ko'ylaklar";
+  if (n.includes("shim") || n.includes("jinsi") || n.includes("bryuk")) return "Shimlar";
   return "Katalog";
 }
 
-// 3 main buttons keyboard
-const MAIN_KEYBOARD = {
+// Bosh klaviatura (Faqat Adminlar uchun ko'rinadi)
+const ADMIN_MAIN_KEYBOARD = {
   keyboard: [
-    [{ text: "➕ Qo'shish" }, { text: "📊 Hisobot" }],
-    [{ text: "🗑 O'chirish" }],
+    [{ text: "➕ Qo'shish" }, { text: "🗑 O'chirish" }],
+    [{ text: "📊 Hisobot" }, { text: "🛍 Do'konni ochish" }],
   ],
   resize_keyboard: true,
 };
@@ -300,13 +242,7 @@ async function handleMessage(msg) {
 
   config = loadConfig();
 
-  // ========================================================================
-  // A. Guruh/Kanalni avtomatik tanib olish ("dreemroom-adm") va ro'yxatga olish
-  // ========================================================================
-  const secretKey = (config.adminSecret || "dreemroom-adm").toLowerCase().trim();
-  const combinedText = `${text} ${caption}`.toLowerCase().trim();
-
-  // Guruh yoki kanaldan kelgan har qanday faollikni ro'yxatga olamiz
+  // Guruh yoki kanaldan kelgan faollikni ro'yxatga olamiz
   if (chatType === "channel" || chatType === "group" || chatType === "supergroup") {
     await saveTelegramGroup({
       chatId,
@@ -315,92 +251,92 @@ async function handleMessage(msg) {
       username: msg.chat?.username || "",
       isTarget: String(chatId) === String(config.targetChatId),
     });
+    return;
   }
 
-  // 1. Agar xabar kanal, superguruh yoki guruhdan kelsa va matnida kalit so'z bo'lsa:
-  if ((chatType === "channel" || chatType === "group" || chatType === "supergroup") && combinedText.includes(secretKey)) {
-    config.targetChatId = chatId;
-    saveConfig(config);
+  // Faqat shaxsiy chatdagi xabarlar
+  const isAdmin = await isUserAdmin(userId);
+  const webAppUrl = config.webAppUrl || process.env.WEB_APP_URL || "https://dreemroom.vercel.app";
 
-    const isChan = chatType === "channel";
-    const typeLabel = isChan ? "Kanal" : "Guruh";
-    const title = msg.chat?.title || msg.chat?.username || typeLabel;
+  const LAUNCH_BUTTON = {
+    inline_keyboard: [
+      [
+        {
+          text: "🛍 Do'konni ochish (Launch App)",
+          web_app: { url: webAppUrl },
+        },
+      ],
+    ],
+  };
 
-    console.log(`[BOT]: ${typeLabel} muvaffaqiyatli ulandi: ${title} (${chatId})`);
+  // /start buyrug'i: Hamma uchun salom + "Launch App" tugmasi
+  if (text === "/start") {
+    userStates.delete(userId);
 
-    await saveTelegramGroup({
-      chatId,
-      title,
-      type: chatType,
-      username: msg.chat?.username || "",
-      isTarget: true,
-    });
+    if (isAdmin) {
+      await callTelegram("sendMessage", {
+        chat_id: chatId,
+        text:
+          `👋 <b>Assalomu alaykum, Hurmatli Admin (${msg.from?.first_name || ""})!</b>\n\n` +
+          `Siz do'kon boshqaruvchisiz. Quyidagi menyu orqali yangi mahsulot qo'shishingiz, o'chirishingiz yoki do'kon hisobotini ko'rishingiz mumkin.\n\n` +
+          `📢 Ulangan kanal/guruh: <code>${config.targetChatId || "Belgilanmagan"}</code>`,
+        parse_mode: "HTML",
+        reply_markup: ADMIN_MAIN_KEYBOARD,
+      });
 
-    // Kanal/Guruhga tasdiq xabari
-    await callTelegram("sendMessage", {
-      chat_id: chatId,
-      text:
-        `✅ <b>Ushbu ${typeLabel.toLowerCase()} DREEM ROOM do'koniga muvaffaqiyatli ulandi!</b>\n\n` +
-        `📢 ${typeLabel}: <b>${title}</b>\n` +
-        `🆔 ID: <code>${chatId}</code>\n\n` +
-        `Endi bot orqali mahsulot qo'shilganda shu yerga avtomatik e'lon joylanadi! 🚀`,
-      parse_mode: "HTML",
-    });
-
-    // Shaxsiy chatdagi adminlarga ham tasdiq xabari yuborish
-    if (Array.isArray(config.adminIds)) {
-      for (const admId of config.adminIds) {
-        await callTelegram("sendMessage", {
-          chat_id: admId,
-          text:
-            `📢 <b>${typeLabel} muvaffaqiyatli ulandi!</b>\n\n` +
-            `🔹 Nomi: <b>${title}</b>\n` +
-            `🔹 ID: <code>${chatId}</code>\n\n` +
-            `Kanalga "<code>dreemroom-adm</code>" yozildi va ulanish tasdiqlandi. Endi mahsulotlar shu yerga chiqadi!`,
-          parse_mode: "HTML",
-          reply_markup: MAIN_KEYBOARD,
-        });
-      }
+      await callTelegram("sendMessage", {
+        chat_id: chatId,
+        text: `Mijozlar ko'rinishidagi do'konni ochish:`,
+        reply_markup: LAUNCH_BUTTON,
+      });
+      return;
     }
-    return;
-  }
 
-  // 2. Agar foydalanuvchi kanaldagi maxsus "dreemroom-adm" matnli xabarni botga FORWARD qilsa:
-  if (msg.forward_from_chat && !photo && (text.toLowerCase().includes(secretKey) || caption.toLowerCase().includes(secretKey))) {
-    const fChat = msg.forward_from_chat;
-    config.targetChatId = fChat.id;
-    saveConfig(config);
-
-    const title = fChat.title || fChat.username || fChat.id;
-
-    await saveTelegramGroup({
-      chatId: fChat.id,
-      title,
-      type: fChat.type || "channel",
-      username: fChat.username || "",
-      isTarget: true,
-    });
-
+    // Oddiy xaridor (mijoz) uchun
     await callTelegram("sendMessage", {
       chat_id: chatId,
       text:
-        `✅ <b>Kanal muvaffaqiyatli ulandi!</b>\n\n` +
-        `📢 Kanal: <b>${title}</b>\n` +
-        `🆔 ID: <code>${fChat.id}</code>\n\n` +
-        `Bot orqali qo'shilgan mahsulotlar avtomatik shu kanalga va veb-saytga joylanadi!`,
+        `🌸 <b>Assalomu alaykum, xush kelibsiz!</b>\n\n` +
+        `Bizning barcha yangi to'plamlarimizni ko'rish, o'lchamlarni tanlash va buyurtma berish uchun quyidagi tugmani bosing:`,
       parse_mode: "HTML",
-      reply_markup: MAIN_KEYBOARD,
+      reply_markup: LAUNCH_BUTTON,
     });
     return;
   }
 
-  // 3. Agar foydalanuvchi shaxsiy chatda "/setchannel" yoki "/setgroup" deb yozsa:
-  if (text.startsWith("/setchannel") || text.startsWith("/setgroup")) {
-    const target = text.replace("/setchannel", "").replace("/setgroup", "").trim();
+  // Agar oddiy foydalanuvchi "Do'konni ochish" deb yozsa
+  if (text === "🛍 Do'konni ochish") {
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: `Do'konimiz katalogini ochish uchun quyidagi tugmani bosing:`,
+      reply_markup: LAUNCH_BUTTON,
+    });
+    return;
+  }
+
+  // ========================================================================
+  // SERVER DARAJASIDAGI ADMIN HUQUQI TEKSHIRUVI
+  // (Quyidagi barcha amallar faqat adminlar uchungina ruxsat etiladi)
+  // ========================================================================
+  if (!isAdmin) {
+    if (text === "➕ Qo'shish" || text === "🗑 O'chirish" || text === "📊 Hisobot" || (photo && photo.length > 0)) {
+      await callTelegram("sendMessage", {
+        chat_id: chatId,
+        text: `🌸 <b>Assalomu alaykum!</b> Do'konimizni ko'rish va xarid qilish uchun quyidagi tugmani bosing:`,
+        parse_mode: "HTML",
+        reply_markup: LAUNCH_BUTTON,
+      });
+      return;
+    }
+  }
+
+  // Kanalni ulash buyrug'i: /setchannel yoki /setgroup
+  if (text.startsWith("/setchannel") || text.startsWith("/setgroup") || text.startsWith("/settarget")) {
+    const target = text.replace(/\/set(channel|group|target)/i, "").trim();
     if (!target) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text: "Iltimos, kanal/guruh nomini yoki ID sini kiriting:\nMasalan: <code>/setchannel @dreemroom_uz</code>",
+        text: "Iltimos, kanal/guruh nomini yoki ID sini kiriting:\nMasalan: <code>/setchannel @kanal_nomi</code> yoki <code>/setchannel -1004367729128</code>",
         parse_mode: "HTML",
       });
       return;
@@ -411,109 +347,7 @@ async function handleMessage(msg) {
       chat_id: chatId,
       text: `✅ Guruh/Kanal ulandi: <code>${target}</code>`,
       parse_mode: "HTML",
-      reply_markup: MAIN_KEYBOARD,
-    });
-    return;
-  }
-
-  // ========================================================================
-  // B. Shaxsiy chatda Admin Autentifikatsiyasi (Kalit so'z so'rash)
-  // ========================================================================
-  const dbAdmin = await getAdminUser(userId);
-
-  // Agar admin panel orqali bloklangan bo'lsa
-  if (dbAdmin && dbAdmin.status === "blocked") {
-    await callTelegram("sendMessage", {
-      chat_id: chatId,
-      text: "🚫 <b>Kechirasiz, sizning adminlik ruxsatingiz admin panel tomonidan bloklangan.</b>\nIltimos, do'kon boshqaruvchisi bilan bog'laning.",
-      parse_mode: "HTML",
-    });
-    return;
-  }
-
-  const isAuth = Boolean(dbAdmin && dbAdmin.status === "active");
-
-  if (!isAuth) {
-    if (text === "/start") {
-      userStates.set(userId, { step: "WAITING_SECRET_KEY" });
-      await callTelegram("sendMessage", {
-        chat_id: chatId,
-        text:
-          `🔐 <b>Xavfsizlik tekshiruvi!</b>\n\n` +
-          `DREEM ROOM Admin botiga xush kelibsiz.\n` +
-          `Botdan foydalanish va mahsulotlarni boshqarish uchun maxfiy <b>kalit so'zni</b> kiriting:`,
-        parse_mode: "HTML",
-      });
-      return;
-    }
-
-    // Kalit so'z tekshiruvi
-    const isKeyValid = await isValidAdminKey(text);
-    if (isKeyValid) {
-      await saveAdminUser({
-        userId,
-        username: msg.from?.username || "",
-        firstName: msg.from?.first_name || "",
-        lastName: msg.from?.last_name || "",
-        usedKey: text.trim(),
-      });
-
-      if (!config.adminIds) config.adminIds = [];
-      if (!config.adminIds.includes(userId)) {
-        config.adminIds.push(userId);
-        saveConfig(config);
-      }
-
-      userStates.delete(userId);
-
-      await callTelegram("sendMessage", {
-        chat_id: chatId,
-        text:
-          `✅ <b>Kalit so'z muvaffaqiyatli tasdiqlandi!</b>\n\n` +
-          `Assalomu alaykum, <b>${msg.from?.first_name || "Admin"}</b>! Siz admin sifatida tizimga kirdingiz.\n\n` +
-          `📢 Ulangan kanal: <code>${config.targetChatId || "Belgilanmagan (Kanalga dreemroom-adm deb yozing)"}</code>\n\n` +
-          `Kerakli bo'limni tanlang yoki to'g'ridan-to'g'ri 4 ta rasm yuboring:`,
-        parse_mode: "HTML",
-        reply_markup: MAIN_KEYBOARD,
-      });
-      return;
-    } else {
-      userStates.set(userId, { step: "WAITING_SECRET_KEY" });
-      await callTelegram("sendMessage", {
-        chat_id: chatId,
-        text:
-          `❌ <b>Noto'g'ri kalit so'z!</b>\n\n` +
-          `Iltimos, qaytadan to'g'ri kalit so'zni kiriting yoki admin panel orqali tekshiring:`,
-        parse_mode: "HTML",
-      });
-      return;
-    }
-  }
-
-  // Tasdiqlangan adminning faollik vaqtini yangilab boramiz
-  await saveAdminUser({
-    userId,
-    username: msg.from?.username || "",
-    firstName: msg.from?.first_name || "",
-    lastName: msg.from?.last_name || "",
-    usedKey: dbAdmin?.usedKey || "",
-  });
-
-  // ========================================================================
-  // C. Tasdiqlangan Admin Buyruqlari
-  // ========================================================================
-
-  // /start
-  if (text === "/start") {
-    userStates.delete(userId);
-    await callTelegram("sendMessage", {
-      chat_id: chatId,
-      text:
-        `👋 <b>Assalomu alaykum, Admin!</b>\n\n` +
-        `📢 Ulangan kanal/guruh: <code>${config.targetChatId || "Belgilanmagan (Guruhga dreemroom-adm deb yozing)"}</code>\n\n` +
-        `Kerakli bo'limni tanlang:`,
-      parse_mode: "HTML",
-      reply_markup: MAIN_KEYBOARD,
+      reply_markup: ADMIN_MAIN_KEYBOARD,
     });
     return;
   }
@@ -529,14 +363,14 @@ async function handleMessage(msg) {
     await callTelegram("sendMessage", {
       chat_id: chatId,
       text:
-        `📊 <b>DREEM ROOM — Do'kon hisoboti:</b>\n\n` +
+        `📊 <b>Do'kon hisoboti:</b>\n\n` +
         `📦 <b>Jami mahsulotlar:</b> ${prods.length} ta\n` +
         `🛍 <b>Jami buyurtmalar:</b> ${orders.length} ta\n` +
-        `💰 <b>Jami tushum:</b> ${revenue} $\n` +
+        `💰 <b>Jami tushum:</b> ${revenue.toLocaleString("ru-RU")} so'm\n` +
         `🆕 <b>Kutilayotgan yangi buyurtmalar:</b> ${newOrders} ta\n\n` +
-        `🌐 <i>Admin panel: http://localhost:3000</i>`,
+        `📢 <b>Ulangan kanal:</b> <code>${config.targetChatId || "Belgilanmagan"}</code>`,
       parse_mode: "HTML",
-      reply_markup: MAIN_KEYBOARD,
+      reply_markup: ADMIN_MAIN_KEYBOARD,
     });
     return;
   }
@@ -549,7 +383,7 @@ async function handleMessage(msg) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
         text: "ℹ️ Hozirda do'konda o'chirish uchun mahsulotlar yo'q.",
-        reply_markup: MAIN_KEYBOARD,
+        reply_markup: ADMIN_MAIN_KEYBOARD,
       });
       return;
     }
@@ -577,21 +411,18 @@ async function handleMessage(msg) {
       chat_id: chatId,
       text:
         `📸 <b>Mahsulot rasmlarini yuboring (1 tadan 4 tagacha):</b>\n\n` +
-        `💡 <i>Birinchi yuborilgan rasm — saytda bosh asosiy rasm bo'ladi, 2, 3, 4-rasmlar qo'shimcha rakurslar bo'ladi.\n` +
+        `💡 <i>1-rasm bosh asosiy rasm bo'ladi, qolganlari qo'shimcha rakurslar bo'ladi.\n` +
         `Rasmlar tagiga narxi va nomini yozib (caption) yuborsangiz ham bo'ladi!</i>`,
       parse_mode: "HTML",
     });
     return;
   }
 
-  // ========================================================================
-  // D. Rasmlarni qabul qilish (Bir nechta rasm / Albom / MediaGroup)
-  // ========================================================================
+  // Rasmlarni qabul qilish
   if (photo && photo.length > 0) {
     const highestPhoto = photo[photo.length - 1];
     const fileId = highestPhoto.file_id;
 
-    // 1. Agar bir nechta rasm birdaniga tanlanib ALBOM (media_group_id) bo'lib kelsa:
     if (msg.media_group_id) {
       const mgId = msg.media_group_id;
       if (!albumBuffers.has(mgId)) {
@@ -613,12 +444,11 @@ async function handleMessage(msg) {
       item.timer = setTimeout(async () => {
         albumBuffers.delete(mgId);
         await processIncomingPhotos(chatId, userId, item.photos, item.caption);
-      }, 1200); // 1.2 soniya ichida albomdagi 4 ta rasm to'liq yig'iladi
+      }, 1200);
 
       return;
     }
 
-    // 2. Agar foydalanuvchi rasmlarni ketma-ket (bittalab) yuborayotgan bo'lsa:
     if (!standalonePhotoBuffers.has(userId)) {
       standalonePhotoBuffers.set(userId, {
         photos: [fileId],
@@ -642,98 +472,77 @@ async function handleMessage(msg) {
     return;
   }
 
-  // ========================================================================
-  // E. Matnli javoblarni qabul qilish (Step by Step: Nom -> Narx -> Razmer)
-  // ========================================================================
+  // Step-by-step ma'lumot kiritish
   const state = userStates.get(userId);
 
-  // 1-qadam: Faqat Nom qabul qilish
-  if (state?.step === "WAIT_NAME") {
-    const name = text.trim();
-    if (!name || name.length < 2) {
-      await callTelegram("sendMessage", {
-        chat_id: chatId,
-        text: "Iltimos, mahsulot nomini yozing (masalan: <code>Dvoyka to'plam</code>):",
-        parse_mode: "HTML",
-      });
-      return;
-    }
-
-    state.name = name;
+  if (state && state.step === "WAIT_NAME") {
+    state.name = text;
     state.step = "WAIT_PRICE";
+
+    const keyboard = state.detectedPrice
+      ? {
+          inline_keyboard: [
+            [{ text: `⚡️ ${formatPrice(state.detectedPrice)}`, callback_data: `pick_price_${userId}` }],
+          ],
+        }
+      : undefined;
 
     await callTelegram("sendMessage", {
       chat_id: chatId,
       text:
-        `✅ Mahsulot nomi: <b>${state.name}</b>\n\n` +
-        `💰 <b>2-qadam. Endi mahsulot narxini kiriting (faqat so'mda):</b>\n` +
-        `<i>Masalan: <code>180</code> (180 000 so'm) yoki <code>250.000</code></i>`,
+        `✅ Nom saqlandi: <b>${state.name}</b>\n\n` +
+        `💰 <b>2-qadam. Mahsulot narxini kiriting:</b>\n` +
+        `<i>Masalan: <code>350000</code> yoki <code>350 ming</code></i>`,
       parse_mode: "HTML",
+      reply_markup: keyboard,
     });
     return;
   }
 
-  // 2-qadam: Faqat Narx qabul qilish (180 yoki 45 kiritilsa ham oxiriga 000 qo'shiladi)
-  if (state?.step === "WAIT_PRICE") {
-    const rawNum = text.match(/([0-9]{1,3}(?:[.,\s][0-9]{3})+|[0-9]+)/);
-    let price = rawNum ? parseInt(rawNum[1].replace(/[^0-9]/g, ""), 10) : 0;
+  if (state && state.step === "WAIT_PRICE") {
+    let cleanVal = text.replace(/[\s.,so'm]/gi, "").trim();
+    let priceNum = parseInt(cleanVal, 10);
 
-    if (!price || price <= 0) {
+    if (isNaN(priceNum) || priceNum <= 0) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text:
-          `❌ <b>Narx noto'g'ri kiritildi!</b>\n\n` +
-          `Iltimos, narxni raqamda kiriting (masalan: <code>180</code> yoki <code>180 000</code>):`,
+        text: "❌ <b>Noto'g'ri narx!</b> Faqat raqam kiriting (masalan: <code>350000</code>):",
         parse_mode: "HTML",
       });
       return;
     }
 
-    // 180 yoki 45 deb yozilsa ham 180 000 yoki 45 000 so'm qilamiz
-    if (price < 1000) {
-      price = price * 1000;
+    if (/ming|k/i.test(text) && priceNum < 10000) {
+      priceNum = priceNum * 1000;
+    } else if (priceNum < 1000) {
+      priceNum = priceNum * 1000;
     }
 
-    state.price = price;
-    state.step = "WAIT_SIZE";
+    state.price = priceNum;
+    state.step = "WAIT_SIZES";
 
     await askForSizes(chatId, userId, state.name, state.price);
     return;
   }
 
-  if (state?.step === "CUSTOM_SIZE_INPUT") {
-    const customSizes = text
-      .split(/[,/\s]+/)
+  if (state && state.step === "WAIT_CUSTOM_SIZE") {
+    const rawSizes = text
+      .split(/[,/;\s]+/)
       .map((s) => s.trim().toUpperCase())
       .filter(Boolean);
 
-    state.sizes = customSizes.length ? customSizes : ["Standart"];
+    state.sizes = rawSizes.length > 0 ? rawSizes : ["Standart"];
+    userStates.delete(userId);
+
     await autoDeployProduct(chatId, userId, state);
     return;
   }
-
-  // Default fallback
-  await callTelegram("sendMessage", {
-    chat_id: chatId,
-    text: "Quyidagi tugmalardan birini tanlang:",
-    reply_markup: MAIN_KEYBOARD,
-  });
 }
 
-// ==========================================================================
-// F. Rasmlarni tartib bilan yuklab olish (1-rasm bosh asosiy, 2,3,4 qolganlari)
-// ==========================================================================
+// Rasmlarni qabul qilib saqlash
 async function processIncomingPhotos(chatId, userId, photoFileIds, rawCaption) {
   await callTelegram("sendChatAction", { chat_id: chatId, action: "upload_photo" });
 
-  const count = photoFileIds.length;
-  await callTelegram("sendMessage", {
-    chat_id: chatId,
-    text: `📸 <b>${count} ta rasm qabul qilindi.</b> Yuklab olinmoqda...\n<i>(1-rasm saytda bosh asosiy rasm qilinadi)</i>`,
-    parse_mode: "HTML",
-  });
-
-  // Download all photos maintaining strict order (1st is main)
   const downloadedImages = [];
   for (let i = 0; i < photoFileIds.length; i++) {
     const fileId = photoFileIds[i];
@@ -752,28 +561,38 @@ async function processIncomingPhotos(chatId, userId, photoFileIds, rawCaption) {
     await callTelegram("sendMessage", {
       chat_id: chatId,
       text: "❌ Rasmlarni saqlashda xatolik yuz berdi. Qaytadan urinib ko'ring.",
-      reply_markup: MAIN_KEYBOARD,
+      reply_markup: ADMIN_MAIN_KEYBOARD,
     });
     return;
   }
 
+  const { name: dName, price: dPrice } = parseNameAndPrice(rawCaption);
+
   userStates.set(userId, {
     step: "WAIT_NAME",
     images: downloadedImages,
+    detectedName: dName,
+    detectedPrice: dPrice,
   });
 
-  // 1-qadam: Faqat Nomini so'rash (alohida)
+  const keyboard = dName
+    ? {
+        inline_keyboard: [[{ text: `⚡️ ${dName}`, callback_data: `pick_name_${userId}` }]],
+      }
+    : undefined;
+
   await callTelegram("sendMessage", {
     chat_id: chatId,
     text:
-      `✅ <b>${downloadedImages.length} ta rasm muvaffaqiyatli saqlandi!</b>\n\n` +
+      `✅ <b>${downloadedImages.length} ta rasm qabul qilindi va bazaga saqlandi!</b>\n\n` +
       `📝 <b>1-qadam. Mahsulot nomini yozing:</b>\n` +
-      `<i>Masalan: <code>Dvoyka to'plam</code> yoki <code>Sport kiyim</code></i>`,
+      `<i>Masalan: <code>Dvoyka to'plam</code> yoki <code>Klassik kardigan</code></i>`,
     parse_mode: "HTML",
+    reply_markup: keyboard,
   });
 }
 
-// Ask for Sizes with inline keyboard
+// O'lchamlarni tanlash klaviaturasi
 async function askForSizes(chatId, userId, name, price) {
   const keyboard = {
     inline_keyboard: [
@@ -803,12 +622,23 @@ async function askForSizes(chatId, userId, name, price) {
   });
 }
 
-// Handle Callback Queries (Size Click)
+// Callback queries (Tugmalar bosilishi)
 async function handleCallbackQuery(cb) {
   const cbId = cb.id;
   const data = cb.data || "";
   const chatId = cb.message?.chat?.id;
   const userId = cb.from?.id;
+
+  // Har bir callbackda admin huquqini serverda tekshirish
+  const isAdmin = await isUserAdmin(userId);
+  if (!isAdmin) {
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: cbId,
+      text: "⛔ Kechirasiz, ushbu amal faqat do'kon administratorlari uchun.",
+      show_alert: true,
+    });
+    return;
+  }
 
   // Mahsulotni o'chirish
   if (data.startsWith("del_prod_")) {
@@ -833,16 +663,15 @@ async function handleCallbackQuery(cb) {
     await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "O'chirildi!" });
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text: `✅ <b>"${targetProd?.name || "Mahsulot"}" sayt va kanaldan muvaffaqiyatli o'chirildi!</b>\n\nEndi botga yangitdan toza rasm yuborishingiz mumkin.`,
+      text: `✅ <b>"${targetProd?.name || "Mahsulot"}" sayt va kanaldan muvaffaqiyatli o'chirildi!</b>`,
       parse_mode: "HTML",
-      reply_markup: MAIN_KEYBOARD,
+      reply_markup: ADMIN_MAIN_KEYBOARD,
     });
     return;
   }
 
   const state = userStates.get(userId);
 
-  // Nom tanlash (Captiondagi taklif qilingan nom)
   if (data.startsWith("pick_name_")) {
     if (state && state.detectedName) {
       state.name = state.detectedName;
@@ -860,9 +689,9 @@ async function handleCallbackQuery(cb) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
         text:
-          `✅ Mahsulot nomi: <b>${state.name}</b>\n\n` +
+          `✅ Nom: <b>${state.name}</b>\n\n` +
           `💰 <b>2-qadam. Mahsulot narxini kiriting:</b>\n` +
-          `<i>Masalan: <code>180 000</code> yoki <code>250.000</code> yoki <code>45</code></i>`,
+          `<i>Masalan: <code>350000</code> yoki <code>350 ming</code></i>`,
         parse_mode: "HTML",
         reply_markup: keyboard,
       });
@@ -870,89 +699,82 @@ async function handleCallbackQuery(cb) {
     return;
   }
 
-  // Narx tanlash (Captiondagi taklif qilingan narx)
   if (data.startsWith("pick_price_")) {
     if (state && state.detectedPrice) {
       state.price = state.detectedPrice;
-      state.step = "WAIT_SIZE";
+      state.step = "WAIT_SIZES";
       await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Narx saqlandi!" });
       await askForSizes(chatId, userId, state.name, state.price);
     }
     return;
   }
 
-  if (data.startsWith("sz_custom_")) {
-    if (state) {
-      state.step = "CUSTOM_SIZE_INPUT";
+  if (data.startsWith("sz_")) {
+    if (!state) {
+      await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Sessiya tugagan." });
+      return;
+    }
+
+    if (data.includes("custom")) {
+      state.step = "WAIT_CUSTOM_SIZE";
       await callTelegram("answerCallbackQuery", { callback_query_id: cbId });
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text: `✍️ O'lchamlarni yozib yuboring (masalan: <code>40, 42, 44</code> yoki <code>2XL, 3XL</code>):`,
+        text: "✍️ <b>Kerakli o'lchamlarni vergul bilan yozing:</b>\n<i>Masalan: 42, 44, 46, 48</i>",
         parse_mode: "HTML",
-      });
-    }
-    return;
-  }
-
-  if (data.startsWith("sz_")) {
-    if (!state) {
-      await callTelegram("answerCallbackQuery", {
-        callback_query_id: cbId,
-        text: "Vaqt tugagan, qaytadan boshlang.",
       });
       return;
     }
 
     let sizes = ["Standart"];
-    if (data.includes("Standart")) sizes = ["Standart"];
-    else if (data.includes("XS_S_M_L_XL")) sizes = ["XS", "S", "M", "L", "XL"];
+    if (data.includes("XS_S_M_L_XL")) sizes = ["XS", "S", "M", "L", "XL"];
     else if (data.includes("S_M_L")) sizes = ["S", "M", "L"];
     else if (data.includes("L_XL_XXL")) sizes = ["L", "XL", "XXL"];
     else if (data.includes("ALL")) sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+    else if (data.includes("Standart")) sizes = ["Standart"];
 
     state.sizes = sizes;
-    await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "O'lcham tanlandi!" });
+    userStates.delete(userId);
+    await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Tayyor!" });
+
     await autoDeployProduct(chatId, userId, state);
+    return;
   }
 }
 
-// ==========================================================================
-// G. Avto-Deploy: Web-saytga va Telegram Kanalga (Albom ko'rinishida)
-// ==========================================================================
+// Avto-Deploy: Mahsulotni DB ga va Telegram Kanalga joylash
 async function autoDeployProduct(chatId, userId, state) {
   config = loadConfig();
 
-  const slug = state.name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "item";
+  const slug =
+    state.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "item";
 
   const productId = `${slug}-${Date.now().toString(36)}`;
 
-  // Product images: 1st is main, 2nd, 3rd, 4th are details
   const formattedImages = state.images.map((img, idx) => ({
     src: img.src,
     fileId: img.fileId,
     alt: idx === 0 ? `${state.name} - asosiy ko'rinish` : `${state.name} - rakurs ${idx + 1}`,
   }));
 
-  // 1. Publish to Telegram Channel / Group as Media Group (Album)
   let channelPublished = false;
   let telegramInfo = null;
   const targetChat = config.targetChatId;
-  const orderBot = config.orderBotUsername || "dreemroom_bot";
+  const botUser = config.botUsername || "";
 
   if (targetChat && state.images.length > 0) {
     const postCaption =
       `✨ <b>${state.name}</b> ✨\n\n` +
       `📏 <b>O'lchami:</b> ${state.sizes.join(", ")}\n` +
       `💰 <b>Narxi:</b> ${formatPrice(state.price)} 🏷\n\n` +
-      `🛍 <b>Buyurtma berish:</b> @${orderBot}`;
+      `🛍 <b>Buyurtma berish:</b> ${botUser ? `@${botUser}` : "Do'kon boti orqali"}`;
 
     try {
       if (state.images.length === 1) {
-        // 1 ta rasm bo'lsa
         const res = await callTelegram("sendPhoto", {
           chat_id: targetChat,
           photo: state.images[0].fileId,
@@ -967,7 +789,6 @@ async function autoDeployProduct(chatId, userId, state) {
           };
         }
       } else {
-        // 4 ta rasm (albom) bo'lsa: 1-rasm boshida tavsifi bilan, qolganlari uning davomida albom bo'ladi
         const media = state.images.slice(0, 10).map((img, idx) => ({
           type: "photo",
           media: img.fileId,
@@ -990,62 +811,54 @@ async function autoDeployProduct(chatId, userId, state) {
         }
       }
     } catch (err) {
-      console.error("Kanalga post chiqarishda xatolik:", err.message);
+      console.error("[DEPLOY]: Kanalga joylashda xatolik:", err.message);
     }
   }
 
-  // 2. Save into products.json (Live immediately on Web Store & Admin Panel)
   const category = detectCategory(state.name);
 
-  let finalPrice = Number(state.price) || 0;
-  if (finalPrice > 0 && finalPrice < 1000) {
-    finalPrice = finalPrice * 1000;
-  }
-
-  const newProduct = {
+  const productData = {
     id: productId,
     name: state.name,
-    price: finalPrice,
-    displayPrice: `${finalPrice.toLocaleString("ru-RU")} so'm`,
+    price: state.price,
     images: formattedImages,
-    category: category,
-    season: "Barchasi",
+    category,
     isNew: true,
-    color: "Asosiy",
-    sizes: state.sizes && state.sizes.length > 0 ? state.sizes : ["XS", "S", "M", "L", "XL"],
-    description: `${state.name}. Yuqori sifatli mato va qulay bichim.`,
+    isPopular: false,
+    salesCount: 0,
+    sizes: state.sizes,
+    description: `${state.name}. Sifatli mato va zamonaviy bichim.`,
     telegram: telegramInfo,
   };
 
-  await createProduct(newProduct);
+  try {
+    await createProduct(productData);
+    console.log(`[DEPLOY]: '${state.name}' muvaffaqiyatli saqlandi!`);
+  } catch (err) {
+    console.error("[DEPLOY]: DB ga yozishda xatolik:", err.message);
+  }
 
-  // Clear state
-  userStates.delete(userId);
+  const resultMsg =
+    `🎉 <b>Mahsulot muvaffaqiyatli joylandi!</b>\n\n` +
+    `👗 <b>Nom:</b> ${state.name}\n` +
+    `💰 <b>Narx:</b> ${formatPrice(state.price)}\n` +
+    `📏 <b>O'lcham:</b> ${state.sizes.join(", ")}\n` +
+    `📂 <b>Kategoriya:</b> ${category}\n` +
+    `🖼 <b>Rasmlar:</b> ${state.images.length} ta (bazaga saqlandi)\n\n` +
+    (channelPublished
+      ? `📢 <b>Telegram kanalga post qilindi!</b>\n`
+      : `⚠️ <i>Kanal belgilanmagan yoki xatolik. Saytga joylandi.</i>\n`) +
+    `🌐 <b>Veb-saytda darhol ko'rish mumkin!</b>`;
 
-  // 3. Confirm to Admin
   await callTelegram("sendMessage", {
     chat_id: chatId,
-    text:
-      `🎉 <b>Mahsulot muvaffaqiyatli saqlandi va deploy qilindi!</b>\n\n` +
-      `📦 <b>Nomi:</b> ${state.name}\n` +
-      `🏷 <b>Toifasi:</b> ${category}\n` +
-      `💰 <b>Narxi:</b> ${formatPrice(state.price)}\n` +
-      `📏 <b>O'lchami:</b> ${state.sizes.join(", ")}\n` +
-      `🖼 <b>Rasmlar soni:</b> ${state.images.length} ta (1-rasm asosiy)\n` +
-      `🤖 <b>Buyurtma boti:</b> @${orderBot}\n\n` +
-      `✅ <b>Web-saytga joylandi:</b> ${config.webAppUrl}\n` +
-      `✅ <b>Admin panelda chiqdi:</b> http://localhost:3000\n` +
-      (channelPublished
-        ? `✅ <b>Telegram kanalga albom qilib post qilindi:</b> ${targetChat}\n`
-        : targetChat
-        ? `⚠️ <i>Kanalga yuborilmadi (bot kanalda admin ekanligini va post chiqarish ruxsati borligini tekshiring)</i>\n`
-        : `ℹ️ <i>Guruh belgilanmagan. Kanal/guruhga botni qo'shib "dreemroom-adm" deb yozing</i>\n`),
+    text: resultMsg,
     parse_mode: "HTML",
-    reply_markup: MAIN_KEYBOARD,
+    reply_markup: ADMIN_MAIN_KEYBOARD,
   });
 }
 
-// Handle bot being added to channel/group as admin (my_chat_member)
+// Bot yangi kanal/guruhga qo'shilganda
 async function handleMyChatMember(memberUpdate) {
   const chat = memberUpdate.chat;
   const newStatus = memberUpdate.new_chat_member?.status;
@@ -1068,123 +881,30 @@ async function handleMyChatMember(memberUpdate) {
       config.targetChatId = chat.id;
       saveConfig(config);
 
-      console.log(`[BOT]: Bot ${typeLabel.toLowerCase()}ga admin qilib qo'shildi: ${title} (${chat.id})`);
+      console.log(`[BOT]: Bot ${typeLabel.toLowerCase()}ga admin bo'ldi: ${title} (${chat.id})`);
 
-      // Kanalga tasdiq xabari
       await callTelegram("sendMessage", {
         chat_id: chat.id,
         text:
-          `✅ <b>DREEM ROOM boti ushbu ${typeLabel.toLowerCase()}ga muvaffaqiyatli ulandi!</b>\n\n` +
+          `✅ <b>Do'kon boti ushbu ${typeLabel.toLowerCase()}ga muvaffaqiyatli ulandi!</b>\n\n` +
           `📢 ${typeLabel}: <b>${title}</b>\n` +
           `🆔 ID: <code>${chat.id}</code>\n\n` +
           `Endi bot orqali qo'shilgan mahsulotlar shu yerga avtomatik joylanadi! 🚀`,
         parse_mode: "HTML",
       });
-
-      // Shaxsiy chatdagi adminlarga ham tasdiq xabari
-      if (Array.isArray(config.adminIds)) {
-        for (const admId of config.adminIds) {
-          await callTelegram("sendMessage", {
-            chat_id: admId,
-            text:
-              `🎉 <b>${typeLabel} muvaffaqiyatli ulandi!</b>\n\n` +
-              `Bot <b>"${title}"</b> ${typeLabel.toLowerCase()}iga administrator qilib qo'shildi va avtomatik ulandi!\n\n` +
-              `🆔 ID: <code>${chat.id}</code>\n` +
-              `Endi mahsulotlarni bot orqali bemalol joylashingiz mumkin.`,
-            parse_mode: "HTML",
-            reply_markup: MAIN_KEYBOARD,
-          });
-        }
-      }
     }
   }
 }
 
-// Long Polling Loop
+// Asosiy polling tsikli
 let lastUpdateId = 0;
-// ==========================================================================
-// H. Mijozlar uchun Buyurtma Boti (@dreemroom_bot)
-// ==========================================================================
-async function startOrderBotPolling() {
-  const token = config.orderBotToken;
-  if (!token) return;
-
-  console.log(`[ORDER BOT]: @${config.orderBotUsername} mijozlar boti ishga tushirildi!`);
-  let lastUpdateId = 0;
-
-  async function callOrderBot(method, payload = {}) {
-    try {
-      const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      return res.json().catch(() => null);
-    } catch {
-      return null;
-    }
-  }
-
-  // Set chat menu button to Web App
-  if (config.webAppUrl) {
-    try {
-      await callOrderBot("setChatMenuButton", {
-        menu_button: {
-          type: "web_app",
-          text: "🛍 Do'kon",
-          web_app: { url: config.webAppUrl },
-        },
-      });
-    } catch {}
-  }
-
-  while (true) {
-    try {
-      const res = await callOrderBot("getUpdates", {
-        offset: lastUpdateId + 1,
-        timeout: 25,
-      });
-
-      if (res?.ok && Array.isArray(res.result)) {
-        for (const update of res.result) {
-          lastUpdateId = update.update_id;
-          const msg = update.message;
-          if (msg && msg.chat?.id) {
-            const chatId = msg.chat.id;
-            const webAppUrl = config.webAppUrl || "https://dreemroom.vercel.app";
-
-            await callOrderBot("sendMessage", {
-              chat_id: chatId,
-              text:
-                `🌸 <b>Assalomu alaykum, DREEM ROOM do'koniga xush kelibsiz!</b>\n\n` +
-                `Bizning barcha yangi to'plamlarimizni ko'rish, o'lchamlarni tanlash va tezkor xarid qilish uchun quyidagi tugmani bosing:`,
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: "🛍 Do'konni ochish (Katalog)",
-                      web_app: { url: webAppUrl },
-                    },
-                  ],
-                ],
-              },
-            });
-          }
-        }
-      }
-    } catch (e) {
-      await new Promise((r) => setTimeout(r, 4000));
-    }
-  }
-}
 
 async function startPolling() {
   config = loadConfig();
   const token = config.botToken?.trim();
 
   if (!token) {
-    console.log("\x1b[33m[TELEGRAM BOT]: bot-config.json fayliga botToken kiritilmagan.\x1b[0m");
+    console.log("\x1b[33m[TELEGRAM BOT]: BOT_TOKEN kiritilmagan. Bot hozircha kutish rejimida.\x1b[0m");
     setTimeout(startPolling, 10000);
     return;
   }
@@ -1197,11 +917,19 @@ async function startPolling() {
       return;
     }
 
-    console.log(`\x1b[32m[TELEGRAM BOT]: @${me.result.username} faol ishga tushdi!\x1b[0m`);
-    console.log(`\x1b[90m👉 Kanalni ulash uchun kanalga botni admin qilib qo'shing va kanalda 'dreemroom-adm' deb yozing.\x1b[0m\n`);
+    console.log(`\x1b[32m[TELEGRAM BOT]: @${me.result.username} (yagona bot) faol ishga tushdi!\x1b[0m`);
 
-    if (config.orderBotToken) {
-      startOrderBotPolling();
+    // WebApp do'kon tugmasini har bir chat menyusiga qo'yish
+    if (config.webAppUrl) {
+      try {
+        await callTelegram("setChatMenuButton", {
+          menu_button: {
+            type: "web_app",
+            text: "🛍 Do'kon",
+            web_app: { url: config.webAppUrl },
+          },
+        });
+      } catch {}
     }
 
     while (true) {
@@ -1225,14 +953,12 @@ async function startPolling() {
             if (update.message) {
               await handleMessage(update.message);
             } else if (update.channel_post) {
-              // Direct post in channel where bot is admin
               await handleMessage(update.channel_post);
             } else if (update.edited_channel_post) {
               await handleMessage(update.edited_channel_post);
             } else if (update.callback_query) {
               await handleCallbackQuery(update.callback_query);
             } else if (update.my_chat_member) {
-              // When bot is added as admin to channel/group
               await handleMyChatMember(update.my_chat_member);
             }
           }

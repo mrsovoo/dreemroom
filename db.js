@@ -147,13 +147,15 @@ export async function initDatabase() {
       );
     `;
 
-    // Boshlang'ich default kalit so'zni kiritish
-    const defaultKey = (process.env.ADMIN_SECRET || "dreemroom-adm").toLowerCase().trim();
-    await sql`
-      INSERT INTO admin_keys (key, label)
-      VALUES (${defaultKey}, 'Asosiy kalit so''z')
-      ON CONFLICT (key) DO NOTHING;
-    `;
+    // Boshlang'ich kalit so'z (agar .env da berilgan bo'lsa)
+    if (process.env.ADMIN_SECRET) {
+      const defaultKey = process.env.ADMIN_SECRET.toLowerCase().trim();
+      await sql`
+        INSERT INTO admin_keys (key, label)
+        VALUES (${defaultKey}, 'Asosiy kalit so''z')
+        ON CONFLICT (key) DO NOTHING;
+      `;
+    }
 
     tablesInitialized = true;
     console.log("[DB]: Neon PostgreSQL jadvallari muvaffaqiyatli tekshirildi/yaratildi.");
@@ -640,12 +642,12 @@ export async function getBotConfig() {
   } catch {}
 
   return {
-    botToken: process.env.ADMIN_BOT_TOKEN || process.env.BOT_TOKEN || fileCfg.botToken || "",
-    adminBotUsername: process.env.ADMIN_BOT_USERNAME || fileCfg.adminBotUsername || "dreemroom_adm_bot",
-    orderBotToken: process.env.ORDER_BOT_TOKEN || fileCfg.orderBotToken || "",
-    orderBotUsername: process.env.ORDER_BOT_USERNAME || fileCfg.orderBotUsername || "dreemroom_bot",
+    botToken: process.env.BOT_TOKEN || process.env.ADMIN_BOT_TOKEN || process.env.ORDER_BOT_TOKEN || fileCfg.botToken || "",
+    adminBotUsername: process.env.BOT_USERNAME || process.env.ADMIN_BOT_USERNAME || fileCfg.adminBotUsername || "",
+    orderBotToken: process.env.BOT_TOKEN || process.env.ORDER_BOT_TOKEN || fileCfg.orderBotToken || "",
+    orderBotUsername: process.env.BOT_USERNAME || process.env.ORDER_BOT_USERNAME || fileCfg.orderBotUsername || "",
     targetChatId: process.env.TARGET_CHAT_ID ? Number(process.env.TARGET_CHAT_ID) : (fileCfg.targetChatId || ""),
-    adminSecret: process.env.ADMIN_SECRET || fileCfg.adminSecret || "dreemroom-adm",
+    adminSecret: process.env.ADMIN_SECRET || fileCfg.adminSecret || "",
     webAppUrl: process.env.WEB_APP_URL || fileCfg.webAppUrl || "http://localhost:5173",
   };
 }
@@ -669,10 +671,14 @@ export async function setBotConfig(cfg) {
 }
 
 // --------------------------------------------------------------------------
-// 4. PRODUCT IMAGES (Neon PostgreSQL + Local Fallback + Auto Telegram Recovery)
+// 4. PRODUCT IMAGES (Neon PostgreSQL + Fallback Cache)
 // --------------------------------------------------------------------------
+const fallbackImageCache = new Map();
+
 export async function saveImage(id, dataBase64, contentType = "image/jpeg") {
   const cleanId = String(id).replace(/^\/images\//, "").replace(/^\/api\/images\?id=/, "");
+  fallbackImageCache.set(cleanId, { id: cleanId, content_type: contentType, data: dataBase64 });
+
   if (sql) {
     await initDatabase();
     try {
@@ -689,7 +695,7 @@ export async function saveImage(id, dataBase64, contentType = "image/jpeg") {
       return false;
     }
   }
-  return false;
+  return true;
 }
 
 export async function getImage(id) {
@@ -710,58 +716,29 @@ export async function getImage(id) {
     }
   }
 
-  // 2. Lokal public/images/ papkadan tekshirish
+  // 2. Fallback memory keshdan tekshirish
+  if (fallbackImageCache.has(cleanId)) {
+    return fallbackImageCache.get(cleanId);
+  }
+
+  // 3. Lokal public/images/ papkadan tekshirish
   try {
     const localPath = path.join(__dirname, "public", "images", cleanId);
     if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
       const buf = fs.readFileSync(localPath);
       const b64 = buf.toString("base64");
-      if (sql) {
-        saveImage(cleanId, b64, "image/jpeg").catch(() => null);
-      }
-      return {
+      const imgObj = {
         id: cleanId,
         content_type: "image/jpeg",
         data: b64,
       };
+      fallbackImageCache.set(cleanId, imgObj);
+      if (sql) {
+        saveImage(cleanId, b64, "image/jpeg").catch(() => null);
+      }
+      return imgObj;
     }
   } catch {}
-
-  // 3. Agar rasm DB da ham, faylda ham bo'lmasa, Telegram fileId orqali qayta yuklab olish
-  if (sql) {
-    try {
-      const cfg = await getBotConfig();
-      const token = cfg?.botToken?.trim();
-      if (token) {
-        const prodRows = await sql`
-          SELECT images FROM products WHERE images::text LIKE ${'%' + cleanId + '%'};
-        `;
-        if (prodRows && prodRows.length > 0) {
-          const imgs = prodRows[0].images || [];
-          const found = imgs.find((img) => img.src && (img.src.includes(cleanId) || img.fileId));
-          if (found && found.fileId) {
-            const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${found.fileId}`).then((r) => r.json()).catch(() => null);
-            if (fileRes?.ok && fileRes?.result?.file_path) {
-              const downUrl = `https://api.telegram.org/file/bot${token}/${fileRes.result.file_path}`;
-              const imgRes = await fetch(downUrl).catch(() => null);
-              if (imgRes && imgRes.ok) {
-                const arrBuf = await imgRes.arrayBuffer();
-                const b64 = Buffer.from(arrBuf).toString("base64");
-                await saveImage(cleanId, b64, "image/jpeg");
-                return {
-                  id: cleanId,
-                  content_type: "image/jpeg",
-                  data: b64,
-                };
-              }
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("[DB]: Telegramdan avto-qayta tiklash xatosi:", err.message);
-    }
-  }
 
   return null;
 }
@@ -956,7 +933,7 @@ export async function deleteAdminUser(userId) {
 // 5. ADMIN KEYS (Maxfiy kalit so'zlar)
 // --------------------------------------------------------------------------
 export async function getAdminKeys() {
-  const defaultKey = (process.env.ADMIN_SECRET || "dreemroom-adm").toLowerCase().trim();
+  const defaultKey = process.env.ADMIN_SECRET ? process.env.ADMIN_SECRET.toLowerCase().trim() : "";
 
   if (sql) {
     await initDatabase();
@@ -1043,8 +1020,8 @@ export async function isValidAdminKey(enteredKey) {
   if (!enteredKey) return false;
   const clean = String(enteredKey).toLowerCase().trim();
   const keys = await getAdminKeys();
-  const defaultSecret = (process.env.ADMIN_SECRET || "dreemroom-adm").toLowerCase().trim();
-  return keys.some((k) => k.key.toLowerCase().trim() === clean) || clean === defaultSecret;
+  const defaultSecret = process.env.ADMIN_SECRET ? process.env.ADMIN_SECRET.toLowerCase().trim() : "";
+  return keys.some((k) => k.key.toLowerCase().trim() === clean) || (defaultSecret && clean === defaultSecret);
 }
 
 // --------------------------------------------------------------------------

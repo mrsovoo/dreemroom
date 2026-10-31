@@ -7,3 +7,5 @@ dist
 !.env.example
 bot-config.json
 admin_users.json
+telegram_groups.json
+.auth_credentials.json
