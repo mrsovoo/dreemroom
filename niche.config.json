@@ -1,0 +1,45 @@
+{
+  "niche": "fashion",
+  "brandName": "DREEM ROOM",
+  "currency": "so'm",
+  "telegramAppName": "app",
+  "bot": {
+    "buttons": {
+      "add": "➕ Qo'shish",
+      "delete": "🗑 O'chirish",
+      "report": "📊 Hisobot",
+      "launchApp": "🛍 Do'konni ochish",
+      "buyNow": "🛍 Buyurtma berish",
+      "confirmDeploy": "✅ Tasdiqlash va chiqarish",
+      "cancelDeploy": "❌ Bekor qilish",
+      "onlySite": "🌐 Faqat saytga (Kanalga shart emas)",
+      "customSize": "✍️ Boshqa o'lcham",
+      "photosReady": "✅ Rasmlar tayyor"
+    },
+    "messages": {
+      "welcomeAdmin": "👋 <b>Assalomu alaykum, Hurmatli Admin ({name})!</b>\n\nSiz do'kon administratorisiz. Quyidagi menyu orqali yangi mahsulot qo'shishingiz, o'chirishingiz yoki do'kon hisobotini ko'rishingiz mumkin.\n\n📢 Ulangan kanal/guruh: <code>{channel}</code>",
+      "welcomeUser": "🌸 <b>Assalomu alaykum, xush kelibsiz!</b>\n\nBizning barcha yangi to'plamlarimizni ko'rish, o'lchamlarni tanlash va buyurtma berish uchun quyidagi tugmani bosing:",
+      "stepPhoto": "📸 <b>Mahsulot rasmlarini yuboring (1 tadan 4 tagacha):</b>\n\n💡 <i>1-rasm bosh asosiy rasm bo'ladi, qolganlari qo'shimcha rakurslar bo'ladi.\nRasmlarni yuborib bo'lgach, tagiga nom va narxini yozishingiz yoki keyingi qadamga o'tishingiz mumkin!</i>",
+      "stepName": "📝 <b>1-qadam. Mahsulot nomini yozing:</b>\n<i>Masalan: <code>Dvoyka to'plam</code> yoki <code>Klassik kardigan</code></i>",
+      "stepPrice": "💰 <b>2-qadam. Mahsulot narxini kiriting:</b>\n<i>Masalan: <code>350000</code> yoki <code>350 ming</code></i>",
+      "stepSizes": "📏 <b>3-qadam. O'lchamini (variantini) tanlang:</b>",
+      "stepChannel": "📢 <b>4-qadam. Ushbu mahsulotni qaysi kanal yoki guruhga joylaysiz?</b>",
+      "stepConfirm": "📋 <b>5-qadam. Mahsulot ma'lumotlarini tekshiring va tasdiqlang:</b>\n\n👗 <b>Nomi:</b> {name}\n💰 <b>Narxi:</b> {price}\n📏 <b>O'lchamlari:</b> {sizes}\n📂 <b>Kategoriyasi:</b> {category}\n🖼 <b>Rasmlar soni:</b> {photoCount} ta\n📢 <b>Joylanadigan manzil:</b> {targetChannel}",
+      "deploySuccess": "🎉 <b>Mahsulot muvaffaqiyatli saqlandi!</b>\n\n👗 <b>Nom:</b> {name}\n💰 <b>Narx:</b> {price}\n📏 <b>O'lcham:</b> {sizes}\n📂 <b>Kategoriya:</b> {category}\n\n{channelResult}🌐 <b>Veb-sayt va mini appda darhol ko'rish mumkin!</b>",
+      "deployCanceled": "❌ Mahsulot qo'shish bekor qilindi. Hech qanday ma'lumot saqlanmadi.",
+      "invalidPrice": "❌ <b>Noto'g'ri narx!</b> Faqat raqam kiriting (masalan: <code>350000</code>):",
+      "accessDenied": "⛔ Kechirasiz, ushbu amal faqat do'kon administratorlari uchun.",
+      "reportTitle": "📊 <b>Do'kon hisoboti:</b>",
+      "noProductsToDelete": "ℹ️ Hozirda do'konda o'chirish uchun mahsulotlar yo'q.",
+      "deleteSelect": "🗑 <b>O'chirmoqchi bo'lgan mahsulotingizni tanlang:</b>\n<i>(Saytdan ham, ulangan kanaldan ham o'chiriladi)</i>",
+      "deleteSuccess": "✅ <b>\"{name}\" sayt va kanaldan muvaffaqiyatli o'chirildi!</b>"
+    },
+    "sizePresets": [
+      { "id": "XS_S_M_L_XL", "label": "✨ XS, S, M, L, XL", "sizes": ["XS", "S", "M", "L", "XL"] },
+      { "id": "S_M_L", "label": "S, M, L", "sizes": ["S", "M", "L"] },
+      { "id": "Standart", "label": "Standart (Universal)", "sizes": ["Standart"] },
+      { "id": "L_XL_XXL", "label": "L, XL, XXL", "sizes": ["L", "XL", "XXL"] },
+      { "id": "ALL", "label": "Barchasi (XS–XXL)", "sizes": ["XS", "S", "M", "L", "XL", "XXL"] }
+    ]
+  }
+}

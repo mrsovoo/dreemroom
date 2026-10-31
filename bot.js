@@ -17,6 +17,7 @@ import {
   getAdminUser,
   saveAdminUser,
   saveTelegramGroup,
+  getTelegramGroups,
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +27,50 @@ const CONFIG_FILE = path.join(__dirname, "bot-config.json");
 const ORDERS_FILE = path.join(__dirname, "orders.json");
 
 const OWNER_TELEGRAM_ID = process.env.OWNER_TELEGRAM_ID ? String(process.env.OWNER_TELEGRAM_ID).trim() : "";
+
+// ==========================================================================
+// 1. NICHE CONFIGURATION (Hamma matn va tugmalar shu yerdan o'qiladi)
+// ==========================================================================
+function getNicheConfig() {
+  try {
+    const configPath = path.join(__dirname, "niche.config.json");
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    }
+  } catch (err) {
+    console.error("niche.config.json o'qishda xatolik:", err.message);
+  }
+  return {};
+}
+
+let nicheConfig = getNicheConfig();
+
+function getMsg(key, params = {}) {
+  nicheConfig = getNicheConfig();
+  let text = nicheConfig.bot?.messages?.[key] || "";
+  for (const [k, v] of Object.entries(params)) {
+    text = text.replaceAll(`{${k}}`, String(v));
+  }
+  return text;
+}
+
+function getBtn(key) {
+  nicheConfig = getNicheConfig();
+  return nicheConfig.bot?.buttons?.[key] || "";
+}
+
+function getSizePresets() {
+  nicheConfig = getNicheConfig();
+  return (
+    nicheConfig.bot?.sizePresets || [
+      { id: "XS_S_M_L_XL", label: "✨ XS, S, M, L, XL", sizes: ["XS", "S", "M", "L", "XL"] },
+      { id: "S_M_L", label: "S, M, L", sizes: ["S", "M", "L"] },
+      { id: "Standart", label: "Standart (Universal)", sizes: ["Standart"] },
+      { id: "L_XL_XXL", label: "L, XL, XXL", sizes: ["L", "XL", "XXL"] },
+      { id: "ALL", label: "Barchasi (XS–XXL)", sizes: ["XS", "S", "M", "L", "XL", "XXL"] },
+    ]
+  );
+}
 
 function loadConfig() {
   let fileCfg = {};
@@ -83,12 +128,9 @@ async function isUserAdmin(userId) {
   return Boolean(dbAdmin && dbAdmin.status === "active");
 }
 
-// Album (media_group_id) accumulator
+// Media buffers & step-by-step sessions
 const albumBuffers = new Map();
-// Standalone multi-photo buffer
 const standalonePhotoBuffers = new Map();
-
-// Session states for step-by-step product creation
 const userStates = new Map();
 
 // Helper: Call Telegram Bot API
@@ -110,7 +152,7 @@ async function callTelegram(method, payload = {}) {
   }
 }
 
-// Helper: Download photo file from Telegram and save directly to DB product_images (diskka emas)
+// Helper: Download photo file from Telegram and save directly to DB product_images
 async function downloadTelegramPhoto(fileId, prefix = "img") {
   const token = config.botToken?.trim();
   if (!token) return null;
@@ -134,7 +176,7 @@ async function downloadTelegramPhoto(fileId, prefix = "img") {
     // Diskka emas, bazaga (product_images) saqlaymiz
     await saveImage(filename, base64Data, "image/jpeg");
 
-    // Sayt va bot uchun universal rasm havolasini qaytaramiz
+    // Sayt va bot uchun universal rasm URL manzili
     return `/api/images?id=${encodeURIComponent(filename)}`;
   } catch (err) {
     console.error("Rasmni saqlashda xatolik:", err.message);
@@ -142,17 +184,17 @@ async function downloadTelegramPhoto(fileId, prefix = "img") {
   }
 }
 
-// Helper: Narxni chiroyli formatlash
+// Helper: Narxni formatlash
 function formatPrice(price) {
   let num = parseInt(String(price).replace(/\D/g, ""), 10);
-  if (isNaN(num)) return "0 so'm";
+  if (isNaN(num)) return `0 ${nicheConfig.currency || "so'm"}`;
   if (num > 0 && num < 1000) {
     num = num * 1000;
   }
-  return `${num.toLocaleString("ru-RU")} so'm`;
+  return `${num.toLocaleString("ru-RU")} ${nicheConfig.currency || "so'm"}`;
 }
 
-// Helper: Captiondan nom va narxni ajratish
+// Helper: Captiondan nom va narxni ajratish (Tezkor usul uchun)
 function parseNameAndPrice(text = "") {
   if (!text) return { name: "", price: 0 };
 
@@ -223,13 +265,15 @@ function detectCategory(name) {
 }
 
 // Bosh klaviatura (Faqat Adminlar uchun ko'rinadi)
-const ADMIN_MAIN_KEYBOARD = {
-  keyboard: [
-    [{ text: "➕ Qo'shish" }, { text: "🗑 O'chirish" }],
-    [{ text: "📊 Hisobot" }, { text: "🛍 Do'konni ochish" }],
-  ],
-  resize_keyboard: true,
-};
+function getAdminMainKeyboard() {
+  return {
+    keyboard: [
+      [{ text: getBtn("add") || "➕ Qo'shish" }, { text: getBtn("delete") || "🗑 O'chirish" }],
+      [{ text: getBtn("report") || "📊 Hisobot" }, { text: getBtn("launchApp") || "🛍 Do'konni ochish" }],
+    ],
+    resize_keyboard: true,
+  };
+}
 
 // Handle incoming messages
 async function handleMessage(msg) {
@@ -254,7 +298,7 @@ async function handleMessage(msg) {
     return;
   }
 
-  // Faqat shaxsiy chatdagi xabarlar
+  // Shaxsiy chat tekshiruvlari
   const isAdmin = await isUserAdmin(userId);
   const webAppUrl = config.webAppUrl || process.env.WEB_APP_URL || "https://dreemroom.vercel.app";
 
@@ -262,7 +306,7 @@ async function handleMessage(msg) {
     inline_keyboard: [
       [
         {
-          text: "🛍 Do'konni ochish (Launch App)",
+          text: getBtn("launchApp") || "🛍 Do'konni ochish (Launch App)",
           web_app: { url: webAppUrl },
         },
       ],
@@ -276,17 +320,17 @@ async function handleMessage(msg) {
     if (isAdmin) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text:
-          `👋 <b>Assalomu alaykum, Hurmatli Admin (${msg.from?.first_name || ""})!</b>\n\n` +
-          `Siz do'kon boshqaruvchisiz. Quyidagi menyu orqali yangi mahsulot qo'shishingiz, o'chirishingiz yoki do'kon hisobotini ko'rishingiz mumkin.\n\n` +
-          `📢 Ulangan kanal/guruh: <code>${config.targetChatId || "Belgilanmagan"}</code>`,
+        text: getMsg("welcomeAdmin", {
+          name: msg.from?.first_name || "Admin",
+          channel: config.targetChatId || "Belgilanmagan",
+        }),
         parse_mode: "HTML",
-        reply_markup: ADMIN_MAIN_KEYBOARD,
+        reply_markup: getAdminMainKeyboard(),
       });
 
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text: `Mijozlar ko'rinishidagi do'konni ochish:`,
+        text: `Do'konning mijozlar interfeysi:`,
         reply_markup: LAUNCH_BUTTON,
       });
       return;
@@ -295,17 +339,14 @@ async function handleMessage(msg) {
     // Oddiy xaridor (mijoz) uchun
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text:
-        `🌸 <b>Assalomu alaykum, xush kelibsiz!</b>\n\n` +
-        `Bizning barcha yangi to'plamlarimizni ko'rish, o'lchamlarni tanlash va buyurtma berish uchun quyidagi tugmani bosing:`,
+      text: getMsg("welcomeUser"),
       parse_mode: "HTML",
       reply_markup: LAUNCH_BUTTON,
     });
     return;
   }
 
-  // Agar oddiy foydalanuvchi "Do'konni ochish" deb yozsa
-  if (text === "🛍 Do'konni ochish") {
+  if (text === getBtn("launchApp") || text === "🛍 Do'konni ochish") {
     await callTelegram("sendMessage", {
       chat_id: chatId,
       text: `Do'konimiz katalogini ochish uchun quyidagi tugmani bosing:`,
@@ -314,20 +355,26 @@ async function handleMessage(msg) {
     return;
   }
 
-  // ========================================================================
-  // SERVER DARAJASIDAGI ADMIN HUQUQI TEKSHIRUVI
-  // (Quyidagi barcha amallar faqat adminlar uchungina ruxsat etiladi)
-  // ========================================================================
+  // Admin huquqi tekshiruvi
   if (!isAdmin) {
-    if (text === "➕ Qo'shish" || text === "🗑 O'chirish" || text === "📊 Hisobot" || (photo && photo.length > 0)) {
+    if (
+      text === getBtn("add") ||
+      text === "➕ Qo'shish" ||
+      text === getBtn("delete") ||
+      text === "🗑 O'chirish" ||
+      text === getBtn("report") ||
+      text === "📊 Hisobot" ||
+      (photo && photo.length > 0)
+    ) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text: `🌸 <b>Assalomu alaykum!</b> Do'konimizni ko'rish va xarid qilish uchun quyidagi tugmani bosing:`,
+        text: getMsg("accessDenied"),
         parse_mode: "HTML",
         reply_markup: LAUNCH_BUTTON,
       });
       return;
     }
+    return;
   }
 
   // Kanalni ulash buyrug'i: /setchannel yoki /setgroup
@@ -347,13 +394,13 @@ async function handleMessage(msg) {
       chat_id: chatId,
       text: `✅ Guruh/Kanal ulandi: <code>${target}</code>`,
       parse_mode: "HTML",
-      reply_markup: ADMIN_MAIN_KEYBOARD,
+      reply_markup: getAdminMainKeyboard(),
     });
     return;
   }
 
   // 📊 Hisobot
-  if (text === "📊 Hisobot") {
+  if (text === getBtn("report") || text === "📊 Hisobot") {
     userStates.delete(userId);
     const prods = await getProducts();
     const orders = readOrders();
@@ -363,27 +410,27 @@ async function handleMessage(msg) {
     await callTelegram("sendMessage", {
       chat_id: chatId,
       text:
-        `📊 <b>Do'kon hisoboti:</b>\n\n` +
+        `${getMsg("reportTitle")}\n\n` +
         `📦 <b>Jami mahsulotlar:</b> ${prods.length} ta\n` +
         `🛍 <b>Jami buyurtmalar:</b> ${orders.length} ta\n` +
-        `💰 <b>Jami tushum:</b> ${revenue.toLocaleString("ru-RU")} so'm\n` +
+        `💰 <b>Jami tushum:</b> ${formatPrice(revenue)}\n` +
         `🆕 <b>Kutilayotgan yangi buyurtmalar:</b> ${newOrders} ta\n\n` +
-        `📢 <b>Ulangan kanal:</b> <code>${config.targetChatId || "Belgilanmagan"}</code>`,
+        `📢 <b>Asosiy kanal:</b> <code>${config.targetChatId || "Belgilanmagan"}</code>`,
       parse_mode: "HTML",
-      reply_markup: ADMIN_MAIN_KEYBOARD,
+      reply_markup: getAdminMainKeyboard(),
     });
     return;
   }
 
   // 🗑 O'chirish
-  if (text === "🗑 O'chirish") {
+  if (text === getBtn("delete") || text === "🗑 O'chirish") {
     userStates.delete(userId);
     const prods = await getProducts();
     if (!prods || prods.length === 0) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text: "ℹ️ Hozirda do'konda o'chirish uchun mahsulotlar yo'q.",
-        reply_markup: ADMIN_MAIN_KEYBOARD,
+        text: getMsg("noProductsToDelete"),
+        reply_markup: getAdminMainKeyboard(),
       });
       return;
     }
@@ -397,28 +444,25 @@ async function handleMessage(msg) {
 
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text: "🗑 <b>O'chirmoqchi bo'lgan mahsulotingizni tanlang:</b>\n<i>(Saytdan ham, ulangan kanaldan ham o'chiriladi)</i>",
+      text: getMsg("deleteSelect"),
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: inlineKeyboard },
     });
     return;
   }
 
-  // ➕ Qo'shish
-  if (text === "➕ Qo'shish") {
-    userStates.set(userId, { step: "WAIT_PHOTO" });
+  // ➕ Qo'shish (Yangi qadamma-qadam oqimning boshlanishi)
+  if (text === getBtn("add") || text === "➕ Qo'shish") {
+    userStates.set(userId, { step: "WAIT_PHOTO", images: [] });
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text:
-        `📸 <b>Mahsulot rasmlarini yuboring (1 tadan 4 tagacha):</b>\n\n` +
-        `💡 <i>1-rasm bosh asosiy rasm bo'ladi, qolganlari qo'shimcha rakurslar bo'ladi.\n` +
-        `Rasmlar tagiga narxi va nomini yozib (caption) yuborsangiz ham bo'ladi!</i>`,
+      text: getMsg("stepPhoto"),
       parse_mode: "HTML",
     });
     return;
   }
 
-  // Rasmlarni qabul qilish
+  // Rasmlarni qabul qilish (Albom yoki yakka rasm)
   if (photo && photo.length > 0) {
     const highestPhoto = photo[photo.length - 1];
     const fileId = highestPhoto.file_id;
@@ -475,6 +519,7 @@ async function handleMessage(msg) {
   // Step-by-step ma'lumot kiritish
   const state = userStates.get(userId);
 
+  // 1-qadam: Nom qabul qilish
   if (state && state.step === "WAIT_NAME") {
     state.name = text;
     state.step = "WAIT_PRICE";
@@ -489,16 +534,14 @@ async function handleMessage(msg) {
 
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text:
-        `✅ Nom saqlandi: <b>${state.name}</b>\n\n` +
-        `💰 <b>2-qadam. Mahsulot narxini kiriting:</b>\n` +
-        `<i>Masalan: <code>350000</code> yoki <code>350 ming</code></i>`,
+      text: `✅ Nom saqlandi: <b>${state.name}</b>\n\n${getMsg("stepPrice")}`,
       parse_mode: "HTML",
       reply_markup: keyboard,
     });
     return;
   }
 
+  // 2-qadam: Narx qabul qilish
   if (state && state.step === "WAIT_PRICE") {
     let cleanVal = text.replace(/[\s.,so'm]/gi, "").trim();
     let priceNum = parseInt(cleanVal, 10);
@@ -506,7 +549,7 @@ async function handleMessage(msg) {
     if (isNaN(priceNum) || priceNum <= 0) {
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text: "❌ <b>Noto'g'ri narx!</b> Faqat raqam kiriting (masalan: <code>350000</code>):",
+        text: getMsg("invalidPrice"),
         parse_mode: "HTML",
       });
       return;
@@ -521,10 +564,11 @@ async function handleMessage(msg) {
     state.price = priceNum;
     state.step = "WAIT_SIZES";
 
-    await askForSizes(chatId, userId, state.name, state.price);
+    await askForSizes(chatId, userId, state);
     return;
   }
 
+  // 3-qadam: Ixtiyoriy o'lchamlarni matn orqali kiritish
   if (state && state.step === "WAIT_CUSTOM_SIZE") {
     const rawSizes = text
       .split(/[,/;\s]+/)
@@ -532,14 +576,14 @@ async function handleMessage(msg) {
       .filter(Boolean);
 
     state.sizes = rawSizes.length > 0 ? rawSizes : ["Standart"];
-    userStates.delete(userId);
+    state.step = "WAIT_CHANNEL";
 
-    await autoDeployProduct(chatId, userId, state);
+    await askForChannel(chatId, userId, state);
     return;
   }
 }
 
-// Rasmlarni qabul qilib saqlash
+// Rasmlarni yuklab olish va navbatdagi qadamga o'tkazish
 async function processIncomingPhotos(chatId, userId, photoFileIds, rawCaption) {
   await callTelegram("sendChatAction", { chat_id: chatId, action: "upload_photo" });
 
@@ -561,68 +605,180 @@ async function processIncomingPhotos(chatId, userId, photoFileIds, rawCaption) {
     await callTelegram("sendMessage", {
       chat_id: chatId,
       text: "❌ Rasmlarni saqlashda xatolik yuz berdi. Qaytadan urinib ko'ring.",
-      reply_markup: ADMIN_MAIN_KEYBOARD,
+      reply_markup: getAdminMainKeyboard(),
     });
     return;
   }
 
+  // Tezkor usul: agar captiondan nom va narx topilsa
   const { name: dName, price: dPrice } = parseNameAndPrice(rawCaption);
 
-  userStates.set(userId, {
-    step: "WAIT_NAME",
+  let state = userStates.get(userId) || {};
+  state = {
+    ...state,
     images: downloadedImages,
     detectedName: dName,
     detectedPrice: dPrice,
-  });
+    name: dName || state.name || "",
+    price: dPrice || state.price || 0,
+  };
+  userStates.set(userId, state);
 
-  const keyboard = dName
-    ? {
-        inline_keyboard: [[{ text: `⚡️ ${dName}`, callback_data: `pick_name_${userId}` }]],
-      }
-    : undefined;
+  // A. Tezkor usul: agar rasm tagida nom va narx to'liq yozilgan bo'lsa darhol O'lchamga o'tamiz
+  if (dName && dPrice) {
+    state.step = "WAIT_SIZES";
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text:
+        `📸 <b>${downloadedImages.length} ta rasm yuklandi!</b>\n` +
+        `📝 Nom: <b>${dName}</b>\n` +
+        `💰 Narx: <b>${formatPrice(dPrice)}</b>\n\n` +
+        getMsg("stepSizes"),
+      parse_mode: "HTML",
+    });
+    await askForSizes(chatId, userId, state);
+    return;
+  }
+
+  // B. Agar faqat nom topilgan bo'lsa, narxga o'tamiz
+  if (dName) {
+    state.step = "WAIT_PRICE";
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: `✅ <b>${downloadedImages.length} ta rasm qabul qilindi!</b>\n📝 Nom: <b>${dName}</b>\n\n${getMsg("stepPrice")}`,
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  // C. Yangi qadamma-qadam oqim: 1-qadam (Nom so'rash)
+  state.step = "WAIT_NAME";
+  await callTelegram("sendMessage", {
+    chat_id: chatId,
+    text: `✅ <b>${downloadedImages.length} ta rasm qabul qilindi va bazaga saqlandi!</b>\n\n${getMsg("stepName")}`,
+    parse_mode: "HTML",
+  });
+}
+
+// 3-qadam: O'lchamlarni so'rash klaviaturasi
+async function askForSizes(chatId, userId, state) {
+  const presets = getSizePresets();
+  const inlineRows = [];
+
+  for (let i = 0; i < presets.length; i += 2) {
+    const row = [
+      { text: presets[i].label, callback_data: `sz_${presets[i].id}_${userId}` },
+    ];
+    if (presets[i + 1]) {
+      row.push({ text: presets[i + 1].label, callback_data: `sz_${presets[i + 1].id}_${userId}` });
+    }
+    inlineRows.push(row);
+  }
+
+  inlineRows.push([
+    { text: getBtn("customSize") || "✍️ Boshqa o'lcham", callback_data: `sz_custom_${userId}` },
+  ]);
 
   await callTelegram("sendMessage", {
     chat_id: chatId,
     text:
-      `✅ <b>${downloadedImages.length} ta rasm qabul qilindi va bazaga saqlandi!</b>\n\n` +
-      `📝 <b>1-qadam. Mahsulot nomini yozing:</b>\n` +
-      `<i>Masalan: <code>Dvoyka to'plam</code> yoki <code>Klassik kardigan</code></i>`,
+      `📦 <b>Mahsulot:</b> ${state.name}\n` +
+      `💰 <b>Narxi:</b> ${formatPrice(state.price)}\n\n` +
+      getMsg("stepSizes"),
     parse_mode: "HTML",
-    reply_markup: keyboard,
+    reply_markup: { inline_keyboard: inlineRows },
   });
 }
 
-// O'lchamlarni tanlash klaviaturasi
-async function askForSizes(chatId, userId, name, price) {
+// 4-qadam: Qaysi kanalga joylashni so'rash
+async function askForChannel(chatId, userId, state) {
+  state.step = "WAIT_CHANNEL";
+  const groups = await getTelegramGroups();
+  const inline_keyboard = [];
+
+  // Asosiy kanal
+  if (config.targetChatId) {
+    inline_keyboard.push([
+      {
+        text: `📢 Asosiy kanal (${config.targetChatId})`,
+        callback_data: `chan_${config.targetChatId}_${userId}`,
+      },
+    ]);
+  }
+
+  // Boshqa ulangan kanallar
+  if (Array.isArray(groups)) {
+    for (const g of groups) {
+      if (String(g.chatId) !== String(config.targetChatId)) {
+        inline_keyboard.push([
+          {
+            text: `📢 ${g.title || g.chatId}`,
+            callback_data: `chan_${g.chatId}_${userId}`,
+          },
+        ]);
+      }
+    }
+  }
+
+  // Faqat saytga (kanalga shart emas)
+  inline_keyboard.push([
+    {
+      text: getBtn("onlySite") || "🌐 Faqat saytga (Kanalga shart emas)",
+      callback_data: `chan_none_${userId}`,
+    },
+  ]);
+
+  await callTelegram("sendMessage", {
+    chat_id: chatId,
+    text: getMsg("stepChannel"),
+    parse_mode: "HTML",
+    reply_markup: { inline_keyboard },
+  });
+}
+
+// 5-qadam: Tasdiq (Confirmation) ko'rsatish
+async function askForConfirmation(chatId, userId, state) {
+  state.step = "WAIT_CONFIRM";
+  const category = detectCategory(state.name);
+  state.category = category;
+
+  const targetLabel = state.chosenChatId ? `📢 ${state.chosenChatTitle || state.chosenChatId}` : "🌐 Faqat saytga";
+
+  const confirmText = getMsg("stepConfirm", {
+    name: state.name,
+    price: formatPrice(state.price),
+    sizes: state.sizes?.join(", ") || "Standart",
+    category,
+    photoCount: state.images?.length || 0,
+    targetChannel: targetLabel,
+  });
+
   const keyboard = {
     inline_keyboard: [
       [
-        { text: "✨ XS, S, M, L, XL", callback_data: `sz_XS_S_M_L_XL_${userId}` },
-        { text: "S, M, L", callback_data: `sz_S_M_L_${userId}` },
+        {
+          text: getBtn("confirmDeploy") || "✅ Tasdiqlash va chiqarish",
+          callback_data: `confirm_deploy_${userId}`,
+        },
       ],
       [
-        { text: "Standart (Universal)", callback_data: `sz_Standart_${userId}` },
-        { text: "L, XL, XXL", callback_data: `sz_L_XL_XXL_${userId}` },
-      ],
-      [
-        { text: "Barchasi (XS–XXL)", callback_data: `sz_ALL_${userId}` },
-        { text: "✍️ Boshqa razmer yozish", callback_data: `sz_custom_${userId}` },
+        {
+          text: getBtn("cancelDeploy") || "❌ Bekor qilish",
+          callback_data: `cancel_deploy_${userId}`,
+        },
       ],
     ],
   };
 
   await callTelegram("sendMessage", {
     chat_id: chatId,
-    text:
-      `📦 <b>Mahsulot:</b> ${name}\n` +
-      `💰 <b>Narxi:</b> ${formatPrice(price)}\n\n` +
-      `📏 <b>O'lchamini (razmerini) tanlang:</b>`,
+    text: confirmText,
     parse_mode: "HTML",
     reply_markup: keyboard,
   });
 }
 
-// Callback queries (Tugmalar bosilishi)
+// Callback queries
 async function handleCallbackQuery(cb) {
   const cbId = cb.id;
   const data = cb.data || "";
@@ -634,7 +790,7 @@ async function handleCallbackQuery(cb) {
   if (!isAdmin) {
     await callTelegram("answerCallbackQuery", {
       callback_query_id: cbId,
-      text: "⛔ Kechirasiz, ushbu amal faqat do'kon administratorlari uchun.",
+      text: getMsg("accessDenied"),
       show_alert: true,
     });
     return;
@@ -663,9 +819,9 @@ async function handleCallbackQuery(cb) {
     await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "O'chirildi!" });
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text: `✅ <b>"${targetProd?.name || "Mahsulot"}" sayt va kanaldan muvaffaqiyatli o'chirildi!</b>`,
+      text: getMsg("deleteSuccess", { name: targetProd?.name || "Mahsulot" }),
       parse_mode: "HTML",
-      reply_markup: ADMIN_MAIN_KEYBOARD,
+      reply_markup: getAdminMainKeyboard(),
     });
     return;
   }
@@ -688,10 +844,7 @@ async function handleCallbackQuery(cb) {
 
       await callTelegram("sendMessage", {
         chat_id: chatId,
-        text:
-          `✅ Nom: <b>${state.name}</b>\n\n` +
-          `💰 <b>2-qadam. Mahsulot narxini kiriting:</b>\n` +
-          `<i>Masalan: <code>350000</code> yoki <code>350 ming</code></i>`,
+        text: `✅ Nom: <b>${state.name}</b>\n\n${getMsg("stepPrice")}`,
         parse_mode: "HTML",
         reply_markup: keyboard,
       });
@@ -704,11 +857,12 @@ async function handleCallbackQuery(cb) {
       state.price = state.detectedPrice;
       state.step = "WAIT_SIZES";
       await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Narx saqlandi!" });
-      await askForSizes(chatId, userId, state.name, state.price);
+      await askForSizes(chatId, userId, state);
     }
     return;
   }
 
+  // O'lchamlarni tanlash
   if (data.startsWith("sz_")) {
     if (!state) {
       await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Sessiya tugagan." });
@@ -726,23 +880,66 @@ async function handleCallbackQuery(cb) {
       return;
     }
 
-    let sizes = ["Standart"];
-    if (data.includes("XS_S_M_L_XL")) sizes = ["XS", "S", "M", "L", "XL"];
-    else if (data.includes("S_M_L")) sizes = ["S", "M", "L"];
-    else if (data.includes("L_XL_XXL")) sizes = ["L", "XL", "XXL"];
-    else if (data.includes("ALL")) sizes = ["XS", "S", "M", "L", "XL", "XXL"];
-    else if (data.includes("Standart")) sizes = ["Standart"];
+    const presets = getSizePresets();
+    const cleanTag = data.replace(`sz_`, "").replace(`_${userId}`, "");
+    const foundPreset = presets.find((p) => p.id === cleanTag);
+    state.sizes = foundPreset ? foundPreset.sizes : ["Standart"];
 
-    state.sizes = sizes;
-    userStates.delete(userId);
-    await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Tayyor!" });
+    await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "O'lcham saqlandi!" });
+    // Navbatdagi qadam: Kanal tanlash
+    await askForChannel(chatId, userId, state);
+    return;
+  }
 
+  // Kanal tanlash
+  if (data.startsWith("chan_")) {
+    if (!state) {
+      await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Sessiya tugagan." });
+      return;
+    }
+
+    const rawId = data.replace("chan_", "").replace(`_${userId}`, "");
+    if (rawId === "none") {
+      state.chosenChatId = null;
+      state.chosenChatTitle = "Faqat saytga";
+    } else {
+      state.chosenChatId = rawId;
+      state.chosenChatTitle = rawId;
+    }
+
+    await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Kanal tanlandi!" });
+    // Navbatdagi qadam: Tasdiqlash
+    await askForConfirmation(chatId, userId, state);
+    return;
+  }
+
+  // Tasdiqlash va chiqarish
+  if (data === `confirm_deploy_${userId}`) {
+    if (!state) {
+      await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Sessiya topilmadi." });
+      return;
+    }
+    await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Chiqarilmoqda..." });
     await autoDeployProduct(chatId, userId, state);
+    userStates.delete(userId);
+    return;
+  }
+
+  // Bekor qilish
+  if (data === `cancel_deploy_${userId}`) {
+    userStates.delete(userId);
+    await callTelegram("answerCallbackQuery", { callback_query_id: cbId, text: "Bekor qilindi" });
+    await callTelegram("sendMessage", {
+      chat_id: chatId,
+      text: getMsg("deployCanceled"),
+      parse_mode: "HTML",
+      reply_markup: getAdminMainKeyboard(),
+    });
     return;
   }
 }
 
-// Avto-Deploy: Mahsulotni DB ga va Telegram Kanalga joylash
+// 6. Avto-Deploy: Web-saytga va Telegram Kanalga (URL tugma bilan)
 async function autoDeployProduct(chatId, userId, state) {
   config = loadConfig();
 
@@ -763,15 +960,35 @@ async function autoDeployProduct(chatId, userId, state) {
 
   let channelPublished = false;
   let telegramInfo = null;
-  const targetChat = config.targetChatId;
-  const botUser = config.botUsername || "";
+
+  // Qaysi kanal tanlangan bo'lsa (yoki config.targetChatId)
+  const targetChat = state.chosenChatId !== undefined ? state.chosenChatId : config.targetChatId;
+
+  // Mini App va Bot havolasi
+  const appName = process.env.TELEGRAM_APP_NAME || nicheConfig.telegramAppName || "app";
+  const botUsername = (config.botUsername || process.env.BOT_USERNAME || "dreemroom_bot").replace(/^@/, "");
+
+  // Talab bo'yicha: https://t.me/{BOT_USERNAME}/{APP_NAME}?startapp=product_{id}
+  const buyUrl = `https://t.me/${botUsername}/${appName}?startapp=product_${productId}`;
 
   if (targetChat && state.images.length > 0) {
     const postCaption =
       `✨ <b>${state.name}</b> ✨\n\n` +
       `📏 <b>O'lchami:</b> ${state.sizes.join(", ")}\n` +
       `💰 <b>Narxi:</b> ${formatPrice(state.price)} 🏷\n\n` +
-      `🛍 <b>Buyurtma berish:</b> ${botUser ? `@${botUser}` : "Do'kon boti orqali"}`;
+      `🛍 <b>${getBtn("buyNow") || "Buyurtma berish"}:</b> <a href="${buyUrl}">Xarid qilish</a> (yoki quyidagi tugma orqali)`;
+
+    // Talab bo'yicha: web_app emas, oddiy URL tugma
+    const channelInlineKeyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: getBtn("buyNow") || "🛍 Buyurtma berish",
+            url: buyUrl,
+          },
+        ],
+      ],
+    };
 
     try {
       if (state.images.length === 1) {
@@ -780,6 +997,7 @@ async function autoDeployProduct(chatId, userId, state) {
           photo: state.images[0].fileId,
           caption: postCaption,
           parse_mode: "HTML",
+          reply_markup: channelInlineKeyboard,
         });
         if (res?.ok && res.result?.message_id) {
           channelPublished = true;
@@ -808,6 +1026,15 @@ async function autoDeployProduct(chatId, userId, state) {
             chatId: targetChat,
             messageIds: msgIds,
           };
+
+          // Albom ostiga buyurtma berish URL tugmasini alohida xabar qilib biriktirish
+          await callTelegram("sendMessage", {
+            chat_id: targetChat,
+            text: `👆 <b>${state.name}</b> uchun to'g'ridan-to'g'ri buyurtma berish:`,
+            parse_mode: "HTML",
+            reply_to_message_id: msgIds[0],
+            reply_markup: channelInlineKeyboard,
+          });
         }
       }
     } catch (err) {
@@ -815,7 +1042,7 @@ async function autoDeployProduct(chatId, userId, state) {
     }
   }
 
-  const category = detectCategory(state.name);
+  const category = state.category || detectCategory(state.name);
 
   const productData = {
     id: productId,
@@ -838,27 +1065,27 @@ async function autoDeployProduct(chatId, userId, state) {
     console.error("[DEPLOY]: DB ga yozishda xatolik:", err.message);
   }
 
-  const resultMsg =
-    `🎉 <b>Mahsulot muvaffaqiyatli joylandi!</b>\n\n` +
-    `👗 <b>Nom:</b> ${state.name}\n` +
-    `💰 <b>Narx:</b> ${formatPrice(state.price)}\n` +
-    `📏 <b>O'lcham:</b> ${state.sizes.join(", ")}\n` +
-    `📂 <b>Kategoriya:</b> ${category}\n` +
-    `🖼 <b>Rasmlar:</b> ${state.images.length} ta (bazaga saqlandi)\n\n` +
-    (channelPublished
-      ? `📢 <b>Telegram kanalga post qilindi!</b>\n`
-      : `⚠️ <i>Kanal belgilanmagan yoki xatolik. Saytga joylandi.</i>\n`) +
-    `🌐 <b>Veb-saytda darhol ko'rish mumkin!</b>`;
+  const channelResult = channelPublished
+    ? `📢 <b>Telegram kanalga post qilindi!</b>\n`
+    : (targetChat ? `⚠️ <i>Kanalga joylashda xatolik yoki kanal belgilanmagan. Saytga joylandi.</i>\n` : `🌐 <i>Faqat saytga joylandi (Kanalga joylanmadi).</i>\n`);
+
+  const resultMsg = getMsg("deploySuccess", {
+    name: state.name,
+    price: formatPrice(state.price),
+    sizes: state.sizes?.join(", "),
+    category,
+    channelResult,
+  });
 
   await callTelegram("sendMessage", {
     chat_id: chatId,
     text: resultMsg,
     parse_mode: "HTML",
-    reply_markup: ADMIN_MAIN_KEYBOARD,
+    reply_markup: getAdminMainKeyboard(),
   });
 }
 
-// Bot yangi kanal/guruhga qo'shilganda
+// Bot kanal/guruhga qo'shilganda
 async function handleMyChatMember(memberUpdate) {
   const chat = memberUpdate.chat;
   const newStatus = memberUpdate.new_chat_member?.status;
@@ -925,7 +1152,7 @@ async function startPolling() {
         await callTelegram("setChatMenuButton", {
           menu_button: {
             type: "web_app",
-            text: "🛍 Do'kon",
+            text: getBtn("launchApp") || "🛍 Do'kon",
             web_app: { url: config.webAppUrl },
           },
         });

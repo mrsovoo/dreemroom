@@ -65,7 +65,7 @@ export type HeroSlide = {
 
 function renderCategoryIcon(cat: string) {
   const c = cat.toLowerCase();
-  if (c === "barchasi" || c === "all") return null;
+  if (c === "barchasi" || c === "all") return <Sparkles size={14} strokeWidth={1.8} />;
   if (c.includes("kurtka") || c.includes("jacket") || c.includes("palto")) return <Layers size={14} strokeWidth={1.8} />;
   if (c.includes("sviter") || c.includes("sweater") || c.includes("kardigan") || c.includes("cardigan")) return <Shirt size={14} strokeWidth={1.8} />;
   if (c.includes("chopon")) return <Feather size={14} strokeWidth={1.8} />;
@@ -514,6 +514,29 @@ export default function App() {
     } else {
       setActiveProduct(productsList[0] || null);
     }
+
+    // Telegram startapp parametri yoki URL query orqali kelgan tovar ID sini ochish
+    try {
+      let startParam = "";
+      const tg = getTelegramWebApp();
+      if (tg?.initDataUnsafe && (tg.initDataUnsafe as any).start_param) {
+        startParam = String((tg.initDataUnsafe as any).start_param).trim();
+      }
+      if (!startParam && typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        startParam = urlParams.get("tgWebAppStartParam") || urlParams.get("startapp") || "";
+      }
+
+      if (startParam && startParam.startsWith("product_")) {
+        const targetId = startParam.replace(/^product_/, "").trim();
+        const found = productsList.find(
+          (p) => String(p.id) === targetId || String(p.id).toLowerCase() === targetId.toLowerCase(),
+        );
+        if (found) {
+          openProduct(found);
+        }
+      }
+    } catch {}
   }, [productsList]);
 
   // Telegram Mini App: kengayish, orqa fon va barqaror balandlik.

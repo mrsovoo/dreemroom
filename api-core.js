@@ -708,3 +708,4 @@ export async function handleApiRequest(req, res) {
   sendJson(res, 404, { error: "API endpoint topilmadi" });
   return true;
 }
+
